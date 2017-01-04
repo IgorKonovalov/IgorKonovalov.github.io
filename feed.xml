@@ -1,4 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-01-03T21:18:58+03:00</updated><id>//</id><title type="html">Igor Konovalov</title><subtitle>Russia, Saint Petersburg. Novice programmer. Core skills - HTML, CSS, Javascript, Node JS. Personal blog and portfolio.</subtitle><entry><title type="html">Hello World!</title><link href="/personal/2016/12/31/first_post.html" rel="alternate" type="text/html" title="Hello World!" /><published>2016-12-31T17:26:55+03:00</published><updated>2016-12-31T17:26:55+03:00</updated><id>/personal/2016/12/31/first_post</id><content type="html" xml:base="/personal/2016/12/31/first_post.html">&lt;p&gt;Hi everybody!
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-01-04T17:52:23+03:00</updated><id>//</id><title type="html">Igor Konovalov</title><subtitle>Russia, Saint Petersburg. Novice programmer. Core skills - HTML, CSS, Javascript, Node JS. Personal blog and portfolio.</subtitle><entry><title type="html">Game Of Life!</title><link href="/projects/2017/01/04/Game_of_life.html" rel="alternate" type="text/html" title="Game Of Life!" /><published>2017-01-04T17:36:55+03:00</published><updated>2017-01-04T17:36:55+03:00</updated><id>/projects/2017/01/04/Game_of_life</id><content type="html" xml:base="/projects/2017/01/04/Game_of_life.html">&lt;p&gt;This is the game of Life&lt;/p&gt;
+
+&lt;style&gt;
+  button {
+    margin: 3px;
+    font-size: 14px;
+  }
+&lt;/style&gt;
+
+&lt;canvas id=&quot;game&quot; width=&quot;740px&quot; height=&quot;600px&quot; style=&quot;background-color: lightgray&quot;&gt;&lt;/canvas&gt;
+&lt;p&gt;&lt;br /&gt;
+&lt;button id=&quot;random&quot; style=&quot;margin-left: 0px;&quot;&gt;Randomize&lt;/button&gt;
+&lt;button id=&quot;step&quot; style=&quot;margin-left: 0px;&quot;&gt;Next Step&lt;/button&gt;
+&lt;span&gt;Speed: &lt;/span&gt;
+&lt;input type=&quot;text&quot; id=&quot;speed&quot; value=&quot;10&quot; /&gt;
+&lt;button id=&quot;start&quot;&gt;Start&lt;/button&gt;
+&lt;button id=&quot;pause&quot;&gt;Pause&lt;/button&gt;&lt;/p&gt;
+
+&lt;script src=&quot;/assets/JS/Game_of_Life/index.js&quot;&gt;&lt;/script&gt;</content><summary type="html">This is the game of Life</summary></entry><entry><title type="html">Hello World!</title><link href="/personal/2016/12/31/first_post.html" rel="alternate" type="text/html" title="Hello World!" /><published>2016-12-31T17:26:55+03:00</published><updated>2016-12-31T17:26:55+03:00</updated><id>/personal/2016/12/31/first_post</id><content type="html" xml:base="/personal/2016/12/31/first_post.html">&lt;p&gt;Hi everybody!
 Partially as a little challenge to myself, partially for expiriense in English writing (I’m a native Russian) I started a blog today.
 I will be using &lt;a href=&quot;http://jekyllrb.com/&quot;&gt;Jekyll&lt;/a&gt; for static blog, and &lt;a href=&quot;https://pages.github.com/&quot;&gt;GitHub&lt;/a&gt; for hosting. The markdown syntax is totally new to me, so as english writing so many mistakes is on its way!
 Soon I’ll add &lt;a href=&quot;https://disqus.com/&quot;&gt;Disqus&lt;/a&gt; for comments, and first little project is coming.&lt;/p&gt;
