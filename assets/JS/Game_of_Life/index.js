@@ -287,19 +287,39 @@ bRandom.addEventListener("click", function () {
 });
 
 const bStart = document.getElementById("start");
+let isTimerOn = false;
 bStart.addEventListener("click", function () {
-  let speedValue = document.getElementById("speed").value;
-  timer = setInterval(function() {
-    getNextStep(boxes)
-    boxCopy(boxes, boxesNextStep);
-    updateField();
-    cleanNextStep(boxesNextStep);
-  }, speedValue * 100);
+  if (!isTimerOn) {
+    let speedValue = document.getElementById("speed").value;
+    timer = setInterval(function() {
+      getNextStep(boxes)
+      boxCopy(boxes, boxesNextStep);
+      updateField();
+      cleanNextStep(boxesNextStep);
+    }, speedValue * 100);
+    isTimerOn = true;
+  } else {
+    clearInterval(timer);
+    isTimerOn = false;
+  }
 })
 
 const bPause = document.getElementById("pause");
 bPause.addEventListener("click", function () {
+  if (isTimerOn) {
+  console.log(timer);
   clearInterval(timer);
+  isTimerOn = false;
+  }
+})
+
+const bClear = document.getElementById("clear");
+bClear.addEventListener("click", function () {
+  cleanNextStep(boxesNextStep);
+  boxCopy(boxes, boxesNextStep);
+  updateField();
+  clearInterval(timer);
+  isTimerOn = false;
 })
 
 // начальный запуск
