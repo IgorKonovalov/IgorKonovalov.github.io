@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Igor Konovalov</title>
-  <meta name="description" content="Russia, Saint Petersburg. Novice programmer. Core skills - HTML, CSS, Javascript, Node JS. Personal blog and portfolio.">
+  <title>Simple Random Walker</title>
+  <meta name="description" content="Just a very simple implementation of random walker on canvas in pure JS.">
 
   <link rel="stylesheet" href="/assets/main.css">
-  <link rel="canonical" href="/">
+  <link rel="canonical" href="/projects/2017/01/31/Simple_Random_walker.html">
   <link rel="alternate" type="application/rss+xml" title="Igor Konovalov" href="/feed.xml">
 
   <script>
@@ -72,94 +72,44 @@
 
     <main class="page-content" aria-label="Content">
       <div class="wrapper">
-        <div class="home">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
 
-  <div class="posts-list">
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Simple Random Walker</h1>
+    <p class="post-meta"><time datetime="2017-01-31T22:35:55+03:00" itemprop="datePublished">Jan 31, 2017</time></p>
+  </header>
 
-    
-    <article class="post-preview">
+  <div class="post-content" itemprop="articleBody">
+    <p>Just a very simple implementation of random walker on canvas in pure JS.</p>
 
-      <a href="/projects/2017/01/31/Simple_Random_walker.html">
-        <h2 class="post-title"> Simple Random Walker</h2>
+<p>Inspired by magnificent Daniel Shiffman - <a href="https://www.youtube.com/watch?v=l__fEY1xanY">take a look at this video</a></p>
 
-        
-      </a>
-      <p class="post-meta">
-        Posted on January 31, 2017
+<canvas width="500px" height="500px" style="background-color: black"></canvas>
+<script src="/assets/JS/Random_Walker_1/index.js"></script>
 
-      <div class="post-entry">
-          <p>Just a very simple implementation of random walker on canvas in pure JS.</p>
-
-
-        <a href="/projects/2017/01/31/Simple_Random_walker.html" class="post-read-more">[Read&nbsp;More]</a>
-      </div>
-      <br/><br/>
-    </article>
-    
-    <article class="post-preview">
-
-      <a href="/projects/2017/01/20/Cellular_Automation.html">
-        <h2 class="post-title"> Elementary Cellular Automaton</h2>
-
-        
-      </a>
-      <p class="post-meta">
-        Posted on January 20, 2017
-
-      <div class="post-entry">
-          <p>While working on <a href="https://igorkonovalov.github.io/projects/2017/01/04/Game_of_life.html">Game Of Life</a> - I’ve became interested in Cellular Automation, and found another interesting example to do - Elementary cellular automaton. According to <a href="https://en.wikipedia.org/wiki/Elementary_cellular_automaton">Wikipedia</a>, “… an elementary cellular automaton is a one-dimensional cellular automaton where there are two possible states (labeled 0 and 1) and the rule to determine the state of a cell in the next generation depends only on the current state of the cell and its two immediate neighbors.” It was  Super simple, right? But it was well challenging for me as for a novice programmer, and also lead to some new knowledge and understanding of what’s going on. It’s 255 different rules instead of three in Game Of Life, but they do not implement simultaniously, one rule per one automata. There is a big list of all the rules can be found <a href="http://atlas.wolfram.com/01/01/">here</a>. The most interesting ones I used in my project. Also, this automata is kind of boring and I added some colour fun. So, take a look!</p>
+<p><a href="https://github.com/IgorKonovalov/Little_projects/tree/master/Random_walker">Source code</a></p>
 
 
-        <a href="/projects/2017/01/20/Cellular_Automation.html" class="post-read-more">[Read&nbsp;More]</a>
-      </div>
-      <br/><br/>
-    </article>
-    
-    <article class="post-preview">
-
-      <a href="/projects/2017/01/04/Game_of_life.html">
-        <h2 class="post-title"> Game Of Life!</h2>
-
-        
-      </a>
-      <p class="post-meta">
-        Posted on January 4, 2017
-
-      <div class="post-entry">
-          <p>For a little while I’ve been working on a first real (at least for me) project - an implementation of <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Conway’s Game of Life</a> in Javascript. It was one of the exercises in excellent book <a href="http://eloquentjavascript.net/">Eloquent Javascript</a> and first one that actually made me really interested in programming process itself.
-For couple of days I wasn’t eating and sleeping and just programming this thing and thinking about it. And when it was actually done - that was really amazing. I haven’t felt myself like this since childhood. Good start of the year! So, the source for the game <a href="https://github.com/IgorKonovalov/Little_projects/tree/master/Game_of_Life">can be found on my Github</a>, and you can play it right below! The usage is very basic, but I’m sure that I will continue to contribute to the project to make it more user-friendly and nice.</p>
-
-
-        <a href="/projects/2017/01/04/Game_of_life.html" class="post-read-more">[Read&nbsp;More]</a>
-      </div>
-      <br/><br/>
-    </article>
-    
-    <article class="post-preview">
-
-      <a href="/personal/2016/12/31/first_post.html">
-        <h2 class="post-title"> Hello World!</h2>
-
-        
-      </a>
-      <p class="post-meta">
-        Posted on December 31, 2016
-
-      <div class="post-entry">
-          <p>Hi everybody!
-Partially as a little challenge to myself, partially for expiriense in English writing (I’m a native Russian) I started a blog today.
-I will be using <a href="http://jekyllrb.com/">Jekyll</a> for static blog, and <a href="https://pages.github.com/">GitHub</a> for hosting. The markdown syntax is totally new to me, so as english writing so many mistakes is on its way!
-Soon I’ll add <a href="https://disqus.com/">Disqus</a> for comments, and first little project is coming.</p>
-
-
-        <a href="/personal/2016/12/31/first_post.html" class="post-read-more">[Read&nbsp;More]</a>
-      </div>
-      <br/><br/>
-    </article>
-    
   </div>
 
-</div>
+  
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+      /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+      var disqus_shortname = 'igorkonovalov-github-io'; // required: replace example with your forum shortname
+      // var disqus_developer = 1; // Comment out when the site is live
+      var disqus_identifier = "/projects/2017/01/31/Simple_Random_walker.html";
+
+      /* * * DON'T EDIT BELOW THIS LINE * * */
+      (function() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+</article>
 
       </div>
     </main>
