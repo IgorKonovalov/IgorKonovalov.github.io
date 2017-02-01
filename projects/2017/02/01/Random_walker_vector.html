@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Simple Random Walker</title>
-  <meta name="description" content="Just a very simple implementation of random walker on canvas in pure JS.">
+  <title>Random walker with vector object (Lévy flight)</title>
+  <meta name="description" content="Hey everyone! After yesterday attempt to code random walker, I thought it would be a good idea to implement almost same thing but with vector object. As far ...">
 
   <link rel="stylesheet" href="/assets/main.css">
-  <link rel="canonical" href="/projects/2017/01/31/Simple_Random_walker.html">
+  <link rel="canonical" href="/projects/2017/02/01/Random_walker_vector.html">
   <link rel="alternate" type="application/rss+xml" title="Igor Konovalov" href="/feed.xml">
 
   <script>
@@ -75,19 +75,49 @@
         <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
-    <h1 class="post-title" itemprop="name headline">Simple Random Walker</h1>
-    <p class="post-meta"><time datetime="2017-01-31T22:35:55+03:00" itemprop="datePublished">Jan 31, 2017</time></p>
+    <h1 class="post-title" itemprop="name headline">Random walker with vector object (Lévy flight)</h1>
+    <p class="post-meta"><time datetime="2017-02-01T22:47:55+03:00" itemprop="datePublished">Feb 1, 2017</time></p>
   </header>
 
   <div class="post-content" itemprop="articleBody">
-    <p>Just a very simple implementation of random walker on canvas in pure JS.</p>
+    <p>Hey everyone! After yesterday attempt to code random walker, I thought it would be a good idea to implement almost same thing but with vector object. As far as I know it’s common practice to use vectors to describe coordinates and speed of objects - and it turns to be a good idea in this little do-it-after-came-back-from-work project. Previous version of random walker is <a href="https://IgorKonovalov.github.io/projects/2017/01/31/Simple_Random_walker.html">here</a></p>
 
-<p>Inspired by magnificent Daniel Shiffman - <a href="https://www.youtube.com/watch?v=l__fEY1xanY">take a look at this video</a></p>
+<p>Take a look at it first, some explanation below:</p>
 
 <canvas width="780px" height="600px" style="background-color: black"></canvas>
-<script src="/assets/JS/Random_Walker_1/index.js"></script>
+<p><button id="stopB">Stop</button>
+<script src="/assets/JS/Random_Walker_2/index.js"></script></p>
 
-<p><a href="https://github.com/IgorKonovalov/Little_projects/tree/master/Random_walker">Source code</a></p>
+<p>Code for vector object is pretty simple - it describes coordinates on canvas:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">function</span> <span class="nx">Vector</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">x</span> <span class="o">=</span> <span class="nx">x</span><span class="p">;</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">y</span> <span class="o">=</span> <span class="nx">y</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I also needed some sort of random vector with set length - to describe next step of walker:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">function</span> <span class="nx">randomNumber</span><span class="p">(</span><span class="nx">min</span><span class="p">,</span> <span class="nx">max</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">min</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="nx">max</span> <span class="o">-</span> <span class="nx">min</span><span class="p">)</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">();</span>
+  <span class="k">else</span>
+    <span class="k">return</span> <span class="p">(</span><span class="nx">max</span> <span class="o">-</span> <span class="nx">min</span><span class="p">)</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">+</span> <span class="nx">min</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kd">function</span> <span class="nx">randomSign</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kd">let</span> <span class="nx">test</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">round</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="mi">2</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">test</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="k">else</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="nx">Vector</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">random</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">x</span> <span class="o">=</span> <span class="nx">randomNumber</span><span class="p">(</span><span class="o">-</span><span class="nx">length</span><span class="p">,</span> <span class="nx">length</span><span class="p">);</span>
+  <span class="nx">y</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">sqrt</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="nx">length</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="nx">randomSign</span><span class="p">();</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="nx">Vector</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>After that, I only needed to put start of line on previous point (initial vector), than plus random vector to it and draw a line. Super simple.
+Full code - on my <a href="https://github.com/IgorKonovalov/Little_projects/tree/master/Random_walker">GitHub</a></p>
 
 
   </div>
@@ -98,7 +128,7 @@
       /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
       var disqus_shortname = 'igorkonovalov-github-io'; // required: replace example with your forum shortname
       // var disqus_developer = 1; // Comment out when the site is live
-      var disqus_identifier = "/projects/2017/01/31/Simple_Random_walker.html";
+      var disqus_identifier = "/projects/2017/02/01/Random_walker_vector.html";
 
       /* * * DON'T EDIT BELOW THIS LINE * * */
       (function() {
