@@ -83,10 +83,17 @@
     <p>Hey everyone! After yesterday attempt to code random walker, I thought it would be a good idea to implement almost same thing but with vector object. As far as I know it’s common practice to use vectors to describe coordinates and speed of objects - and it turns to be a good idea in this little do-it-after-came-back-from-work project. Previous version of random walker is <a href="https://IgorKonovalov.github.io/projects/2017/01/31/Simple_Random_walker.html">here</a></p>
 
 <p>Take a look at it first, some explanation below:</p>
-
-<canvas width="780px" height="600px" style="background-color: black"></canvas>
+<canvas width="740px" height="600px" style="background-color: black"></canvas>
 <p><button id="stopB">Stop</button>
 <script src="/assets/JS/Random_Walker_2/index.js"></script></p>
+
+<style>
+  @media screen and (max-width: 600px) {
+    canvas {
+      width: 340px;
+      }
+  }
+</style>
 
 <p>Code for vector object is pretty simple - it describes coordinates on canvas:</p>
 
