@@ -1,4 +1,94 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-02-10T20:23:19+03:00</updated><id>//</id><title type="html">Igor Konovalov</title><subtitle>Russia, Saint Petersburg. Novice programmer. Core skills - HTML, CSS, Javascript, Node JS. Personal blog and portfolio.</subtitle><entry><title type="html">Random Lines in SVG Shapes</title><link href="/projects/2017/02/10/Random_lines_in_shapes.html" rel="alternate" type="text/html" title="Random Lines in SVG Shapes" /><published>2017-02-10T19:36:55+03:00</published><updated>2017-02-10T19:36:55+03:00</updated><id>/projects/2017/02/10/Random_lines_in_shapes</id><content type="html" xml:base="/projects/2017/02/10/Random_lines_in_shapes.html">&lt;p&gt;I came to this small project after watching &lt;a href=&quot;https://www.youtube.com/watch?v=sJ6pMLp_IaI&quot;&gt;video&lt;/a&gt; by Daniel Shiffman&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-02-14T21:16:59+03:00</updated><id>//</id><title type="html">Igor Konovalov</title><subtitle>Russia, Saint Petersburg. Novice programmer. Core skills - HTML, CSS, Javascript, Node JS. Personal blog and portfolio.</subtitle><entry><title type="html">Maurer Rose</title><link href="/projects/2017/02/14/Maurer_rose.html" rel="alternate" type="text/html" title="Maurer Rose" /><published>2017-02-14T20:35:55+03:00</published><updated>2017-02-14T20:35:55+03:00</updated><id>/projects/2017/02/14/Maurer_rose</id><content type="html" xml:base="/projects/2017/02/14/Maurer_rose.html">&lt;p&gt;Mathematics can be very beautiful. Below is javascript implementation of mathematical rose - (rhodonea curve is a sinusoid plotted in polar coordinates) with Maurer rose (consists of some lines that connect some points on a rose curve).
+Formulas is relatively simple, and can be found in wikipedia pages: &lt;a href=&quot;https://en.wikipedia.org/wiki/Rose_(mathematics)&quot;&gt;Mathematical Rose&lt;/a&gt; and &lt;a href=&quot;https://en.wikipedia.org/wiki/Maurer_rose&quot;&gt;Maurer rose&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Good place to start for you to experiments with rose is this chart:&lt;/p&gt;
+
+&lt;p&gt;&lt;i&gt;Mathematical “rose” or “rhodonea” curves, based on the polar-coordinates equation r=cos(θ*n/d). In this chart, the values of parameter n varies from 1 to 7, while d varies from 1 to 9.&lt;/i&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/JS/Maurer_rose/Rose-rhodonea-curve-7x9-chart-improved.svg.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The Rose itself is red and “Maurer” part is blue. A Maurer rose of the rose r = sin(nθ) consists of the 360 lines successively connecting the above 361 points. Thus a Maurer rose is a polygonal curve with vertices on a rose. “maurer” parameter defines an angle between start of walk (first line) and next step (next line). The first line starts at coordinates (0,0) and there the final line ends.&lt;/p&gt;
+
+&lt;p&gt;Experiments with rose and her Maurer part can be very interesting.&lt;/p&gt;
+
+&lt;p&gt;I suggest for you to try: [n: 0.01, d: 8.16, maurer: 21],[n: 2, d: 1, maurer: 71],[n: 2, d: 5, maurer: 56],[n: 7, d: 1, maurer: 29],[n: 5, d: 2, maurer: 66], and so on&lt;/p&gt;
+
+&lt;p&gt;Possibilities are infinite, have fun!&lt;/p&gt;
+
+&lt;h2&gt;Happy Valentine's!&lt;/h2&gt;
+
+&lt;canvas id=&quot;rose&quot; width=&quot;600&quot; height=&quot;600&quot; style=&quot;background-color: black&quot;&gt;&lt;/canvas&gt;
+&lt;p&gt;&lt;br /&gt;
+Select n: &lt;input type=&quot;text&quot; name=&quot;&quot; value=&quot;20&quot; id=&quot;n&quot; /&gt;
+Select d: &lt;input type=&quot;text&quot; name=&quot;&quot; value=&quot;2&quot; id=&quot;d&quot; /&gt;
+Select maurer: &lt;input type=&quot;text&quot; name=&quot;&quot; value=&quot;71&quot; id=&quot;maurer&quot; /&gt;
+&lt;button id=&quot;generate&quot; class=&quot;button-primary&quot;&gt;Generate&lt;/button&gt;&lt;/p&gt;
+&lt;p&gt;&lt;input type=&quot;checkbox&quot; id=&quot;showRose&quot; checked=&quot;&quot; /&gt; Show rose
+&lt;input type=&quot;checkbox&quot; id=&quot;showMaurer&quot; checked=&quot;&quot; /&gt; Show Maurer lines&lt;/p&gt;
+&lt;div class=&quot;flexContainer&quot;&gt;
+  &lt;div class=&quot;spans&quot;&gt;
+    &lt;span&gt;Select n: &lt;/span&gt;
+    &lt;span&gt;Select d: &lt;/span&gt;
+    &lt;span&gt;Select maurer: &lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;inputs&quot;&gt;
+    &lt;input type=&quot;range&quot; id=&quot;rangeN&quot; name=&quot;&quot; value=&quot;20&quot; min=&quot;0&quot; max=&quot;20&quot; step=&quot;0.001&quot; /&gt;
+    &lt;input type=&quot;range&quot; id=&quot;rangeD&quot; name=&quot;&quot; value=&quot;2&quot; min=&quot;0&quot; max=&quot;30&quot; step=&quot;0.01&quot; /&gt;
+    &lt;input type=&quot;range&quot; id=&quot;rangeMaurer&quot; name=&quot;&quot; value=&quot;71&quot; min=&quot;0&quot; max=&quot;360&quot; step=&quot;1&quot; /&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;spansValue&quot;&gt;
+    &lt;span id=&quot;rangeNValue&quot;&gt;&lt;/span&gt;
+    &lt;span id=&quot;rangeDValue&quot;&gt;&lt;/span&gt;
+    &lt;span id=&quot;rangeMaurerValue&quot;&gt;&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;/assets/JS/Maurer_rose/main.min.js&quot;&gt;&lt;/script&gt;
+
+&lt;style&gt;
+ button {
+   margin-top: -3px;
+   margin-left: 10px;
+ }
+  span {
+    margin-top: 2px;
+    margin-left:5px;
+  }
+  input[type=&quot;text&quot;] {
+    width: 50px;
+  }
+  .flexContainer {
+    max-width: 740px;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-direction: row;
+        flex-direction: row;
+    -ms-flex-pack: justify;
+        justify-content: space-between;
+    -ms-flex-align: center;
+        align-items: center;
+  }
+  .spans,
+  .inputs,
+  .spansValue {
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-direction: column;
+        flex-direction: column;
+  }
+  .spansValue {
+    min-width: 10%;
+  }
+  .inputs {
+    min-width: 70%;
+  }
+  @media screen and (max-width: 600px) {
+    canvas {
+      width: 340px;
+      }
+  }
+&lt;/style&gt;</content><summary type="html">Mathematics can be very beautiful. Below is javascript implementation of mathematical rose - (rhodonea curve is a sinusoid plotted in polar coordinates) with Maurer rose (consists of some lines that connect some points on a rose curve).
+Formulas is relatively simple, and can be found in wikipedia pages: Mathematical Rose and Maurer rose.</summary></entry><entry><title type="html">Random Lines in SVG Shapes</title><link href="/projects/2017/02/10/Random_lines_in_shapes.html" rel="alternate" type="text/html" title="Random Lines in SVG Shapes" /><published>2017-02-10T19:36:55+03:00</published><updated>2017-02-10T19:36:55+03:00</updated><id>/projects/2017/02/10/Random_lines_in_shapes</id><content type="html" xml:base="/projects/2017/02/10/Random_lines_in_shapes.html">&lt;p&gt;I came to this small project after watching &lt;a href=&quot;https://www.youtube.com/watch?v=sJ6pMLp_IaI&quot;&gt;video&lt;/a&gt; by Daniel Shiffman&lt;/p&gt;
 
 &lt;p&gt;I haven’t made a full version of star patterns yet, before finishing I found this interesting pattern:
 draw a shape (hexagon, scuare or triangle), then find a random point in each edge of figure, and draw a random lines between this random points. Sometimes you can get an interesting results with this simple rules. Try it and save the result with download button!&lt;/p&gt;
