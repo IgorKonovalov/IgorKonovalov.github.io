@@ -273,8 +273,6 @@ pre {
 .icon > svg {
   display: inline-block;
   vertical-align: middle; }
-  .icon > svg path {
-    fill: #828282; }
 
 /**
  * Site header
@@ -297,8 +295,6 @@ pre {
 
 .site-nav {
   float: right;
-  display: flex;
-  flex-direction: row;
   line-height: 56px; }
   .site-nav .menu-icon {
     display: none; }
