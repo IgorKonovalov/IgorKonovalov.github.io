@@ -30,7 +30,7 @@ const years = [...postsByYear.keys()].sort((a, b) => b - a);
             <h1>{year}</h1>
             <ul>
               {postsByYear.get(year)!.map((post) => (
-                <li style="line-height:1.5em">
+                <li class="archive-item">
                   {post.data.date.toLocaleDateString('en-GB', {
                     day: '2-digit',
                     month: 'short',
@@ -51,3 +51,10 @@ const years = [...postsByYear.keys()].sort((a, b) => b - a);
     </div>
   </article>
 </BaseLayout>
+
+<style>
+  .archive-item {
+    line-height: var(--leading-normal);
+    margin-bottom: var(--space-1);
+  }
+</style>

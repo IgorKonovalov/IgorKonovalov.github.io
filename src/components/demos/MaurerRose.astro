@@ -44,7 +44,7 @@
 
 <style>
   .demo-container {
-    max-width: 740px;
+    max-width: var(--content-width);
     margin: 1.5rem 0;
   }
   canvas {
@@ -62,7 +62,7 @@
     margin-left: 10px;
   }
   .flex-container {
-    max-width: 740px;
+    max-width: var(--content-width);
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -83,7 +83,7 @@
   input[type='range'] {
     width: 100%;
   }
-  @media screen and (max-width: 600px) {
+  @media screen and (max-width: 640px) {
     canvas {
       width: 340px;
     }

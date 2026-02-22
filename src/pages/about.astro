@@ -15,7 +15,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <img
         src="/images/about/about_photo.jpg"
         alt="Igor Konovalov"
-        style="width: 33%; float: left; padding: 0 10px 0 0;"
+        class="about-photo"
       />
 
       <p>
@@ -37,3 +37,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </article>
 </BaseLayout>
+
+<style>
+  .about-photo {
+    width: 33%;
+    float: left;
+    padding: 0 var(--space-4) var(--space-4) 0;
+    border-radius: var(--radius-md);
+  }
+
+  @media screen and (max-width: 640px) {
+    .about-photo {
+      width: 100%;
+      float: none;
+      padding: 0 0 var(--space-4) 0;
+    }
+  }
+</style>
