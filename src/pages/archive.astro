@@ -1,0 +1,57 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection('blog');
+const sortedPosts = posts.sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+
+const postsByYear = new Map<number, typeof sortedPosts>();
+for (const post of sortedPosts) {
+  const year = post.data.date.getFullYear();
+  if (!postsByYear.has(year)) postsByYear.set(year, []);
+  postsByYear.get(year)!.push(post);
+}
+
+const years = [...postsByYear.keys()].sort((a, b) => b - a);
+---
+
+<BaseLayout title="Archive">
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Archive</h1>
+    </header>
+
+    <div class="post-content">
+      {
+        years.map((year) => (
+          <>
+            <h1>{year}</h1>
+            <ul>
+              {postsByYear.get(year)!.map((post) => (
+                <li style="line-height:1.5em">
+                  {post.data.date.toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                  })}{' '}
+                  &middot;{' '}
+                  <a
+                    href={`/${post.data.tags?.[0] || 'personal'}/${post.data.date.getFullYear()}/${String(post.data.date.getMonth() + 1).padStart(2, '0')}/${String(post.data.date.getDate()).padStart(2, '0')}/${post.id}/`}
+                  >
+                    {post.data.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        ))
+      }
+      {
+        years.length === 0 && (
+          <p>No posts yet. Posts will appear here after Phase 3 migration.</p>
+        )
+      }
+    </div>
+  </article>
+</BaseLayout>

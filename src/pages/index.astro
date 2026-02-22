@@ -1,9 +1,43 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection('blog');
+const sortedPosts = posts.sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
 ---
 
 <BaseLayout>
   <div class="home">
-    <p>Site shell is working. Post listing will be added in Phase 2.</p>
+    <div class="posts-list">
+      {
+        sortedPosts.map((post) => (
+          <article class="post-preview">
+            <a
+              href={`/${post.data.tags?.[0] || 'personal'}/${post.data.date.getFullYear()}/${String(post.data.date.getMonth() + 1).padStart(2, '0')}/${String(post.data.date.getDate()).padStart(2, '0')}/${post.id}/`}
+            >
+              <h2 class="post-title">{post.data.title}</h2>
+            </a>
+            <p class="post-meta">
+              Posted on{' '}
+              {post.data.date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+            <div class="post-entry">
+              {post.data.description && <p>{post.data.description}</p>}
+            </div>
+          </article>
+        ))
+      }
+      {
+        sortedPosts.length === 0 && (
+          <p>No posts yet. Posts will appear here after Phase 3 migration.</p>
+        )
+      }
+    </div>
   </div>
 </BaseLayout>

@@ -1,0 +1,34 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+  canonicalUrl?: string;
+  type?: 'website' | 'article';
+}
+
+const siteTitle = 'Igor Konovalov';
+const siteDescription =
+  'Russia, Saint Petersburg. Passionate WebDeveloper. Core skills - HTML, CSS, Javascript, Node JS. Personal blog and portfolio.';
+const siteUrl = 'https://igorkonovalov.github.io';
+
+const {
+  title,
+  description = siteDescription,
+  canonicalUrl,
+  type = 'website',
+} = Astro.props;
+
+const pageTitle = title ? `${title} | ${siteTitle}` : siteTitle;
+const canonical = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
+---
+
+<title>{pageTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+
+<!-- Open Graph -->
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content={type} />
+<meta property="og:url" content={canonical} />
+<meta property="og:site_name" content={siteTitle} />

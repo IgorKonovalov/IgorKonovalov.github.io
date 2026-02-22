@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="About"
+  description="About Igor Konovalov - JavaScript developer based in Saint Petersburg, Russia."
+>
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">About</h1>
+    </header>
+
+    <div class="post-content">
+      <img
+        src="/images/about/about_photo.jpg"
+        alt="Igor Konovalov"
+        style="width: 33%; float: left; padding: 0 10px 0 0;"
+      />
+
+      <p>
+        Hello everyone! My name is Igor Konovalov - I'm a JavaScript developer.
+        Welcome to my personal site. I like building strange things with JS.
+      </p>
+
+      <p>Currently I live in Russia, Saint Petersburg.</p>
+
+      <p><a href="/archive/Igor_Konovalov_CV_EN_Jul2017.html">CV</a></p>
+
+      <p>
+        My hobby is photography. Follow me on: <a
+          href="https://www.instagram.com/some_strange/">Instagram</a
+        >
+      </p>
+
+      <p><a href="http://igor-dlinni.livejournal.com">Russian blog</a></p>
+    </div>
+  </article>
+</BaseLayout>
