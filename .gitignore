@@ -1,6 +1,18 @@
+# Jekyll (legacy)
 _site
 .sass-cache
 .jekyll-metadata
+
+# Astro
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
 
 # Claude Code
 .claude/settings.json

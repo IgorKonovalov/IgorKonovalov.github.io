@@ -13,14 +13,14 @@ Living document. Update as the project matures and patterns solidify.
 
 ## File Naming
 
-| Type | Convention | Example |
-|------|-----------|---------|
-| Components | PascalCase | `Header.astro`, `BlogPost.tsx` |
-| Pages | kebab-case | `about.astro`, `game-of-life.astro` |
-| Styles | kebab-case | `global.css`, `blog-post.module.css` |
-| Content (blog) | kebab-case | `game-of-life.md` |
-| Utilities | camelCase | `formatDate.ts`, `slugify.ts` |
-| Constants | UPPER_SNAKE in file | `const MAX_POSTS_PER_PAGE = 10` |
+| Type           | Convention          | Example                              |
+| -------------- | ------------------- | ------------------------------------ |
+| Components     | PascalCase          | `Header.astro`, `BlogPost.tsx`       |
+| Pages          | kebab-case          | `about.astro`, `game-of-life.astro`  |
+| Styles         | kebab-case          | `global.css`, `blog-post.module.css` |
+| Content (blog) | kebab-case          | `game-of-life.md`                    |
+| Utilities      | camelCase           | `formatDate.ts`, `slugify.ts`        |
+| Constants      | UPPER_SNAKE in file | `const MAX_POSTS_PER_PAGE = 10`      |
 
 ## TypeScript Conventions
 
@@ -77,15 +77,15 @@ Use design tokens from `.claude/skills/designer/references/design-system.md`:
 
 ```yaml
 # Required fields for blog posts
-title: "Post Title"
+title: 'Post Title'
 date: 2024-01-15
-description: "Brief description for SEO and previews"
+description: 'Brief description for SEO and previews'
 tags: [javascript, generative-art]
 
 # Optional fields
 draft: false
-demo: "game-of-life"        # slug of related interactive demo
-image: "./hero.webp"         # featured image
+demo: 'game-of-life' # slug of related interactive demo
+image: './hero.webp' # featured image
 ```
 
 ## Git Conventions

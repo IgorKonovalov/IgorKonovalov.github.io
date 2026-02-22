@@ -1,6 +1,6 @@
 ---
 name: dev
-description: "Implement features, fix bugs, and write code for a portfolio/blog site being migrated from Jekyll to a modern static site framework. Use when: (1) Implementing new pages, components, or features, (2) Migrating content from Jekyll, (3) Writing or modifying CSS/styles, (4) Creating or updating interactive JS demos, (5) Setting up build pipeline or GitHub Actions, (6) Fixing bugs or addressing build errors, (7) Adding new blog posts or content, (8) Any hands-on coding task for the site."
+description: 'Implement features, fix bugs, and write code for a portfolio/blog site being migrated from Jekyll to a modern static site framework. Use when: (1) Implementing new pages, components, or features, (2) Migrating content from Jekyll, (3) Writing or modifying CSS/styles, (4) Creating or updating interactive JS demos, (5) Setting up build pipeline or GitHub Actions, (6) Fixing bugs or addressing build errors, (7) Adding new blog posts or content, (8) Any hands-on coding task for the site.'
 ---
 
 # Dev - Implementation Guide
@@ -74,6 +74,7 @@ Implement features and write code for the portfolio/blog site migration and ongo
 ## Code Quality Standards
 
 ### General
+
 - Use TypeScript for all new code
 - No `any` types except at framework boundaries
 - Prefer `const` over `let`, never use `var`
@@ -81,6 +82,7 @@ Implement features and write code for the portfolio/blog site migration and ongo
 - Keep files under 300 lines; split if larger
 
 ### CSS
+
 - Use CSS custom properties from the design system
 - Mobile-first media queries
 - No magic numbers; use spacing/sizing tokens
@@ -88,6 +90,7 @@ Implement features and write code for the portfolio/blog site migration and ongo
 - Test at all breakpoints: 640px, 768px, 1024px, 1280px
 
 ### Components
+
 - One component per file
 - Props interface defined and exported
 - Handle loading, error, and empty states
@@ -95,45 +98,60 @@ Implement features and write code for the portfolio/blog site migration and ongo
 - Accessible: semantic HTML, ARIA labels where needed, keyboard navigation
 
 ### Content
+
 - Images: use optimized formats (WebP with fallback)
 - Provide alt text for all images
 - Use responsive image sizes where supported
 - Lazy-load images below the fold
 
+## Dependency Management
+
+- **Use exact versions** in `package.json` — no `^` or `~` prefixes (e.g., `"astro": "5.17.3"`, not `"^5.0.0"`)
+- When adding dependencies: `yarn add --exact <pkg>` or `yarn add --dev --exact <pkg>`
+- Use **Yarn** as the package manager (not npm/pnpm)
+
 ## Build and Deploy
 
 ### Local Development
+
 ```bash
 # Install dependencies
-npm install  # or pnpm/yarn per project convention
+yarn install
 
 # Start dev server
-npm run dev
+yarn dev
 
 # Build for production
-npm run build
+yarn build
 
 # Preview production build locally
-npm run preview
+yarn preview
 ```
 
 ### GitHub Actions Deployment
 
 The CI/CD pipeline should:
+
 1. Install dependencies (with cache)
 2. Build the site
 3. Deploy to GitHub Pages
 
 Key considerations:
+
 - Cache `node_modules` and framework cache between builds
 - Run build with production environment variables
 - Ensure `base` path is correct for GitHub Pages (usually `""` for user sites)
 
 ### Pre-Commit Checks
 
-Before committing, verify:
-- [ ] `npm run build` succeeds with no errors
-- [ ] No TypeScript errors
+A Husky pre-commit hook runs automatically:
+
+1. **lint-staged**: ESLint + Prettier on staged files
+2. **typecheck**: `astro check` for TypeScript errors
+
+Before committing, also verify manually:
+
+- [ ] `yarn build` succeeds with no errors
 - [ ] Pages render correctly at all breakpoints
 - [ ] New content has proper frontmatter
 - [ ] Images are optimized
@@ -142,6 +160,7 @@ Before committing, verify:
 ## Continuous Improvement
 
 As the project evolves, update this skill:
+
 - Add framework-specific patterns once the framework is chosen
 - Document recurring code patterns as they emerge
 - Add templates for common operations (new post, new demo, new page)

@@ -1,0 +1,16 @@
+dist/
+.astro/
+node_modules/
+yarn.lock
+*.svg
+
+# Legacy Jekyll (will be removed in Phase 8)
+assets/
+_site/
+_includes/
+_layouts/
+_posts/
+_sass/
+
+# Static passthrough
+public/tours/

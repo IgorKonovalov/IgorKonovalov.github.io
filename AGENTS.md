@@ -9,6 +9,7 @@ Guidelines for AI agents working on this portfolio/blog site migration and devel
 Personal portfolio and technical blog being migrated from Jekyll 3.3.1 to a modern static site framework. Deployed to GitHub Pages.
 
 Key documentation:
+
 - **`docs/architecture/`** - Architecture Decision Records
 - **`docs/features/`** - Feature specifications
 - **`.claude/skills/`** - Specialized agent skills
@@ -21,12 +22,12 @@ Review existing architecture decisions and feature specs before making significa
 
 Skills in `.claude/skills/` provide domain-specific guidance:
 
-| Skill | Purpose |
-|-------|---------|
-| `designer` | UI design, styling, layout, visual components |
-| `business-analyst` | Feature discovery, requirements analysis, feature specs |
-| `architect` | Framework evaluation, migration planning, technical architecture |
-| `dev` | Code implementation, bug fixes, content migration |
+| Skill              | Purpose                                                          |
+| ------------------ | ---------------------------------------------------------------- |
+| `designer`         | UI design, styling, layout, visual components                    |
+| `business-analyst` | Feature discovery, requirements analysis, feature specs          |
+| `architect`        | Framework evaluation, migration planning, technical architecture |
+| `dev`              | Code implementation, bug fixes, content migration                |
 
 ---
 
@@ -52,6 +53,14 @@ Explain what changed and why.
 - Small, frequent commits over large batches
 - Test before committing
 - Never commit: secrets, debug logs, build artifacts, commented-out code
+
+---
+
+## Dependency Management
+
+- **Use exact versions** in `package.json` — no `^` or `~` prefixes (e.g., `"astro": "5.17.3"`, not `"^5.0.0"`)
+- When adding dependencies, use `yarn add --exact` (or `yarn add --dev --exact` for devDependencies)
+- Use **Yarn** as the package manager (not npm/pnpm)
 
 ---
 
@@ -97,10 +106,11 @@ Explain what changed and why.
 ### Blog Posts
 
 Required frontmatter:
+
 ```yaml
-title: "Post Title"
+title: 'Post Title'
 date: 2024-01-15
-description: "Brief description for SEO"
+description: 'Brief description for SEO'
 tags: [javascript, generative-art]
 ```
 
@@ -127,13 +137,13 @@ Optional: `draft`, `demo` (related demo slug), `image` (featured image)
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|-----------|---------|
-| Components | PascalCase | `Header.astro`, `BlogCard.tsx` |
-| Pages | kebab-case | `about.astro`, `game-of-life.astro` |
-| Styles | kebab-case | `global.css`, `blog-post.module.css` |
-| Content | kebab-case | `game-of-life.md` |
-| Utilities | camelCase | `formatDate.ts`, `slugify.ts` |
+| Type       | Convention | Example                              |
+| ---------- | ---------- | ------------------------------------ |
+| Components | PascalCase | `Header.astro`, `BlogCard.tsx`       |
+| Pages      | kebab-case | `about.astro`, `game-of-life.astro`  |
+| Styles     | kebab-case | `global.css`, `blog-post.module.css` |
+| Content    | kebab-case | `game-of-life.md`                    |
+| Utilities  | camelCase  | `formatDate.ts`, `slugify.ts`        |
 
 ### Structure Principles
 
@@ -158,7 +168,7 @@ Optional: `draft`, `demo` (related demo slug), `image` (featured image)
 - **Target**: GitHub Pages (static files only)
 - **Build**: GitHub Actions CI/CD
 - **Branch**: source on `main`/`master`, deploy via Actions
-- Verify `npm run build` succeeds before pushing
+- Verify `yarn build` succeeds before pushing
 - Preserve or redirect existing URLs during migration
 
 ---

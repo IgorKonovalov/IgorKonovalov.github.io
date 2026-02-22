@@ -1,0 +1,900 @@
+/*
+ * Global styles — direct port of Jekyll Minima theme SCSS
+ * Phase 1: hardcoded values from SCSS variables, same look & feel
+ *
+ * SCSS variable reference:
+ *   $base-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif
+ *   $base-font-size: 16px
+ *   $base-font-weight: 400
+ *   $small-font-size: 14px
+ *   $base-line-height: 1.5
+ *   $spacing-unit: 30px
+ *   $text-color: #111
+ *   $background-color: #fdfdfd
+ *   $brand-color: #2a7ae2
+ *   $grey-color: #828282
+ *   $grey-color-light: #e8e8e8  (lighten #828282, 40%)
+ *   $grey-color-dark: #424242   (darken #828282, 25%)
+ *   $content-width: 800px
+ *   $on-palm: 600px
+ *   $on-laptop: 800px
+ */
+
+/* ==========================================================================
+   Reset
+   ========================================================================== */
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote,
+pre,
+hr,
+dl,
+dd,
+ol,
+ul,
+figure {
+  margin: 0;
+  padding: 0;
+}
+
+/* ==========================================================================
+   Buttons (from Skeleton CSS)
+   ========================================================================== */
+
+.button,
+button,
+input[type='submit'],
+input[type='reset'],
+input[type='button'] {
+  display: inline-block;
+  height: 30px;
+  padding: 0 15px;
+  color: #555;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 25px;
+  letter-spacing: 0.1rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  background-color: transparent;
+  border-radius: 4px;
+  border: 2px solid #bbb;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.button:hover,
+button:hover,
+input[type='submit']:hover,
+input[type='reset']:hover,
+input[type='button']:hover,
+.button:focus,
+button:focus,
+input[type='submit']:focus,
+input[type='reset']:focus,
+input[type='button']:focus {
+  color: #333;
+  border-color: #888;
+  outline: 0;
+}
+
+.button.button-primary,
+button.button-primary,
+input[type='submit'].button-primary,
+input[type='reset'].button-primary,
+input[type='button'].button-primary {
+  color: #fff;
+  background-color: #33c3f0;
+  border-color: #33c3f0;
+}
+
+.button.button-primary:hover,
+button.button-primary:hover,
+input[type='submit'].button-primary:hover,
+input[type='reset'].button-primary:hover,
+input[type='button'].button-primary:hover,
+.button.button-primary:focus,
+button.button-primary:focus,
+input[type='submit'].button-primary:focus,
+input[type='reset'].button-primary:focus,
+input[type='button'].button-primary:focus {
+  color: #fff;
+  background-color: #1eaedb;
+  border-color: #1eaedb;
+}
+
+/* ==========================================================================
+   Forms (from Skeleton CSS)
+   ========================================================================== */
+
+input[type='email'],
+input[type='number'],
+input[type='search'],
+input[type='text'],
+input[type='tel'],
+input[type='url'],
+input[type='password'],
+textarea,
+select {
+  transform: translateY(-1px);
+  height: 30px;
+  padding: 6px 10px;
+  background-color: #fff;
+  border: 2px solid #d1d1d1;
+  border-radius: 4px;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+
+input[type='email'],
+input[type='number'],
+input[type='search'],
+input[type='text'],
+input[type='tel'],
+input[type='url'],
+input[type='password'],
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+textarea {
+  min-height: 65px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+input[type='email']:focus,
+input[type='number']:focus,
+input[type='search']:focus,
+input[type='text']:focus,
+input[type='tel']:focus,
+input[type='url']:focus,
+input[type='password']:focus,
+textarea:focus,
+select:focus {
+  border: 2px solid #33c3f0;
+  outline: 0;
+}
+
+label,
+legend {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+fieldset {
+  padding: 0;
+  border-width: 0;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  display: inline;
+}
+
+label > .label-body {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-weight: normal;
+}
+
+/* ==========================================================================
+   Basic styling
+   ========================================================================== */
+
+body {
+  font:
+    400 16px/1.5 'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif;
+  color: #111;
+  background-color: #fdfdfd;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-feature-settings: 'kern' 1;
+  -moz-font-feature-settings: 'kern' 1;
+  -o-font-feature-settings: 'kern' 1;
+  font-feature-settings: 'kern' 1;
+  font-kerning: normal;
+}
+
+/* ==========================================================================
+   Vertical rhythm
+   ========================================================================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote,
+pre,
+ul,
+ol,
+dl,
+figure {
+  margin-bottom: 15px;
+}
+
+/* ==========================================================================
+   Images
+   ========================================================================== */
+
+img {
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+figure > img {
+  display: block;
+}
+
+figcaption {
+  font-size: 14px;
+}
+
+/* ==========================================================================
+   Lists
+   ========================================================================== */
+
+ul,
+ol {
+  margin-left: 30px;
+}
+
+li > ul,
+li > ol {
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Headings
+   ========================================================================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 400;
+}
+
+/* ==========================================================================
+   Links
+   ========================================================================== */
+
+a {
+  color: #2a7ae2;
+  text-decoration: none;
+}
+
+a:visited {
+  color: #1556a8;
+}
+
+a:hover {
+  color: #111;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Blockquotes
+   ========================================================================== */
+
+blockquote {
+  color: #828282;
+  border-left: 4px solid #e8e8e8;
+  padding-left: 15px;
+  font-size: 18px;
+  letter-spacing: -1px;
+  font-style: italic;
+}
+
+blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Code formatting
+   ========================================================================== */
+
+pre,
+code {
+  font-size: 15px;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+  background-color: #eef;
+}
+
+code {
+  padding: 1px 5px;
+}
+
+pre {
+  padding: 8px 12px;
+  overflow-x: auto;
+}
+
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+/* ==========================================================================
+   Wrapper
+   ========================================================================== */
+
+.wrapper {
+  max-width: calc(800px - 60px);
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 30px;
+  padding-left: 30px;
+}
+
+.wrapper::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+@media screen and (max-width: 800px) {
+  .wrapper {
+    max-width: calc(800px - 30px);
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+}
+
+/* ==========================================================================
+   Icons
+   ========================================================================== */
+
+.icon > svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ==========================================================================
+   Custom additions (from main minima.scss)
+   ========================================================================== */
+
+#nav-trigger {
+  display: none;
+}
+
+.floatRight {
+  float: right;
+}
+
+/* ==========================================================================
+   Site header
+   ========================================================================== */
+
+.site-header {
+  border-top: 5px solid #424242;
+  border-bottom: 1px solid #e8e8e8;
+  min-height: 56px;
+  position: relative;
+}
+
+.site-title {
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 56px;
+  letter-spacing: -1px;
+  margin-bottom: 0;
+  float: left;
+}
+
+.site-title,
+.site-title:visited {
+  color: #424242;
+}
+
+.site-nav {
+  float: right;
+  line-height: 56px;
+}
+
+.site-nav .menu-icon {
+  display: none;
+}
+
+.site-nav .page-link {
+  color: #111;
+  line-height: 1.5;
+}
+
+.site-nav .page-link:not(:last-child) {
+  margin-right: 20px;
+}
+
+@media screen and (max-width: 600px) {
+  .site-nav {
+    position: absolute;
+    top: 9px;
+    right: 15px;
+    background-color: #fdfdfd;
+    border: 1px solid #e8e8e8;
+    border-radius: 5px;
+    text-align: right;
+  }
+
+  .site-nav .menu-icon {
+    display: block;
+    float: right;
+    width: 36px;
+    height: 26px;
+    line-height: 0;
+    padding-top: 10px;
+    text-align: center;
+  }
+
+  .site-nav .menu-icon > svg {
+    width: 18px;
+    height: 15px;
+  }
+
+  .site-nav .menu-icon > svg path {
+    fill: #424242;
+  }
+
+  .site-nav .trigger {
+    clear: both;
+    display: none;
+  }
+
+  .site-nav:hover .trigger {
+    display: block;
+    padding-bottom: 5px;
+  }
+
+  .site-nav .page-link {
+    display: block;
+    padding: 5px 10px;
+    margin-left: 20px;
+  }
+
+  .site-nav .page-link:not(:last-child) {
+    margin-right: 0;
+  }
+}
+
+/* ==========================================================================
+   Site footer
+   ========================================================================== */
+
+.site-footer {
+  border-top: 1px solid #e8e8e8;
+  padding: 30px 0;
+}
+
+.footer-heading {
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.contact-list,
+.social-media-list {
+  list-style: none;
+  margin-left: 0;
+}
+
+.footer-col-wrapper {
+  font-size: 15px;
+  color: #828282;
+  margin-left: -15px;
+}
+
+.footer-col-wrapper::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.footer-col {
+  float: left;
+  margin-bottom: 15px;
+  padding-left: 15px;
+}
+
+.footer-col-1 {
+  width: calc(35% - 15px);
+}
+
+.footer-col-2 {
+  width: calc(20% - 15px);
+}
+
+.footer-col-3 {
+  width: calc(45% - 15px);
+}
+
+@media screen and (max-width: 800px) {
+  .footer-col-1,
+  .footer-col-2 {
+    width: calc(50% - 15px);
+  }
+
+  .footer-col-3 {
+    width: calc(100% - 15px);
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .footer-col {
+    float: none;
+    width: calc(100% - 15px);
+  }
+}
+
+/* ==========================================================================
+   Page content
+   ========================================================================== */
+
+.page-content {
+  padding: 30px 0;
+}
+
+.page-heading {
+  font-size: 20px;
+}
+
+.post-list {
+  margin-left: 0;
+  list-style: none;
+}
+
+.post-list > li {
+  margin-bottom: 30px;
+}
+
+.post-meta {
+  font-size: 14px;
+  color: #828282;
+}
+
+.post-link {
+  display: block;
+  font-size: 24px;
+}
+
+/* ==========================================================================
+   Posts
+   ========================================================================== */
+
+.post-header {
+  margin-bottom: 30px;
+}
+
+.post-title {
+  font-size: 30px;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+@media screen and (max-width: 800px) {
+  .post-title {
+    font-size: 36px;
+  }
+}
+
+.post-content {
+  margin-bottom: 30px;
+}
+
+.post-content h2 {
+  font-size: 32px;
+}
+
+@media screen and (max-width: 800px) {
+  .post-content h2 {
+    font-size: 28px;
+  }
+}
+
+.post-content h3 {
+  font-size: 26px;
+}
+
+@media screen and (max-width: 800px) {
+  .post-content h3 {
+    font-size: 22px;
+  }
+}
+
+.post-content h4 {
+  font-size: 20px;
+}
+
+@media screen and (max-width: 800px) {
+  .post-content h4 {
+    font-size: 18px;
+  }
+}
+
+/* ==========================================================================
+   Page navigation (prev/next)
+   ========================================================================== */
+
+.PageNavigation {
+  font-size: 14px;
+  display: block;
+  width: auto;
+  overflow: hidden;
+}
+
+.PageNavigation a {
+  display: block;
+  width: 50%;
+  float: left;
+  margin: 1em 0;
+}
+
+.PageNavigation .next {
+  float: left;
+  text-align: left;
+}
+
+.PageNavigation .prev {
+  float: right;
+  text-align: right;
+}
+
+/* ==========================================================================
+   Home page (post listing)
+   ========================================================================== */
+
+.home .posts-list {
+  margin-left: 0;
+}
+
+.post-preview {
+  margin-bottom: 15px;
+}
+
+.post-preview .post-title {
+  font-size: 24px;
+  margin-bottom: 0;
+}
+
+.post-preview .post-subtitle {
+  font-size: 18px;
+  font-weight: 300;
+  margin-bottom: 5px;
+}
+
+.post-preview .post-meta {
+  margin-bottom: 5px;
+}
+
+.post-entry {
+  margin-top: 5px;
+}
+
+.post-read-more {
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Syntax highlighting
+   ========================================================================== */
+
+.highlight {
+  background: #fff;
+  margin-bottom: 15px;
+}
+
+.highlighter-rouge .highlight {
+  background: #eef;
+}
+
+.highlight .c {
+  color: #998;
+  font-style: italic;
+}
+.highlight .err {
+  color: #a61717;
+  background-color: #e3d2d2;
+}
+.highlight .k {
+  font-weight: bold;
+}
+.highlight .o {
+  font-weight: bold;
+}
+.highlight .cm {
+  color: #998;
+  font-style: italic;
+}
+.highlight .cp {
+  color: #999;
+  font-weight: bold;
+}
+.highlight .c1 {
+  color: #998;
+  font-style: italic;
+}
+.highlight .cs {
+  color: #999;
+  font-weight: bold;
+  font-style: italic;
+}
+.highlight .gd {
+  color: #000;
+  background-color: #fdd;
+}
+.highlight .gd .x {
+  color: #000;
+  background-color: #faa;
+}
+.highlight .ge {
+  font-style: italic;
+}
+.highlight .gr {
+  color: #a00;
+}
+.highlight .gh {
+  color: #999;
+}
+.highlight .gi {
+  color: #000;
+  background-color: #dfd;
+}
+.highlight .gi .x {
+  color: #000;
+  background-color: #afa;
+}
+.highlight .go {
+  color: #888;
+}
+.highlight .gp {
+  color: #555;
+}
+.highlight .gs {
+  font-weight: bold;
+}
+.highlight .gu {
+  color: #aaa;
+}
+.highlight .gt {
+  color: #a00;
+}
+.highlight .kc {
+  font-weight: bold;
+}
+.highlight .kd {
+  font-weight: bold;
+}
+.highlight .kp {
+  font-weight: bold;
+}
+.highlight .kr {
+  font-weight: bold;
+}
+.highlight .kt {
+  color: #458;
+  font-weight: bold;
+}
+.highlight .m {
+  color: #099;
+}
+.highlight .s {
+  color: #d14;
+}
+.highlight .na {
+  color: #008080;
+}
+.highlight .nb {
+  color: #0086b3;
+}
+.highlight .nc {
+  color: #458;
+  font-weight: bold;
+}
+.highlight .no {
+  color: #008080;
+}
+.highlight .ni {
+  color: #800080;
+}
+.highlight .ne {
+  color: #900;
+  font-weight: bold;
+}
+.highlight .nf {
+  color: #900;
+  font-weight: bold;
+}
+.highlight .nn {
+  color: #555;
+}
+.highlight .nt {
+  color: #000080;
+}
+.highlight .nv {
+  color: #008080;
+}
+.highlight .ow {
+  font-weight: bold;
+}
+.highlight .w {
+  color: #bbb;
+}
+.highlight .mf {
+  color: #099;
+}
+.highlight .mh {
+  color: #099;
+}
+.highlight .mi {
+  color: #099;
+}
+.highlight .mo {
+  color: #099;
+}
+.highlight .sb {
+  color: #d14;
+}
+.highlight .sc {
+  color: #d14;
+}
+.highlight .sd {
+  color: #d14;
+}
+.highlight .s2 {
+  color: #d14;
+}
+.highlight .se {
+  color: #d14;
+}
+.highlight .sh {
+  color: #d14;
+}
+.highlight .si {
+  color: #d14;
+}
+.highlight .sx {
+  color: #d14;
+}
+.highlight .sr {
+  color: #009926;
+}
+.highlight .s1 {
+  color: #d14;
+}
+.highlight .ss {
+  color: #990073;
+}
+.highlight .bp {
+  color: #999;
+}
+.highlight .vc {
+  color: #008080;
+}
+.highlight .vg {
+  color: #008080;
+}
+.highlight .vi {
+  color: #008080;
+}
+.highlight .il {
+  color: #099;
+}
