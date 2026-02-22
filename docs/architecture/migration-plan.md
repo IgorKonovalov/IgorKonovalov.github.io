@@ -4,6 +4,30 @@
 
 The current site is a Jekyll 3.3.1 portfolio/blog focused on generative art and algorithmic visualization. It has 13 blog posts with 10 interactive JS demos embedded inline, 3 static pages, ~598MB of virtual panoramic tours, and is deployed to GitHub Pages. Jekyll 3.3.1 is outdated (2016), the Ruby toolchain adds friction, and there's no CI/CD pipeline. The goal is to migrate to a modern framework that preserves all existing content and interactivity while enabling a better developer experience and future growth.
 
+### Current Two-Repo Setup
+
+The site currently uses two separate repositories:
+
+| Repo | Purpose | URL |
+|------|---------|-----|
+| `IgorKonovalov.github.io_source` | Jekyll source code (Markdown, templates, assets) | — |
+| `IgorKonovalov.github.io` | Pre-built static HTML output, served by GitHub Pages | igorkonovalov.github.io |
+
+The workflow is manual: edit source in `_source` repo → run `jekyll build` → copy output to `IgorKonovalov.github.io` → push. GitHub Pages serves `IgorKonovalov.github.io` directly from the `master` branch because `<username>.github.io` repos use branch-based deployment by default.
+
+### Post-Migration: Single Repo
+
+After migration, **only `IgorKonovalov.github.io` is needed.** Astro source code goes directly into this repo, and GitHub Actions builds and deploys automatically — no manual build step, no second repo.
+
+```
+Before (Jekyll):                      After (Astro):
+
+_source repo ──(manual build)──►      IgorKonovalov.github.io
+  .github.io repo ──► GitHub Pages      ├── src/          (Astro source)
+                                         ├── .github/      (CI/CD)
+                                         └── ──► GitHub Actions ──► GitHub Pages
+```
+
 ---
 
 ## 1. Framework: Astro
@@ -81,6 +105,7 @@ The current site is a Jekyll 3.3.1 portfolio/blog focused on generative art and 
 │           │   └── index.ts
 │           └── ...
 ├── public/
+│   ├── CNAME                  # Custom domain for GitHub Pages
 │   ├── favicon.ico
 │   ├── images/                # Blog images (from assets/IMG/)
 │   ├── archive/               # CV (from assets/ARCHIVE/)
@@ -299,6 +324,25 @@ Once the site is fully functional in Astro, build the design system:
 
 ## 7. Build & Deployment Pipeline
 
+### Repo Consolidation Strategy
+
+The migration moves from two repos to one. All Astro source code will live in `IgorKonovalov.github.io` — the repo GitHub Pages is already configured to serve.
+
+**Why this works:** GitHub Pages supports two deployment methods:
+1. **Branch-based** (current) — serves static files from a branch directly
+2. **GitHub Actions** (after migration) — a workflow builds the site and uploads an artifact that Pages serves
+
+By switching to method 2, the repo can contain source code (not build output), and the build happens in CI. No `gh-pages` branch or second repo is needed.
+
+**Steps to switch:**
+1. Develop the Astro site in `IgorKonovalov.github.io_source` (Phases 1–6)
+2. When ready to go live (Phase 7): push Astro source into `IgorKonovalov.github.io`, replacing the old built HTML
+3. In GitHub repo **Settings → Pages → Source**: change from "Deploy from a branch" to **"GitHub Actions"**
+4. Push triggers the workflow below → site deploys automatically
+5. After verifying: archive or delete `IgorKonovalov.github.io_source`
+
+**Custom domain** (`igorkonovalov.github.io`) stays on the same repo — no DNS or CNAME changes needed. Keep the existing `CNAME` file in the repo root (Astro copies it from `public/CNAME`).
+
 ### GitHub Actions Workflow
 
 ```yaml
@@ -343,7 +387,8 @@ jobs:
 
 ### Branch Strategy
 - **main** — source code (rename from master)
-- Deploy via GitHub Actions → GitHub Pages (no gh-pages branch needed with actions/deploy-pages)
+- Deploy via GitHub Actions → GitHub Pages (no `gh-pages` branch needed with `actions/deploy-pages`)
+- The `CNAME` file lives in `public/CNAME` so Astro copies it to `dist/` at build time
 
 ---
 
@@ -381,9 +426,10 @@ This generates `/projects/2017/01/04/Game-of-Life/index.html` which GitHub Pages
 ## 9. Migration Phases
 
 ### Phase 1: Project Scaffold
-- Initialize Astro project with TypeScript
+- Initialize Astro project with TypeScript **in `IgorKonovalov.github.io_source`** (the current working repo — development stays here through Phases 1–6)
 - Set up directory structure
-- Configure `astro.config.mjs` (site URL, output: static)
+- Configure `astro.config.mjs` (site URL: `https://igorkonovalov.github.io`, output: static)
+- Add `public/CNAME` with `igorkonovalov.github.io` (preserved for GitHub Pages custom domain)
 - Port existing Minima CSS into `src/styles/global.css` (direct conversion from SCSS, same look & feel)
 - Create `BaseLayout.astro`, `Header.astro`, `Footer.astro`
 - **Verify:** `yarn dev` shows a styled shell matching the current site
@@ -430,19 +476,29 @@ This generates `/projects/2017/01/04/Game-of-Life/index.html` which GitHub Pages
 - Optimize images (WebP via Astro `<Image>`)
 - **Verify:** All images load, tour links work, CV accessible
 
-### Phase 7: Build Pipeline & Deployment
-- Create GitHub Actions workflow
-- Configure GitHub Pages to deploy from Actions
-- Test full build + deploy cycle
-- Verify all URLs match old site
-- **Verify:** Site live at GitHub Pages URL, all pages/demos/tours working
+### Phase 7: Build Pipeline & Repo Consolidation
+This phase moves the Astro source from the development repo into the live repo and enables automated deployment.
+
+1. **Prepare `IgorKonovalov.github.io` repo:**
+   - Create a fresh branch (e.g., `astro-migration`) in `IgorKonovalov.github.io`
+   - Remove the old Jekyll-built HTML files from the branch
+   - Copy the Astro source code (everything except `.git/`) from `_source` into this branch
+2. **Add GitHub Actions workflow** (`.github/workflows/deploy.yml`)
+3. **Switch GitHub Pages source:**
+   - Go to `IgorKonovalov.github.io` → **Settings → Pages → Source**
+   - Change from "Deploy from a branch" to **"GitHub Actions"**
+4. **Merge and push** the `astro-migration` branch to `main` (rename from `master` if desired)
+5. **Verify deployment:** GitHub Actions runs, builds Astro, deploys to Pages
+6. **Verify all URLs** match the old site (spot-check posts, demos, tours, static pages)
+- **Verify:** Site live at `igorkonovalov.github.io`, all pages/demos/tours working, `CNAME` preserved
 
 ### Phase 8: Cleanup & Polish
-- Remove Jekyll files (Gemfile, _config.yml, _layouts/, _includes/, _sass/, _posts/)
+- Remove Jekyll files from `IgorKonovalov.github.io` (Gemfile, _config.yml, _layouts/, _includes/, _sass/, _posts/) — these were copied during Phase 7 and are no longer needed
 - Update README
 - Add sitemap and RSS feed (Astro has plugins: `@astrojs/sitemap`, `@astrojs/rss`)
 - Remove Google Analytics UA (deprecated) or migrate to GA4
 - Write ADR documenting the migration decision
+- **Archive `IgorKonovalov.github.io_source`:** set repo to archived on GitHub (or delete if no longer needed). All development now happens in `IgorKonovalov.github.io`
 - **Verify:** Clean repo, no dead files, lighthouse audit passes
 
 ### Phase 9: Design System
@@ -471,7 +527,9 @@ This generates `/projects/2017/01/04/Game-of-Life/index.html` which GitHub Pages
 | Migrate | `assets/JS/*` → `src/scripts/demos/*` (minimal changes) |
 | Copy | `assets/FULL/*` → `public/tours/*` |
 | Copy | `assets/IMG/*` → `public/images/*` |
+| Create | `public/CNAME` (custom domain) |
 | Delete (Phase 8) | `Gemfile`, `_config.yml`, `_layouts/`, `_includes/`, `_sass/`, `_posts/` |
+| Archive (Phase 8) | `IgorKonovalov.github.io_source` repo (all dev moves to `.github.io` repo) |
 
 ## Verification
 
