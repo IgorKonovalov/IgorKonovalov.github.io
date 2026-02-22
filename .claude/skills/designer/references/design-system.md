@@ -58,15 +58,15 @@ Design tokens and patterns for the portfolio site. Update this file as design de
 
 ```css
 :root {
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-3: 0.75rem;   /* 12px */
-  --space-4: 1rem;      /* 16px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-8: 2rem;      /* 32px */
-  --space-12: 3rem;     /* 48px */
-  --space-16: 4rem;     /* 64px */
-  --space-24: 6rem;     /* 96px */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
+  --space-24: 6rem; /* 96px */
 
   /* Content width */
   --content-width: 720px;
@@ -77,16 +77,17 @@ Design tokens and patterns for the portfolio site. Update this file as design de
 
 ## Breakpoints
 
-| Name    | Width   | Usage                     |
-|---------|---------|---------------------------|
-| sm      | 640px   | Mobile landscape          |
-| md      | 768px   | Tablet                    |
-| lg      | 1024px  | Desktop                   |
-| xl      | 1280px  | Wide desktop              |
+| Name | Width  | Usage            |
+| ---- | ------ | ---------------- |
+| sm   | 640px  | Mobile landscape |
+| md   | 768px  | Tablet           |
+| lg   | 1024px | Desktop          |
+| xl   | 1280px | Wide desktop     |
 
 ## Component Patterns
 
 ### Project Card
+
 - White background with subtle border
 - Thumbnail/preview at top
 - Title, description, tech tags below
@@ -94,23 +95,27 @@ Design tokens and patterns for the portfolio site. Update this file as design de
 - Aspect ratio: 16:9 for thumbnails
 
 ### Blog Post Preview
+
 - Title as primary element (heading font)
 - Date and tags as muted metadata
 - Optional excerpt (2-3 lines max)
 - No thumbnail unless post has a featured image
 
 ### Navigation
+
 - Horizontal on desktop, minimal items (Home, Projects, Blog, About)
 - Clean underline or weight change for active state
 - Mobile: hamburger menu or collapsible
 
 ### Code Blocks
+
 - Subtle background differentiation from page
 - Rounded corners, comfortable padding
 - Syntax highlighting with muted, readable colors
 - Optional filename label
 
 ### Demo Container
+
 - Full-width option for immersive canvas demos
 - Bordered container for inline demos
 - Responsive: scale canvas to viewport width, maintain aspect ratio

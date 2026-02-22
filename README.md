@@ -47,11 +47,11 @@ assets/
 
 This project includes specialized AI agent skills in `.claude/skills/`:
 
-| Skill | Purpose |
-|-------|---------|
-| `designer` | UI design and visual implementation |
-| `business-analyst` | Feature discovery and requirements |
-| `architect` | Technical architecture and migration planning |
-| `dev` | Code implementation and development |
+| Skill              | Purpose                                       |
+| ------------------ | --------------------------------------------- |
+| `designer`         | UI design and visual implementation           |
+| `business-analyst` | Feature discovery and requirements            |
+| `architect`        | Technical architecture and migration planning |
+| `dev`              | Code implementation and development           |
 
 See [AGENTS.md](AGENTS.md) for detailed agent guidelines.

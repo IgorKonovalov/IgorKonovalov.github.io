@@ -17,8 +17,8 @@ title: Igor Konovalov
 email: konovalov.avp@gmail.com
 description: Russia, Saint Petersburg. Passionate WebDeveloper. Core skills - HTML, CSS, Javascript, Node JS. Personal blog and portfolio.
 
-baseurl: "" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
+baseurl: '' # the subpath of your site, e.g. /blog
+url: '' # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: igor_dlinni
 github_username: IgorKonovalov
 instagram_username: some_strange
@@ -27,7 +27,6 @@ google_analytics: UA-89901015-1
 
 disquss:
   shortname: igorkonovalov-github-io
-
 
 # Build settings
 markdown: kramdown

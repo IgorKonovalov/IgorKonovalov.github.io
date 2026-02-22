@@ -19,21 +19,25 @@ Guide the user from a vague feature idea to a concrete feature spec through stru
 Ask questions in priority order. Skip categories already clear. Use AskUserQuestion with concrete options whenever possible.
 
 ### Round 1: Core Intent
+
 - What problem does this solve? What's missing from the current site?
 - Who is the audience? (potential employers, fellow developers, art enthusiasts, general public?)
 - Show 2-3 concrete usage scenarios and ask "which matches what you're thinking?"
 
 ### Round 2: UX and Placement
+
 - Where does this live? (new page, section on homepage, enhancement to existing page, standalone?)
 - How does a visitor discover this? (navigation link, homepage feature, linked from blog posts?)
 - Walk through a concrete visitor flow step by step and ask user to confirm or correct
 
 ### Round 3: Content and Data
+
 - What content is needed? (existing content to migrate, new content to create?)
 - How is content authored? (markdown files, CMS, hardcoded?)
 - Does this need dynamic data? (API calls, build-time data fetching, client-side interactivity?)
 
 ### Round 4: Scope and Priority
+
 - What's the minimal viable version of this feature?
 - What's explicitly NOT included in v1?
 - How does this rank against other planned features?
