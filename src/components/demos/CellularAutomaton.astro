@@ -1,0 +1,40 @@
+<div class="demo-container">
+  <canvas id="automata" width="740" height="600" style="background-color: black"
+  ></canvas>
+  <div class="demo-controls">
+    Select rule:
+    <select id="selectRule"></select>
+    Select first row:
+    <select id="selectFirstRow"></select>
+    <button id="clear">Clear</button>
+    <button id="startPause" class="button-primary">Start</button>
+    <br /><br />
+    Select cell color:
+    <input type="color" id="cellColor" value="#ffffff" />
+    Select canvas color:
+    <input type="color" id="canvasColor" />
+    Psychedelic mode:
+    <input type="checkbox" id="psychedelic" value="on" />ON
+  </div>
+</div>
+
+<style>
+  .demo-controls button {
+    float: right;
+    margin-left: 3px;
+    font-size: 14px;
+  }
+  canvas {
+    margin-bottom: 10px;
+  }
+  select {
+    min-width: 120px;
+  }
+  #selectFirstRow {
+    margin-right: 5px;
+  }
+</style>
+
+<script>
+  import '../../scripts/demos/cellular-automaton.js';
+</script>
