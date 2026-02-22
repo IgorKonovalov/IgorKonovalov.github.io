@@ -37,7 +37,7 @@ const years = [...postsByYear.keys()].sort((a, b) => b - a);
                   })}{' '}
                   &middot;{' '}
                   <a
-                    href={`/${post.data.tags?.[0] || 'personal'}/${post.data.date.getFullYear()}/${String(post.data.date.getMonth() + 1).padStart(2, '0')}/${String(post.data.date.getDate()).padStart(2, '0')}/${post.id}/`}
+                    href={`/${post.data.tags?.[0] || 'personal'}/${post.data.date.getFullYear()}/${String(post.data.date.getMonth() + 1).padStart(2, '0')}/${String(post.data.date.getDate()).padStart(2, '0')}/${post.id.replace(/^\d{4}-\d{2}-\d{2}-/, '')}/`}
                   >
                     {post.data.title}
                   </a>
@@ -47,11 +47,7 @@ const years = [...postsByYear.keys()].sort((a, b) => b - a);
           </>
         ))
       }
-      {
-        years.length === 0 && (
-          <p>No posts yet. Posts will appear here after Phase 3 migration.</p>
-        )
-      }
+      {years.length === 0 && <p>No posts yet.</p>}
     </div>
   </article>
 </BaseLayout>

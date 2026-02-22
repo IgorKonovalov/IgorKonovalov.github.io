@@ -1,0 +1,15 @@
+---
+title: 'Phyllotaxis'
+date: 2017-04-12
+tags: ['projects']
+description: 'Phyllotaxis pattern recreation on canvas'
+demo: 'phyllotaxis'
+---
+
+As in [wikipedia](https://en.wikipedia.org/wiki/Phyllotaxis), Phyllotaxis or phyllotaxy is the arrangement of leaves on a plant stem (from Ancient Greek phýllon "leaf" and táxis "arrangement"). Phyllotactic spirals form a distinctive class of patterns in nature.
+
+Below is my attempt to recreate something similar on canvas:
+
+<!-- Demo: Phyllotaxis (will be added in Phase 4) -->
+
+[Source code](https://github.com/IgorKonovalov/Little_projects/tree/master/Phyllotaxis)

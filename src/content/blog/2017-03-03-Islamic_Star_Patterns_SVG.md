@@ -1,0 +1,31 @@
+---
+title: 'Islamic Star Patterns in SVG'
+date: 2017-03-08
+tags: ['projects']
+description: 'Islamic star patterns implemented in vanilla JavaScript and SVG'
+demo: 'islamic-star-patterns'
+---
+
+This is a little project I made under influence of another David Shiffman's [video](https://www.youtube.com/watch?v=sJ6pMLp_IaI). The implementation I found rather intriguing and interesting to redo in SVG. Here is my attempt - I've used a code in [Coding Train](https://github.com/CodingTrain) repo for [Islamic Star Patterns](https://github.com/CodingTrain/StarPatterns) and completely rewrite it for vanilla Javascript and rendering in SVG. This project really helped me to understand OOP paradigm in JS, and helped a lot in the next project (You'll see it very soon), and to understand how SVG animation working.
+
+If you have any suggestions - please write me on [twitter](https://twitter.com/igor_dlinni). All code is available on my [Github](https://github.com/IgorKonovalov/Islamic_Star_Patterns_SVG) - this time I decided that this project is big enough for separate repository - feel free to make issue/PR/fork/etc.. There is a lot improve - another objects (triangles, etc), customization through CSS and so on.
+
+Interesting part of this project is implementing standard P5.JS Vector objects - The best way to understand something for me is rewriting it. I needed a lot of vector methods for making this thing work. Here is rotating function, for example:
+
+```javascript
+Vector.prototype.rotate = function (angle) {
+  x =
+    Math.round(10000 * (this.x * Math.cos(angle) - this.y * Math.sin(angle))) /
+    10000;
+  y =
+    Math.round(10000 * (this.x * Math.sin(angle) + this.y * Math.cos(angle))) /
+    10000;
+  return new Vector(x, y);
+};
+```
+
+And many more - take a look at [repository](https://github.com/IgorKonovalov/Islamic_Star_Patterns_SVG)
+
+So enjoy, experiment and share your thoughts!
+
+<!-- Demo: Islamic Star Patterns in SVG (will be added in Phase 5) -->
