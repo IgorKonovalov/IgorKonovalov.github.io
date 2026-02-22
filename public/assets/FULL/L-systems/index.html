@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=0.8">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>L-systems generator</title>
+  <meta name="description" content="L-System based fractals generator. Choose from one of pre-defined shape and convert it to your own. Prototype version, not suitable for mobile.">   
+  <link rel="stylesheet" href="./src/main.css">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+</head>
+
+<body>
+  <div class="wrapper">
+    <button id="openControls">Controls</button>
+    <div class="controls">
+      <h1 id="name"></h1>
+      <div class="controlsWrapper">
+          <div class="polish">
+          <div class="columnP">
+            <span>Axiom: </span>
+            <input id="axiom" type="text">
+          </div>
+          <div class="columnP">
+            <span>Angle (rad):</span>
+            <input id="angle" type="text">
+            <span id="toDeg"></span>
+          </div>          
+        </div>
+          <span>Rules: </span>
+          <textarea rows="6" id="rules"></textarea>
+          <div class="polish">
+          <div class="columnP">
+            X: <input type="text" id="X"> Iterations: <input type="text" id="iterations" maxlength="10"> Step Length:
+            <input type="text" id="stepLength">
+          </div>
+          <div class="columnP">
+            Y: <input type="text" id="Y"> Initial Angle (rad): <input type="text" id="initialAngle">
+          </div>
+          </div>
+          <span id="warning"></span>
+          <div class="contentStyle">
+          <span>Canvas color: </span>
+          <input type="color" name="" id="canvasColor" value="#ffffff">
+          <span>Colorize shape?</span>
+          <input type="checkbox" class="colorizeInput" id="colorizeShape">
+          </div>
+        </div>
+      </div>
+    <div class="canvasWrapper">
+      <canvas id="canvas" width="900px"></canvas>
+      <span id="stats"></span>
+      <a id="download" href="#" download="image.png">Download Shape</a>
+    </div>
+    <div class="imageList"></div>
+    <script src="./src/shapes.js"></script>
+    <script src="./src/controls.js"></script>
+    <script src="./src/index.js"></script>
+  </div>
+</body>
+
+</html>
