@@ -1,0 +1,95 @@
+---
+
+---
+
+<div class="demo-container">
+  <canvas id="rose" width="600" height="600" style="background-color: black"
+  ></canvas>
+  <br />
+  <div class="controls-row">
+    Select n: <input type="text" value="20" id="n" />
+    Select d: <input type="text" value="2" id="d" />
+    Select maurer: <input type="text" value="71" id="maurer" />
+    <button id="generate" class="button-primary">Generate</button>
+  </div>
+  <p>
+    <input type="checkbox" id="showRose" checked /> Show rose
+    <input type="checkbox" id="showMaurer" checked /> Show Maurer lines
+  </p>
+  <div class="flex-container">
+    <div class="spans">
+      <span>Select n: </span>
+      <span>Select d: </span>
+      <span>Select maurer: </span>
+    </div>
+    <div class="inputs">
+      <input type="range" id="rangeN" value="20" min="0" max="20" step="0.1" />
+      <input type="range" id="rangeD" value="2" min="0" max="30" step="0.1" />
+      <input
+        type="range"
+        id="rangeMaurer"
+        value="71"
+        min="0"
+        max="360"
+        step="1"
+      />
+    </div>
+    <div class="spans-value">
+      <span id="rangeNValue"></span>
+      <span id="rangeDValue"></span>
+      <span id="rangeMaurerValue"></span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .demo-container {
+    max-width: 740px;
+    margin: 1.5rem 0;
+  }
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+  .controls-row {
+    margin: 0.5rem 0;
+  }
+  .controls-row input[type='text'] {
+    width: 50px;
+  }
+  .controls-row button {
+    margin-top: -3px;
+    margin-left: 10px;
+  }
+  .flex-container {
+    max-width: 740px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .spans,
+  .inputs,
+  .spans-value {
+    display: flex;
+    flex-direction: column;
+  }
+  .spans-value {
+    min-width: 10%;
+  }
+  .inputs {
+    min-width: 70%;
+  }
+  input[type='range'] {
+    width: 100%;
+  }
+  @media screen and (max-width: 600px) {
+    canvas {
+      width: 340px;
+    }
+  }
+</style>
+
+<script>
+  import '../../scripts/demos/maurer-rose.js';
+</script>

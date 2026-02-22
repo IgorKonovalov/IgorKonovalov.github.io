@@ -1,0 +1,34 @@
+---
+
+---
+
+<div class="demo-container">
+  <span>Number of petals: <input type="text" value="3" id="walker-n" /></span>
+  <button id="walker-start">START</button>
+  <br />
+  <canvas
+    id="walker-canvas"
+    width="740"
+    height="740"
+    style="background-color: black"></canvas>
+</div>
+
+<style>
+  .demo-container {
+    max-width: 740px;
+    margin: 1.5rem 0;
+  }
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+  @media screen and (max-width: 600px) {
+    canvas {
+      width: 340px;
+    }
+  }
+</style>
+
+<script>
+  import '../../scripts/demos/maurer-rose-walker.js';
+</script>

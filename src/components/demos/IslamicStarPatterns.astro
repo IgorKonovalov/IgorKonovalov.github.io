@@ -1,0 +1,95 @@
+---
+
+---
+
+<div class="demo-container">
+  <div class="controls-container">
+    <div class="controls">
+      <span>DELTA: </span><input
+        type="range"
+        id="delta"
+        value="10"
+        min="0"
+        max="50"
+        step="1"
+      />
+      <span>ANGLE: </span><input
+        type="range"
+        id="angle"
+        value="30"
+        min="0"
+        max="90"
+        step="1"
+      />
+    </div>
+    <div class="controls">
+      <span>deltainc: </span><input
+        type="range"
+        id="deltaInc"
+        value="0"
+        min="-0.5"
+        max="0.5"
+        step="0.01"
+      />
+      <span>angleinc: </span><input
+        type="range"
+        id="angleInc"
+        value="0"
+        min="-1"
+        max="1"
+        step="0.01"
+      />
+    </div>
+  </div>
+  <br />
+  <div id="svgContainer"></div>
+  <select id="tiling">
+    <option value="square">Square</option>
+    <option value="hex">Hexagon</option>
+  </select>
+</div>
+
+<style>
+  .demo-container {
+    max-width: 740px;
+    margin: 1.5rem 0;
+  }
+  .controls-container {
+    display: flex;
+    flex-direction: column;
+    width: 700px;
+    max-width: 100%;
+  }
+  .controls {
+    display: flex;
+    justify-content: space-between;
+  }
+  .controls span {
+    width: 170px;
+    display: flex;
+  }
+  .controls input {
+    width: 100%;
+    margin-right: 5px;
+  }
+  .tile :global(polygon) {
+    pointer-events: visiblePainted;
+    fill: hsla(279, 100%, 5%, 1);
+    stroke: hsla(0, 100%, 100%, 1);
+    stroke-width: 0.3;
+  }
+  .tile :global(line) {
+    stroke: hsla(0, 100%, 100%, 1);
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 0;
+  }
+  #svgContainer :global(svg) {
+    max-width: 100%;
+    height: auto;
+  }
+</style>
+
+<script>
+  import '../../scripts/demos/islamic-star-patterns.js';
+</script>

@@ -1,0 +1,68 @@
+---
+
+---
+
+<div class="demo-container">
+  <div class="controls">
+    Set SVG width:
+    <input type="text" id="svgWidth" value="740" />
+    Set SVG height:
+    <input type="text" id="svgHeight" value="340" />
+    <br />
+    Set number of lines (multiply by number of edges):
+    <input type="text" id="lines" value="1" />
+    <br />
+    Set figure background color:
+    <input type="color" id="bgColor" value="#EDEDED" />
+    Set line color:
+    <input type="color" id="lineColor" value="#101010" />
+    <br />
+    Figure:
+    <select id="figure_select">
+      <option value="HEX">Hex</option>
+      <option value="Triangle">Triangle</option>
+      <option value="Square">Square</option>
+    </select>
+    Add size (from center to corner):
+    <input type="text" id="sizeValue" value="60" />
+    Offset:
+    <input type="text" id="offsetValue" value="5" />
+    <br />
+    <button type="button" class="button-primary" id="generate"
+      >Generate Sprite</button
+    >
+  </div>
+  <div id="Figure"></div>
+  <button id="download">Download SVG</button>
+</div>
+
+<style>
+  .demo-container {
+    max-width: 740px;
+    margin: 1.5rem 0;
+  }
+  .controls input[type='text'] {
+    width: 60px;
+  }
+  .tile polygon {
+    pointer-events: visiblePainted;
+    stroke-width: 1.5;
+  }
+  .tile line {
+    stroke-width: 1.5;
+  }
+  .displaynone {
+    display: none;
+  }
+  #Figure {
+    margin: 1rem 0;
+  }
+  #Figure :global(svg) {
+    max-width: 100%;
+    height: auto;
+  }
+</style>
+
+<script>
+  import '../../scripts/demos/random-lines-in-shape.js';
+</script>
