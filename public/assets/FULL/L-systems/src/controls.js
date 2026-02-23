@@ -42,6 +42,8 @@ shapesNamesList.forEach((element, i) => {
   image.setAttribute('src', `src/img/${id}.png`)
   image.setAttribute('class', 'shapePreview')
   image.setAttribute('data-id', id)
+  image.setAttribute('alt', element)
+  image.setAttribute('title', element)
   imageContainer.appendChild(image)
 })
 
@@ -74,7 +76,7 @@ controls.forEach(control =>
       warning.innerHTML = 'too many iterations, please use < 10'
       return
     } else if (stepLength.value == '') {
-      warning.innerHTML = 'pleace provide step value'
+      warning.innerHTML = 'please provide step value'
       return
     }
     warning.innerHTML = ''
@@ -99,8 +101,11 @@ controls.forEach(control =>
   })
 )
 
+// ── Mouse drag ───────────────────────────────────────────────────────
+
 let draggin = false
 const mouseCoord = {}
+
 canvas.addEventListener('mousedown', e => {
   draggin = true
   canvas.style.cursor = 'move'
@@ -109,31 +114,21 @@ canvas.addEventListener('mousedown', e => {
     y: e.offsetY
   })
 })
+
 canvas.addEventListener('mouseup', e => {
   draggin = false
   canvas.style.cursor = 'grab'
-  tempObject.center = {
-    x: Number(tempObject.center.x - (mouseCoord.x - e.offsetX)),
-    y: Number(tempObject.center.y - (mouseCoord.y - e.offsetY))
+  if (tempObject) {
+    tempObject.center = {
+      x: Number(tempObject.center.x - (mouseCoord.x - e.offsetX)),
+      y: Number(tempObject.center.y - (mouseCoord.y - e.offsetY))
+    }
   }
-  Object.assign(mouseCoord, {
-    x: 0,
-    y: 0
-  })
-})
-
-canvas.addEventListener('wheel', e => {
-  if (e.deltaY > 0) {
-    tempObject.stepLength = Number(tempObject.stepLength) + 0.1
-    draw(tempObject, state)
-  } else {
-    tempObject.stepLength = Number(tempObject.stepLength) - 0.1
-    draw(tempObject, state)
-  }
+  Object.assign(mouseCoord, { x: 0, y: 0 })
 })
 
 canvas.addEventListener('mousemove', e => {
-  if (draggin) {
+  if (draggin && tempObject) {
     draw(tempObject, state, {
       x: mouseCoord.x - e.offsetX,
       y: mouseCoord.y - e.offsetY
@@ -143,6 +138,90 @@ canvas.addEventListener('mousemove', e => {
   }
 })
 
+// ── Touch drag ───────────────────────────────────────────────────────
+
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    draggin = true
+    const rect = canvas.getBoundingClientRect()
+    Object.assign(mouseCoord, {
+      x: e.touches[0].clientX - rect.left,
+      y: e.touches[0].clientY - rect.top
+    })
+    e.preventDefault()
+  }
+}, { passive: false })
+
+canvas.addEventListener('touchend', e => {
+  if (!draggin) return
+  draggin = false
+  if (tempObject && e.changedTouches.length > 0) {
+    const rect = canvas.getBoundingClientRect()
+    const endX = e.changedTouches[0].clientX - rect.left
+    const endY = e.changedTouches[0].clientY - rect.top
+    tempObject.center = {
+      x: Number(tempObject.center.x - (mouseCoord.x - endX)),
+      y: Number(tempObject.center.y - (mouseCoord.y - endY))
+    }
+  }
+  Object.assign(mouseCoord, { x: 0, y: 0 })
+})
+
+canvas.addEventListener('touchmove', e => {
+  if (draggin && tempObject && e.touches.length === 1) {
+    const rect = canvas.getBoundingClientRect()
+    const touchX = e.touches[0].clientX - rect.left
+    const touchY = e.touches[0].clientY - rect.top
+    draw(tempObject, state, {
+      x: mouseCoord.x - touchX,
+      y: mouseCoord.y - touchY
+    })
+    centerX.value = tempObject.center.x - (mouseCoord.x - touchX)
+    centerY.value = tempObject.center.y - (mouseCoord.y - touchY)
+    e.preventDefault()
+  }
+}, { passive: false })
+
+// ── Zoom (wheel + pinch) ─────────────────────────────────────────────
+
+canvas.addEventListener('wheel', e => {
+  if (!tempObject) return
+  e.preventDefault()
+  if (e.deltaY > 0) {
+    tempObject.stepLength = Number(tempObject.stepLength) + 0.1
+  } else {
+    tempObject.stepLength = Math.max(0.1, Number(tempObject.stepLength) - 0.1)
+  }
+  draw(tempObject, state)
+}, { passive: false })
+
+// Pinch-to-zoom on touch
+let lastPinchDist = 0
+
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX
+    const dy = e.touches[0].clientY - e.touches[1].clientY
+    lastPinchDist = Math.sqrt(dx * dx + dy * dy)
+    e.preventDefault()
+  }
+}, { passive: false })
+
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 2 && tempObject) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX
+    const dy = e.touches[0].clientY - e.touches[1].clientY
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const delta = dist - lastPinchDist
+    tempObject.stepLength = Math.max(0.1, Number(tempObject.stepLength) + delta * 0.02)
+    lastPinchDist = dist
+    draw(tempObject, state)
+    e.preventDefault()
+  }
+}, { passive: false })
+
+// ── Download ─────────────────────────────────────────────────────────
+
 download.addEventListener('click', () => {
   const image = canvas
     .toDataURL('image/png')
@@ -150,18 +229,22 @@ download.addEventListener('click', () => {
   download.setAttribute('href', image)
 })
 
+// ── Toggle controls panel ────────────────────────────────────────────
+
 openControls.addEventListener('click', () => {
   document
     .getElementsByClassName('controls')[0]
     .classList.toggle('showControls')
 })
 
+// ── Keyboard navigation ──────────────────────────────────────────────
+
 document.addEventListener('keypress', e => {
   if (e.keyCode === 38) {
     previewsArr.forEach(preview => {
       if (preview.classList.contains('active') && preview.previousSibling) {
         preview.classList.remove('active')
-        preview.previousSibling.scrollIntoView()        
+        preview.previousSibling.scrollIntoView()
         preview.previousSibling.classList.add('active')
         drawFromPreview(preview.previousSibling, state)
       }

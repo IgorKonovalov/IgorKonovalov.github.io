@@ -1,0 +1,309 @@
+---
+
+---
+
+<div class="mra-demo">
+  <div class="mra-canvas-wrap">
+    <canvas id="mra-canvas"></canvas>
+  </div>
+
+  <div class="mra-actions">
+    <button id="mra-play-pause">Play</button>
+    <button id="mra-randomize">Randomize</button>
+    <button id="mra-save">Save PNG</button>
+    <button id="mra-save-gif">Save GIF</button>
+    <button id="mra-reset-view">Reset View</button>
+    <button id="mra-fullscreen">Fullscreen</button>
+  </div>
+
+  <div class="mra-gif-progress" id="mra-gif-progress" hidden>
+    <span id="mra-gif-progress-text">Encoding GIF...</span>
+    <progress id="mra-gif-progress-bar" max="100" value="0"></progress>
+  </div>
+
+  <button
+    id="mra-toggle-controls"
+    class="mra-toggle-controls"
+    title="Toggle controls"
+  >
+    <svg
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path d="M4 6l4 4 4-4"></path>
+    </svg>
+  </button>
+
+  <div class="mra-controls">
+    <div class="mra-slider-row">
+      <label for="mra-n">n</label>
+      <input type="range" id="mra-n" min="0" max="20" step="0.01" value="2" />
+      <span id="mra-n-val" class="mra-val">2.00</span>
+    </div>
+    <div class="mra-slider-row">
+      <label for="mra-d">d</label>
+      <input type="range" id="mra-d" min="0" max="30" step="0.01" value="20" />
+      <span id="mra-d-val" class="mra-val">20.00</span>
+    </div>
+    <div class="mra-slider-row">
+      <label for="mra-maurer">maurer</label>
+      <input
+        type="range"
+        id="mra-maurer"
+        min="0"
+        max="360"
+        step="1"
+        value="71"
+      />
+      <span id="mra-maurer-val" class="mra-val">71</span>
+    </div>
+    <div class="mra-slider-row">
+      <label for="mra-size">size</label>
+      <input
+        type="range"
+        id="mra-size"
+        min="10"
+        max="500"
+        step="5"
+        value="250"
+      />
+      <span id="mra-size-val" class="mra-val">250</span>
+    </div>
+    <div class="mra-slider-row">
+      <label for="mra-rotate">rotate</label>
+      <input
+        type="range"
+        id="mra-rotate"
+        min="0"
+        max="6.3"
+        step="0.01"
+        value="0"
+      />
+      <span id="mra-rotate-val" class="mra-val">0.00</span>
+    </div>
+    <div class="mra-slider-row">
+      <label for="mra-gg">offset</label>
+      <input type="range" id="mra-gg" min="0" max="500" step="1" value="0" />
+      <span id="mra-gg-val" class="mra-val">0</span>
+    </div>
+
+    <div class="mra-checkboxes">
+      <label
+        ><input type="checkbox" id="mra-draw-maurer" checked /> Maurer lines</label
+      >
+      <label><input type="checkbox" id="mra-colorize" /> Colorize</label>
+      <label><input type="checkbox" id="mra-draw-rose" /> Rose curve</label>
+    </div>
+  </div>
+</div>
+
+<style>
+  .mra-demo {
+    max-width: var(--content-width);
+    margin: 1.5rem 0;
+  }
+
+  .mra-canvas-wrap {
+    width: 100%;
+    background: #000;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+
+  .mra-canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .mra-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .mra-gif-progress[hidden] {
+    display: none;
+  }
+
+  .mra-gif-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary, #666);
+  }
+
+  .mra-gif-progress progress {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+  }
+
+  .mra-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .mra-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mra-slider-row label {
+    min-width: 55px;
+    text-align: right;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .mra-slider-row input[type='range'] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mra-val {
+    min-width: 50px;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .mra-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .mra-checkboxes label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+  }
+
+  @media screen and (max-width: 640px) {
+    .mra-slider-row label {
+      min-width: 45px;
+      font-size: 0.8rem;
+    }
+
+    .mra-val {
+      min-width: 40px;
+      font-size: 0.8rem;
+    }
+  }
+
+  /* Toggle chevron – hidden outside fullscreen */
+  .mra-toggle-controls {
+    display: none;
+  }
+
+  /* Fullscreen */
+  .mra-demo:fullscreen {
+    max-width: none;
+    margin: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mra-demo:fullscreen .mra-canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    margin-bottom: 0;
+  }
+
+  .mra-demo:fullscreen .mra-actions {
+    justify-content: center;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .mra-demo:fullscreen .mra-actions button {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .mra-demo:fullscreen .mra-controls {
+    color: #fff;
+    max-height: 40vh;
+    overflow: hidden;
+    padding: 0.5rem;
+    transition:
+      max-height 0.3s ease,
+      opacity 0.3s ease,
+      padding 0.3s ease;
+  }
+
+  .mra-demo:fullscreen .mra-slider-row label,
+  .mra-demo:fullscreen .mra-checkboxes label {
+    color: #fff;
+  }
+
+  .mra-demo:fullscreen .mra-val {
+    color: #ccc;
+  }
+
+  .mra-demo:fullscreen .mra-gif-progress {
+    color: #ccc;
+    justify-content: center;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .mra-demo:fullscreen .mra-toggle-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-end;
+    width: 28px;
+    height: 18px;
+    margin-right: 0.5rem;
+    padding: 0;
+    border: none;
+    border-radius: 4px 4px 0 0;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ccc;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .mra-demo:fullscreen .mra-toggle-controls:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+  }
+
+  .mra-demo:fullscreen .mra-toggle-controls svg {
+    transition: transform 0.3s ease;
+  }
+
+  .mra-demo:fullscreen.mra-controls-hidden .mra-toggle-controls svg {
+    transform: rotate(180deg);
+  }
+
+  .mra-demo:fullscreen.mra-controls-hidden .mra-controls {
+    max-height: 0 !important;
+    opacity: 0;
+    padding: 0 0.5rem;
+  }
+</style>
+
+<script>
+  import '../../scripts/demos/maurer-rose-advanced.js';
+</script>

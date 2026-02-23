@@ -1,0 +1,296 @@
+---
+
+---
+
+<div class="lsys-demo">
+  <h3 id="lsys-name">L-Systems Generator</h3>
+  <span id="lsys-stats" class="lsys-stats"></span>
+
+  <div class="lsys-canvas-wrap">
+    <canvas id="lsys-canvas"></canvas>
+    <div class="lsys-zoom-controls">
+      <button id="lsys-zoom-in" title="Zoom in">+</button>
+      <button id="lsys-zoom-out" title="Zoom out">&minus;</button>
+      <button id="lsys-fullscreen" title="Fullscreen">
+        <svg
+          viewBox="0 0 16 16"
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M1 6V1h5M10 1h5v5M15 10v5h-5M6 15H1v-5"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="lsys-presets" class="lsys-presets"></div>
+
+  <details class="lsys-controls-panel">
+    <summary>Controls</summary>
+    <div class="lsys-controls">
+      <div class="lsys-row">
+        <label>Axiom: <input type="text" id="lsys-axiom" /></label>
+        <label
+          >Angle (rad): <input type="text" id="lsys-angle" />
+          <span id="lsys-angle-deg"></span></label
+        >
+      </div>
+      <div class="lsys-row">
+        <label class="lsys-rules-label"
+          >Rules:
+          <textarea rows="4" id="lsys-rules"></textarea>
+        </label>
+      </div>
+      <div class="lsys-row">
+        <label>X: <input type="text" id="lsys-x" /></label>
+        <label>Y: <input type="text" id="lsys-y" /></label>
+        <label>Iterations: <input type="text" id="lsys-iterations" /></label>
+        <label>Step: <input type="text" id="lsys-step" /></label>
+        <label>Init Angle: <input type="text" id="lsys-initial-angle" /></label>
+      </div>
+      <div class="lsys-row">
+        <label
+          >Canvas color: <input
+            type="color"
+            id="lsys-canvas-color"
+            value="#ffffff"
+          /></label
+        >
+        <label>Colorize: <input type="checkbox" id="lsys-colorize" /></label>
+      </div>
+      <span id="lsys-warning" class="lsys-warning"></span>
+      <button id="lsys-generate" class="button-primary">Generate</button>
+    </div>
+  </details>
+
+  <a
+    id="lsys-download"
+    href="#"
+    download="l-system.png"
+    class="lsys-download-link">Download PNG</a
+  >
+</div>
+
+<style>
+  .lsys-demo {
+    max-width: var(--content-width);
+    margin: 1.5rem 0;
+  }
+
+  .lsys-demo h3 {
+    margin: 0 0 0.25rem 0;
+  }
+
+  .lsys-stats {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary, #666);
+    margin-bottom: 0.5rem;
+  }
+
+  /* Canvas */
+  .lsys-canvas-wrap {
+    width: 100%;
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+
+  .lsys-canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    cursor: grab;
+  }
+
+  .lsys-zoom-controls {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .lsys-zoom-controls button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border, #ccc);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    user-select: none;
+  }
+
+  .lsys-zoom-controls button:hover {
+    background: rgba(255, 255, 255, 1);
+  }
+
+  .lsys-zoom-controls button:active {
+    background: var(--color-border, #ddd);
+  }
+
+  /* Presets gallery */
+  .lsys-presets {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    margin-bottom: 0.75rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .lsys-presets :global(.lsys-preset) {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    object-fit: cover;
+    transition: border-color 0.15s;
+  }
+
+  .lsys-presets :global(.lsys-preset:hover) {
+    border-color: var(--color-primary, #4a9eff);
+  }
+
+  .lsys-presets :global(.lsys-preset.active) {
+    border-color: var(--color-primary, #4a9eff);
+    box-shadow: 0 0 0 1px var(--color-primary, #4a9eff);
+  }
+
+  /* Controls panel */
+  .lsys-controls-panel {
+    margin-bottom: 0.75rem;
+  }
+
+  .lsys-controls-panel summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.5rem 0;
+    user-select: none;
+  }
+
+  .lsys-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--color-surface, #f9f9f9);
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 4px;
+  }
+
+  .lsys-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .lsys-row label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+  }
+
+  .lsys-row input[type='text'] {
+    width: 70px;
+  }
+
+  .lsys-rules-label {
+    flex-direction: column;
+    align-items: flex-start !important;
+    width: 100%;
+  }
+
+  .lsys-rules-label textarea {
+    width: 100%;
+    font-family: monospace;
+    resize: vertical;
+  }
+
+  .lsys-warning {
+    color: red;
+    font-size: 0.85rem;
+  }
+
+  .lsys-download-link {
+    font-size: 0.9rem;
+  }
+
+  @media screen and (max-width: 640px) {
+    .lsys-presets :global(.lsys-preset) {
+      width: 50px;
+      height: 50px;
+    }
+
+    .lsys-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .lsys-row input[type='text'] {
+      width: 100%;
+      max-width: 200px;
+    }
+  }
+
+  /* Fullscreen */
+  .lsys-demo:fullscreen {
+    max-width: none;
+    margin: 0;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .lsys-demo:fullscreen h3,
+  .lsys-demo:fullscreen .lsys-stats {
+    display: none;
+  }
+
+  .lsys-demo:fullscreen .lsys-canvas-wrap {
+    flex: 1;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+
+  .lsys-demo:fullscreen .lsys-presets {
+    margin-bottom: 0;
+    padding: 0.25rem 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .lsys-demo:fullscreen .lsys-controls-panel {
+    margin-bottom: 0;
+    padding: 0 0.5rem 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .lsys-demo:fullscreen .lsys-download-link {
+    padding: 0 0.5rem 0.25rem;
+    flex-shrink: 0;
+  }
+</style>
+
+<script>
+  import '../../scripts/demos/l-systems.js';
+</script>

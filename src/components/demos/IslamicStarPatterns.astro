@@ -65,12 +65,18 @@
     justify-content: space-between;
   }
   .controls span {
-    width: 170px;
-    display: flex;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .controls input {
     width: 100%;
+    min-width: 0;
     margin-right: 5px;
+  }
+  @media screen and (max-width: 640px) {
+    .controls {
+      flex-wrap: wrap;
+    }
   }
   .tile :global(polygon) {
     pointer-events: visiblePainted;

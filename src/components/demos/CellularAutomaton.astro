@@ -2,36 +2,61 @@
   <canvas id="automata" width="740" height="600" style="background-color: black"
   ></canvas>
   <div class="demo-controls">
-    Select rule:
-    <select id="selectRule"></select>
-    Select first row:
-    <select id="selectFirstRow"></select>
-    <button id="clear">Clear</button>
-    <button id="startPause" class="button-primary">Start</button>
-    <br /><br />
-    Select cell color:
-    <input type="color" id="cellColor" value="#ffffff" />
-    Select canvas color:
-    <input type="color" id="canvasColor" />
-    Psychedelic mode:
-    <input type="checkbox" id="psychedelic" value="on" />ON
+    <div class="controls-row">
+      <label>Select rule: <select id="selectRule"></select></label>
+      <label>Select first row: <select id="selectFirstRow"></select></label>
+      <div class="controls-buttons">
+        <button id="startPause" class="button-primary">Start</button>
+        <button id="clear">Clear</button>
+      </div>
+    </div>
+    <div class="controls-row">
+      <label
+        >Cell color: <input
+          type="color"
+          id="cellColor"
+          value="#ffffff"
+        /></label
+      >
+      <label>Canvas color: <input type="color" id="canvasColor" /></label>
+      <label
+        >Psychedelic: <input
+          type="checkbox"
+          id="psychedelic"
+          value="on"
+        /></label
+      >
+    </div>
   </div>
 </div>
 
 <style>
-  .demo-controls button {
-    float: right;
-    margin-left: 3px;
-    font-size: 14px;
+  .demo-container {
+    max-width: var(--content-width);
+    margin: 1.5rem 0;
   }
   canvas {
-    margin-bottom: 10px;
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 0.5rem;
+  }
+  .demo-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .controls-buttons {
+    display: flex;
+    gap: 0.25rem;
   }
   select {
     min-width: 120px;
-  }
-  #selectFirstRow {
-    margin-right: 5px;
   }
 </style>
 

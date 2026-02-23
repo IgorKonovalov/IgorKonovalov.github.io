@@ -10,7 +10,7 @@ const state = {
 
 let tempObject // store object
 
-// helper functions 
+// helper functions
 
 const jsonToHTML = rules => {
   let res = ''
@@ -24,7 +24,9 @@ const htmlToJson = html => {
   let stringsArr = html.trim().split('\n')
   stringsArr.forEach(str => {
     let rule = str.split('=>')
-    res[rule[0].trim()] = rule[1].trim()
+    if (rule.length === 2) {
+      res[rule[0].trim()] = rule[1].trim()
+    }
   })
   return res
 }
@@ -55,7 +57,8 @@ function Lshape(
   this.rules = rules
   this.angle = angle
   this.stepLength = stepLength
-  this.center = center
+  // Read center (handles both plain objects and getter-based centers)
+  this.center = { x: center.x, y: center.y }
   this.iterations = iterations
   this.initialAngle = initialAngle
   this.closePath = closePath
@@ -200,3 +203,21 @@ const drawFromControls = obj => {
   tempObject = shapeToDraw
   draw(shapeToDraw, state)
 }
+
+// Resize handler — re-size canvas and redraw current shape
+let resizeTimer
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    sizeCanvas()
+    if (tempObject) {
+      // Find matching preset to get fresh center for new canvas size
+      const matchName = tempObject.name
+      if (SHAPES[matchName]) {
+        const freshCenter = SHAPES[matchName].center
+        tempObject.center = { x: freshCenter.x, y: freshCenter.y }
+      }
+      draw(tempObject, state)
+    }
+  }, 100)
+})

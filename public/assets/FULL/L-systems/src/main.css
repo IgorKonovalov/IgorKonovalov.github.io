@@ -1,67 +1,84 @@
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  overflow: hidden;
+  font-family: 'Open Sans', sans-serif;
 }
 .wrapper {
-  height: 95vh;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
   display: flex;
   flex-direction: row;
   position: relative;
+  overflow: hidden;
 }
 .canvasWrapper {
   display: flex;
   flex-direction: column;
-  margin-left: auto;
+  flex: 1;
+  min-width: 0;
 }
 #canvas {
   cursor: grab;
+  display: block;
+  flex: 1;
 }
 .imageList {
-  height: 96vh;
+  height: 100vh;
+  height: 100dvh;
   align-self: center;
   justify-content: center;
   min-width: 175px;
   overflow-y: auto;
   margin-right: 10px;
   flex-direction: column;
+  flex-shrink: 0;
 }
 .controls {
   display: none;
-  background-color: beige;  
-  font-family: 'Open Sans', sans-serif;  
+  background-color: beige;
+  font-family: 'Open Sans', sans-serif;
   text-align: left;
   padding: 10px;
   position: absolute;
-  margin-left: auto;
-  margin-right: 10px;
   min-width: 100px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
   height: auto;
   left: 1%;
   top: 5%;
-  box-shadow: 8px 5px 14px -3px rgba(0, 0, 0, 0.75);  
+  z-index: 10;
+  box-shadow: 8px 5px 14px -3px rgba(0, 0, 0, 0.75);
   animation: toBottom .2s cubic-bezier(0.65, 0.05, 0.36, 1);
 }
 @keyframes toBottom {
-   from {
-    margin-top: 100%;
-    height: 300%; 
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
   }
   to {
-    margin-top: 0%;
-    height: 100%;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 #openControls {
   color: inherit;
   align-self: baseline;
-  margin-left: 1%;
+  margin: 5px;
   font-size: inherit;
- padding: 5px 15px 5px 30px;
+  padding: 5px 15px 5px 30px;
   border-radius: 2px;
   background-color: transparent;
   border: 1px solid black;
   cursor: pointer;
   position: relative;
+  flex-shrink: 0;
 }
 #openControls::after {
   content: '\2699';
@@ -72,7 +89,7 @@
   left: 0;
 }
 .showControls {
-  display: block;
+  display: block !important;
 }
 .controlsWrapper {
   display: flex;
@@ -84,15 +101,17 @@
   display: flex;
   justify-content: space-between;
   flex-direction: row;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 .columnP {
   min-width: 120px;
   display: flex;
   flex-direction: column;
- 
+  flex: 1;
 }
 .columnP:nth-child(2n) {
-   margin-left: 10px;
+  margin-left: 10px;
 }
 .contentStyle {
   padding: 15px 0;
@@ -104,6 +123,7 @@
 #name {
   margin: 0 0 20px 0;
   max-width: 300px;
+  font-size: 1.2rem;
 }
 #toDeg {
   font-size: 12px;
@@ -112,14 +132,23 @@
   font-size: 14px;
   color: red;
 }
+#stats {
+  font-size: 13px;
+  padding: 4px 0;
+}
+#download {
+  font-size: 13px;
+  padding: 4px 0;
+}
 .shapePreview {
   display: flex;
   margin: auto;
   margin-top: 5px;
   padding: 1px;
+  cursor: pointer;
 }
 .active {
-  box-shadow: inset 0px 0px 1px 1px rgba(171,48,171, 0.5); 
+  box-shadow: inset 0px 0px 1px 1px rgba(171, 48, 171, 0.5);
 }
 .select {
   max-width: 100px;
@@ -129,29 +158,64 @@
 }
 
 input {
-  margin-bottom: 15px; 
- 
+  margin-bottom: 10px;
+}
+textarea {
+  width: 100%;
+  margin-bottom: 10px;
 }
 
 .colorizeInput {
-  margin-right: auto; 
+  margin-right: auto;
 }
 
 @media screen and (max-width: 768px) {
   .wrapper {
     flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .canvasWrapper {
+    flex: 1;
+    order: 1;
   }
   .imageList {
     width: 100%;
     display: flex;
     flex-direction: row;
     overflow-x: auto;
-    height: 150px;
+    overflow-y: hidden;
+    height: auto;
+    max-height: 120px;
+    order: 3;
+    padding: 5px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .shapePreview {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
   }
   #openControls {
     align-self: center;
+    order: 2;
+    margin: 4px;
   }
   .controls {
-    background: aliceblue;
+    background: rgba(240, 248, 255, 0.97);
+    left: 2%;
+    right: 2%;
+    top: 3%;
+    max-width: 96vw;
+  }
+  .polish {
+    flex-direction: column;
+  }
+  .columnP:nth-child(2n) {
+    margin-left: 0;
+  }
+  input[type="text"] {
+    font-size: 16px;
+    padding: 4px;
   }
 }

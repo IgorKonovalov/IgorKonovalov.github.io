@@ -3,10 +3,10 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=0.8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>L-systems generator</title>
-  <meta name="description" content="L-System based fractals generator. Choose from one of pre-defined shape and convert it to your own. Prototype version, not suitable for mobile.">   
+  <meta name="description" content="L-System based fractals generator. Choose from one of pre-defined shapes and convert it to your own.">
   <link rel="stylesheet" href="./src/main.css">
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
 </head>
@@ -26,7 +26,7 @@
             <span>Angle (rad):</span>
             <input id="angle" type="text">
             <span id="toDeg"></span>
-          </div>          
+          </div>
         </div>
           <span>Rules: </span>
           <textarea rows="6" id="rules"></textarea>
@@ -49,7 +49,7 @@
         </div>
       </div>
     <div class="canvasWrapper">
-      <canvas id="canvas" width="900px"></canvas>
+      <canvas id="canvas"></canvas>
       <span id="stats"></span>
       <a id="download" href="#" download="image.png">Download Shape</a>
     </div>
