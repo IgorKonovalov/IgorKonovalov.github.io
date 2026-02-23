@@ -1,5 +1,7 @@
 # Full Architecture Plan: Jekyll → Astro Migration
 
+> **Status: Completed** — Migration finished through all 9 phases. This document is preserved as a historical record of the migration decisions. For current architecture documentation, see [architecture.md](architecture.md).
+
 ## Context
 
 The current site is a Jekyll 3.3.1 portfolio/blog focused on generative art and algorithmic visualization. It has 13 blog posts with 10 interactive JS demos embedded inline, 3 static pages, ~598MB of virtual panoramic tours, and is deployed to GitHub Pages. Jekyll 3.3.1 is outdated (2016), the Ruby toolchain adds friction, and there's no CI/CD pipeline. The goal is to migrate to a modern framework that preserves all existing content and interactivity while enabling a better developer experience and future growth.
@@ -64,23 +66,21 @@ _source repo ──(manual build)──►      IgorKonovalov.github.io
 ├── src/
 │   ├── layouts/
 │   │   ├── BaseLayout.astro   # <html>, <head>, <body> shell
-│   │   ├── PostLayout.astro   # Blog post wrapper (date, title, schema.org)
-│   │   └── PageLayout.astro   # Static page wrapper
+│   │   └── PostLayout.astro   # Blog post wrapper (date, title, schema.org)
 │   ├── components/
 │   │   ├── Header.astro       # Site header + navigation
 │   │   ├── Footer.astro       # Footer with social links
-│   │   ├── PostCard.astro     # Post preview card for homepage
 │   │   ├── SEO.astro          # Meta tags, Open Graph, schema.org
 │   │   └── demos/             # Demo wrapper components
 │   │       ├── GameOfLife.astro
 │   │       ├── CellularAutomaton.astro
 │   │       ├── MaurerRose.astro
+│   │       ├── MaurerRoseWalker.astro
 │   │       ├── RandomWalker1.astro
 │   │       ├── RandomWalker2.astro
 │   │       ├── RandomLinesInShape.astro
 │   │       ├── IslamicStarPatterns.astro
-│   │       ├── Phyllotaxis.astro
-│   │       └── MaurerRoseRevisited.astro
+│   │       └── Phyllotaxis.astro
 │   ├── content/
 │   │   └── blog/              # Content collection
 │   │       ├── 2016-12-31-hello-world.md
@@ -96,24 +96,26 @@ _source repo ──(manual build)──►      IgorKonovalov.github.io
 │   │   ├── global.css         # Ported Minima CSS (Phases 1–7), then refactored (Phase 9)
 │   │   └── tokens.css         # Design tokens — added in Phase 9
 │   └── scripts/
-│       └── demos/             # Existing demo JS (migrated, minimal changes)
-│           ├── game-of-life/
-│           │   └── index.ts   # Original JS → TypeScript (optional)
-│           ├── cellular-automaton/
-│           │   ├── rules.ts
-│           │   └── index.ts
-│           ├── maurer-rose/
-│           │   └── index.ts
-│           └── ...
+│       └── demos/             # Demo JS (vanilla, ES modules)
+│           ├── game-of-life.js
+│           ├── cellular-automaton.js
+│           ├── random-walker-1.js
+│           ├── random-walker-2.js
+│           ├── random-lines-in-shape.js
+│           ├── maurer-rose.js
+│           ├── maurer-rose-walker.js
+│           ├── islamic-star-patterns.js
+│           └── phyllotaxis.js
 ├── public/
 │   ├── CNAME                  # Custom domain for GitHub Pages
 │   ├── favicon.ico
 │   ├── images/                # Blog images (from assets/IMG/)
 │   ├── archive/               # CV (from assets/ARCHIVE/)
-│   └── tours/                 # Virtual tours (see Section 5)
-│       ├── bangtao-house/
-│       ├── vtour-a1/
-│       └── vtour-p1/
+│   └── assets/FULL/           # Virtual tours (static passthrough)
+│       ├── BangTao_house/
+│       ├── vtour_A1/
+│       ├── vtour_P1_fin/
+│       └── L-systems/
 └── docs/
     └── architecture/          # ADRs and this plan
 ```
@@ -155,9 +157,10 @@ comments: true                        # Removed (Disqus deprecated)
 ```typescript
 // src/content.config.ts
 import { defineCollection, z } from 'astro:content';
+import { glob } from 'astro/loaders';
 
 const blog = defineCollection({
-  type: 'content',
+  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/blog' }),
   schema: z.object({
     title: z.string(),
     date: z.date(),
@@ -238,7 +241,7 @@ The algorithm works by...
 
 - **Cellular Automaton**: Has 2-file dependency (rules.js loaded before index.js) → merge into single module with `import`
 - **Islamic Star Patterns & Random Lines**: SVG-based, use `createElementNS` — works as-is
-- **L-systems Generator**: Already a standalone app at `/assets/FULL/L-systems/` → keep as static passthrough in `public/tours/l-systems/`, link from blog post
+- **L-systems Generator**: Already a standalone app → kept as static passthrough in `public/assets/FULL/L-systems/`, linked from blog post
 
 ---
 
@@ -248,33 +251,18 @@ The algorithm works by...
 
 Virtual tours total ~598MB. GitHub repo limit is 1GB, and GitHub Pages has a 1GB site size limit. This is a real constraint.
 
-### Approach: Git LFS + Static Passthrough
+### Approach: Static Passthrough
 
-Tour files are tracked via **Git LFS** to keep the repo lightweight. At build time, LFS files are checked out and placed in `public/tours/` — Astro copies `public/` to build output unchanged. Tours remain self-contained with their own HTML entry points.
+Tour files are stored as regular files in `public/assets/FULL/` — Astro copies `public/` to build output unchanged. Tours remain self-contained with their own HTML entry points.
 
-**Setup:**
+> **Note:** Git LFS was initially evaluated for tour storage but later removed (commit `055dd3d5`). Tours are stored as regular files, which is simpler and avoids LFS bandwidth costs.
 
-```bash
-git lfs install
-git lfs track "public/tours/**"
-```
+**Tour locations (preserving original paths):**
 
-**GitHub Actions** must include LFS checkout:
-
-```yaml
-- uses: actions/checkout@v4
-  with:
-    lfs: true
-```
-
-**Note:** GitHub LFS has a free tier of 1GB storage + 1GB/month bandwidth. Tours at 598MB fit within storage but may need a data pack ($5/mo for 50GB bandwidth) if the site gets moderate traffic to tour pages.
-
-**URL mapping:**
-
-- `/assets/FULL/BangTao_house/` → `/tours/bangtao-house/` (with redirect from old URL)
-- `/assets/FULL/vtour_A1/` → `/tours/vtour-a1/`
-- `/assets/FULL/vtour_P1_fin/` → `/tours/vtour-p1/`
-- `/assets/FULL/L-systems/` → `/tours/l-systems/`
+- `/assets/FULL/BangTao_house/`
+- `/assets/FULL/vtour_A1/`
+- `/assets/FULL/vtour_P1_fin/`
+- `/assets/FULL/L-systems/`
 
 ---
 
@@ -380,8 +368,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -404,7 +390,7 @@ jobs:
 
 ### Branch Strategy
 
-- **main** — source code (rename from master)
+- **master** — source code
 - Deploy via GitHub Actions → GitHub Pages (no `gh-pages` branch needed with `actions/deploy-pages`)
 - The `CNAME` file lives in `public/CNAME` so Astro copies it to `dist/` at build time
 
@@ -443,123 +429,95 @@ This generates `/projects/2017/01/04/Game-of-Life/index.html` which GitHub Pages
 
 ## 9. Migration Phases
 
-### Phase 1: Project Scaffold
+> All phases completed. Checklists marked `[x]` for reference.
 
-- Initialize Astro project with TypeScript **in `IgorKonovalov.github.io_source`** (the current working repo — development stays here through Phases 1–6)
-- Set up directory structure
-- Configure `astro.config.mjs` (site URL: `https://igorkonovalov.github.io`, output: static)
-- Add `public/CNAME` with `igorkonovalov.github.io` (preserved for GitHub Pages custom domain)
-- Port existing Minima CSS into `src/styles/global.css` (direct conversion from SCSS, same look & feel)
-- Create `BaseLayout.astro`, `Header.astro`, `Footer.astro`
-- **Verify:** `yarn dev` shows a styled shell matching the current site
+### Phase 1: Project Scaffold [x]
 
-### Phase 2: Static Pages
+- [x] Initialize Astro project with TypeScript
+- [x] Set up directory structure
+- [x] Configure `astro.config.mjs` (site URL: `https://igorkonovalov.github.io`, output: static)
+- [x] Add `public/CNAME` with `igorkonovalov.github.io` (preserved for GitHub Pages custom domain)
+- [x] Port existing Minima CSS into `src/styles/global.css` (direct conversion from SCSS, same look & feel)
+- [x] Create `BaseLayout.astro`, `Header.astro`, `Footer.astro`
 
-- Migrate homepage (index.astro with post listing)
-- Migrate about page
-- Migrate archive page
-- Port SEO/meta tag system
-- **Verify:** All 3 pages render correctly, navigation works
+### Phase 2: Static Pages [x]
 
-### Phase 3: Blog Posts (Text Only)
+- [x] Migrate homepage (index.astro with post listing)
+- [x] Migrate about page
+- [x] Migrate archive page
+- [x] Port SEO/meta tag system
 
-- Set up content collection with schema
-- Migrate all 13 posts as `.md` files (strip demo HTML for now)
-- Configure URL generation to match Jekyll paths
-- Implement `PostLayout.astro` with date, title, tags
-- **Verify:** All 13 posts accessible at correct URLs, post listing works
+### Phase 3: Blog Posts (Text Only) [x]
 
-### Phase 4: Interactive Demos (Simplest First)
+- [x] Set up content collection with schema (glob loader + Zod)
+- [x] Migrate all 13 posts as `.md` files
+- [x] Configure URL generation to match Jekyll paths
+- [x] Implement `PostLayout.astro` with date, title, tags
 
-- Create demo wrapper components, starting with simplest:
+### Phase 4: Interactive Demos (Simplest First) [x]
+
+- [x] Create demo wrapper components:
   1. Random Walker 1 (single canvas, minimal controls)
   2. Random Walker 2 (single canvas, minimal controls)
   3. Game of Life (canvas + button controls)
   4. Cellular Automaton (canvas + dropdowns + color pickers)
   5. Phyllotaxis (canvas, responsive)
-- Convert those 5 posts from `.md` to `.mdx`
-- Migrate demo JS to `src/scripts/demos/` as ES modules
-- **Verify:** Each demo renders and is interactive in the blog post
+- [x] Convert those 5 posts from `.md` to `.mdx`
+- [x] Migrate demo JS to `src/scripts/demos/` as ES modules
 
-### Phase 5: Interactive Demos (Complex)
+### Phase 5: Interactive Demos (Complex) [x]
 
-- Remaining demos with more complex UI: 6. Maurer Rose (dual input controls, sliders, checkboxes) 7. Maurer Rose Revisited (if inline) or link to CodePen 8. Random Lines in Shape (SVG generation, download) 9. Islamic Star Patterns (SVG, range sliders, tiling selection)
-- L-systems: copy standalone app to `public/tours/l-systems/`, update link
-- **Verify:** All demos functional, responsive on mobile
+- [x] Maurer Rose (dual input controls, sliders, checkboxes)
+- [x] Maurer Rose Walker
+- [x] Random Lines in Shape (SVG generation, download)
+- [x] Islamic Star Patterns (SVG, range sliders, tiling selection)
+- [x] L-systems: standalone app in `public/assets/FULL/L-systems/`
 
-### Phase 6: Static Assets & Tours
+### Phase 6: Static Assets & Tours [x]
 
-- Copy virtual tours to `public/tours/`
-- Copy blog images to `public/images/`
-- Copy CV to `public/archive/`
-- Update all asset references in posts
-- Optimize images (WebP via Astro `<Image>`)
-- **Verify:** All images load, tour links work, CV accessible
+- [x] Copy virtual tours to `public/assets/FULL/`
+- [x] Copy blog images to `public/images/`
+- [x] Copy CV to `public/archive/`
+- [x] Update all asset references in posts
 
-### Phase 7: Build Pipeline & Repo Consolidation
+### Phase 7: Build Pipeline & Repo Consolidation [x]
 
-This phase moves the Astro source from the development repo into the live repo and enables automated deployment.
+- [x] Astro source code in `IgorKonovalov.github.io` repo
+- [x] GitHub Actions workflow (`.github/workflows/deploy.yml`)
+- [x] GitHub Pages source set to GitHub Actions
+- [x] Site deployed on `master` branch
+- [x] All URLs verified against old site
 
-1. **Prepare `IgorKonovalov.github.io` repo:**
-   - Create a fresh branch (e.g., `astro-migration`) in `IgorKonovalov.github.io`
-   - Remove the old Jekyll-built HTML files from the branch
-   - Copy the Astro source code (everything except `.git/`) from `_source` into this branch
-2. **Add GitHub Actions workflow** (`.github/workflows/deploy.yml`)
-3. **Switch GitHub Pages source:**
-   - Go to `IgorKonovalov.github.io` → **Settings → Pages → Source**
-   - Change from "Deploy from a branch" to **"GitHub Actions"**
-4. **Merge and push** the `astro-migration` branch to `main` (rename from `master` if desired)
-5. **Verify deployment:** GitHub Actions runs, builds Astro, deploys to Pages
-6. **Verify all URLs** match the old site (spot-check posts, demos, tours, static pages)
+### Phase 8: Cleanup & Polish [x]
 
-- **Verify:** Site live at `igorkonovalov.github.io`, all pages/demos/tours working, `CNAME` preserved
+- [x] Jekyll files removed
+- [x] Sitemap (`@astrojs/sitemap`) and RSS feed (`@astrojs/rss`) added
+- [x] Google Analytics UA removed
+- [x] Single repo — `IgorKonovalov.github.io_source` no longer needed
 
-### Phase 8: Cleanup & Polish
+### Phase 9: Design System [x]
 
-- Remove Jekyll files from `IgorKonovalov.github.io` (Gemfile, \_config.yml, \_layouts/, \_includes/, \_sass/, \_posts/) — these were copied during Phase 7 and are no longer needed
-- Update README
-- Add sitemap and RSS feed (Astro has plugins: `@astrojs/sitemap`, `@astrojs/rss`)
-- Remove Google Analytics UA (deprecated) or migrate to GA4
-- Write ADR documenting the migration decision
-- **Archive `IgorKonovalov.github.io_source`:** set repo to archived on GitHub (or delete if no longer needed). All development now happens in `IgorKonovalov.github.io`
-- **Verify:** Clean repo, no dead files, lighthouse audit passes
-
-### Phase 9: Design System
-
-- Define design tokens in `src/styles/tokens.css` (colors, typography, spacing)
-- Migrate global CSS to use CSS custom properties
-- Update breakpoints to new system (640/768/1024/1280px)
-- Move component styles from global CSS into Astro scoped `<style>` tags
-- Redesign visual direction (typography, color palette, component look & feel)
-- Style demo wrapper components with consistent controls layout
-- **Verify:** Visual consistency across all pages, responsive on all breakpoints
+- [x] Design tokens in `src/styles/tokens.css` (colors, typography, spacing)
+- [x] Global CSS uses CSS custom properties
+- [x] Breakpoints updated (640/768/1024/1280px)
+- [x] Visual direction redesigned (Source Serif 4, Source Sans 3, JetBrains Mono)
+- [x] Dark mode via `prefers-color-scheme`
 
 ---
 
-## Key Files to Modify/Create
+## Key Files Created During Migration
 
-| Action            | File                                                                       |
-| ----------------- | -------------------------------------------------------------------------- |
-| Create            | `astro.config.mjs`                                                         |
-| Create            | `src/layouts/BaseLayout.astro`                                             |
-| Create            | `src/layouts/PostLayout.astro`                                             |
-| Create            | `src/components/demos/*.astro` (9 wrappers)                                |
-| Create            | `src/content/blog/*.md` and `*.mdx` (13 posts)                             |
-| Create            | `src/pages/index.astro`, `about.astro`, `archive.astro`                    |
-| Create            | `src/styles/tokens.css`, `global.css`                                      |
-| Create            | `.github/workflows/deploy.yml`                                             |
-| Migrate           | `assets/JS/*` → `src/scripts/demos/*` (minimal changes)                    |
-| Copy              | `assets/FULL/*` → `public/tours/*`                                         |
-| Copy              | `assets/IMG/*` → `public/images/*`                                         |
-| Create            | `public/CNAME` (custom domain)                                             |
-| Delete (Phase 8)  | `Gemfile`, `_config.yml`, `_layouts/`, `_includes/`, `_sass/`, `_posts/`   |
-| Archive (Phase 8) | `IgorKonovalov.github.io_source` repo (all dev moves to `.github.io` repo) |
-
-## Verification
-
-After each phase, verify with:
-
-- `yarn dev` — local dev server, check all pages
-- `yarn build` — ensure static build succeeds
-- After Phase 7: check live GitHub Pages deployment
-- Final: Lighthouse audit targeting 90+ on Performance, Accessibility, SEO
+| File                                                                       | Status                         |
+| -------------------------------------------------------------------------- | ------------------------------ |
+| `astro.config.mjs`                                                         | Created                        |
+| `src/layouts/BaseLayout.astro`, `PostLayout.astro`                         | Created                        |
+| `src/components/demos/*.astro` (9 wrappers)                                | Created                        |
+| `src/content/blog/*.md` and `*.mdx` (13 posts)                             | Migrated                       |
+| `src/pages/index.astro`, `about.astro`, `archive.astro`, `[...slug].astro` | Created                        |
+| `src/styles/tokens.css`, `global.css`                                      | Created                        |
+| `.github/workflows/deploy.yml`                                             | Created                        |
+| `src/scripts/demos/*.js` (9 scripts)                                       | Migrated from `assets/JS/`     |
+| `public/assets/FULL/*`                                                     | Copied from old `assets/FULL/` |
+| `public/images/*`                                                          | Copied from old `assets/IMG/`  |
+| `public/CNAME`                                                             | Created                        |
+| Jekyll files (`Gemfile`, `_config.yml`, `_layouts/`, etc.)                 | Deleted                        |

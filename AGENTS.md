@@ -6,12 +6,12 @@ Guidelines for AI agents working on this portfolio/blog site migration and devel
 
 ## Project Context
 
-Personal portfolio and technical blog being migrated from Jekyll 3.3.1 to a modern static site framework. Deployed to GitHub Pages.
+Portfolio and technical blog built with Astro 5, deployed to GitHub Pages.
 
 Key documentation:
 
 - **`docs/architecture/`** - Architecture Decision Records
-- **`docs/features/`** - Feature specifications
+- **`docs/architecture/architecture.md`** - Current architecture reference
 - **`.claude/skills/`** - Specialized agent skills
 
 Review existing architecture decisions and feature specs before making significant changes.
@@ -22,12 +22,12 @@ Review existing architecture decisions and feature specs before making significa
 
 Skills in `.claude/skills/` provide domain-specific guidance:
 
-| Skill              | Purpose                                                          |
-| ------------------ | ---------------------------------------------------------------- |
-| `designer`         | UI design, styling, layout, visual components                    |
-| `business-analyst` | Feature discovery, requirements analysis, feature specs          |
-| `architect`        | Framework evaluation, migration planning, technical architecture |
-| `dev`              | Code implementation, bug fixes, content migration                |
+| Skill              | Purpose                                                 |
+| ------------------ | ------------------------------------------------------- |
+| `designer`         | UI design, styling, layout, visual components           |
+| `business-analyst` | Feature discovery, requirements analysis, feature specs |
+| `architect`        | Technical architecture, code health, evolution guidance |
+| `dev`              | Code implementation, bug fixes, content migration       |
 
 ---
 
@@ -173,4 +173,4 @@ Optional: `draft`, `demo` (related demo slug), `image` (featured image)
 
 ---
 
-**Last Updated**: 2026-02-22
+**Last Updated**: 2026-02-23
