@@ -25,13 +25,6 @@ export default [
     },
   },
   {
-    ignores: [
-      'dist/',
-      '.astro/',
-      'node_modules/',
-      'assets/',
-      '_site/',
-      'public/',
-    ],
+    ignores: ['dist/', '.astro/', 'node_modules/', 'public/'],
   },
 ];

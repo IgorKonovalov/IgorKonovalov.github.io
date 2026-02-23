@@ -1,11 +1,11 @@
 ---
 name: dev
-description: 'Implement features, fix bugs, and write code for a portfolio/blog site being migrated from Jekyll to a modern static site framework. Use when: (1) Implementing new pages, components, or features, (2) Migrating content from Jekyll, (3) Writing or modifying CSS/styles, (4) Creating or updating interactive JS demos, (5) Setting up build pipeline or GitHub Actions, (6) Fixing bugs or addressing build errors, (7) Adding new blog posts or content, (8) Any hands-on coding task for the site.'
+description: 'Implement features, fix bugs, and write code for a portfolio/blog site built with Astro. Use when: (1) Implementing new pages, components, or features, (2) Writing or modifying CSS/styles, (3) Creating or updating interactive JS demos, (4) Setting up build pipeline or GitHub Actions, (5) Fixing bugs or addressing build errors, (6) Adding new blog posts or content, (7) Any hands-on coding task for the site.'
 ---
 
 # Dev - Implementation Guide
 
-Implement features and write code for the portfolio/blog site migration and ongoing development.
+Implement features and write code for the portfolio/blog site (Astro 5, static output, GitHub Pages).
 
 ## Before Writing Code
 
@@ -14,62 +14,203 @@ Implement features and write code for the portfolio/blog site migration and ongo
 3. **Review existing code** - understand current patterns before adding new ones
 4. **Consult the designer skill's design system** - check `.claude/skills/designer/references/design-system.md` for design tokens
 
+## Project Structure
+
+```
+src/
+├── pages/               # File-based routing (required)
+│   ├── index.astro      # Home / post listing
+│   ├── [...slug].astro  # Dynamic blog post routes
+│   ├── about.astro
+│   ├── archive.astro
+│   └── rss.xml.ts       # RSS API endpoint
+├── layouts/
+│   ├── BaseLayout.astro  # HTML shell, head, header/footer
+│   └── PostLayout.astro  # Wraps BaseLayout for blog posts
+├── components/
+│   ├── Header.astro
+│   ├── Footer.astro
+│   ├── SEO.astro
+│   └── demos/            # Interactive demo components
+├── content/
+│   └── blog/             # MDX/Markdown blog posts
+├── content.config.ts     # Content collection schema (Astro 5 location)
+├── scripts/
+│   └── demos/            # Vanilla JS for canvas demos
+└── styles/
+    ├── tokens.css        # Design tokens (colors, spacing, fonts)
+    └── global.css        # Global resets and base styles
+```
+
 ## Implementation Workflow
 
 ### Adding a New Page
 
-1. Create the page file in the framework's pages directory
-2. Use the appropriate layout component
-3. Add navigation link if needed
-4. Ensure responsive design across all breakpoints
-5. Test locally with dev server
+1. Create `.astro` file in `src/pages/` (kebab-case filename)
+2. Import and wrap with `BaseLayout`
+3. Define `Props` interface in frontmatter if accepting props
+4. Add navigation link in `Header.astro` if needed
+5. Use scoped `<style>` for page-specific styles, reference tokens from `tokens.css`
+6. Test locally with `yarn dev`
+
+```astro
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Page Title" description="Page description">
+  <h1>Page Title</h1>
+  <!-- content -->
+</BaseLayout>
+
+<style>
+  h1 {
+    color: var(--color-text-primary);
+  }
+</style>
+```
 
 ### Adding a New Blog Post
 
-1. Create markdown file in the content directory
-2. Add required frontmatter (title, date, tags, description)
-3. Add images to the assets directory
-4. If post includes an interactive demo, create the demo component and reference it
-5. Verify rendering locally
+1. Create `.mdx` file in `src/content/blog/` named `YYYY-MM-DD-Title.mdx`
+2. Add required frontmatter matching the Zod schema in `content.config.ts`:
+   ```yaml
+   title: 'Post Title'
+   date: 2026-01-15 # ISO format
+   tags: [javascript, canvas]
+   description: 'Brief description for SEO and previews'
+   demo: 'game-of-life' # optional: slug of related demo
+   ```
+3. Add images to `src/assets/` (not `public/`) for optimization
+4. If post includes a demo, create the demo component and set the `demo` field
+5. Verify rendering with `yarn dev`
+
+### Adding a Dynamic Route
+
+Use `getStaticPaths()` for routes generated from content:
+
+```astro
+---
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({
+    params: { slug: buildSlug(post) },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+```
 
 ### Creating an Interactive Demo Component
 
-1. Create a new directory for the demo under the components/demos path
-2. Implement the demo logic (Canvas API, p5.js, or vanilla JS)
-3. Wrap in a framework component with proper lifecycle handling:
-   - Initialize on mount
-   - Clean up on unmount (cancel animation frames, remove event listeners)
-   - Handle resize events for responsive canvas
-4. Ensure the component works with lazy loading (no DOM access at import time)
-5. Add a loading placeholder for the pre-hydration state
+1. Create `src/components/demos/DemoName.astro`
+2. Create `src/scripts/demos/demo-name.js` with the canvas/animation logic
+3. Structure the component:
+
+```astro
+<!-- DemoName.astro -->
+<div class="demo-container">
+  <canvas id="demo-name-canvas"></canvas>
+  <div class="demo-controls">
+    <!-- buttons, sliders, etc. -->
+  </div>
+</div>
+
+<style>
+  .demo-container {
+    /* responsive styles using tokens */
+  }
+  @media (max-width: 640px) {
+    /* mobile adjustments */
+  }
+</style>
+
+<script>
+  import '../../scripts/demos/demo-name.js';
+</script>
+```
+
+4. In the JS file: query DOM elements, add event listeners, handle canvas drawing
+5. No `client:*` directives needed — Astro renders HTML statically, `<script>` runs on the client
 6. Test at multiple viewport sizes
 
-### Migrating a Jekyll Blog Post
+### Adding an RSS Feed or API Endpoint
 
-1. Copy markdown content from `_posts/YYYY-MM-DD-title.md`
-2. Update frontmatter:
-   - Remove `layout` field
-   - Convert `categories` to `tags` array
-   - Add `description` field
-   - Keep `date` field
-3. Convert Liquid template syntax:
-   - `{{ site.baseurl }}` references to relative paths
-   - `{% highlight lang %}` to fenced code blocks
-   - `{% include %}` to component imports
-4. Update image paths to new asset structure
-5. Verify all links work
+Create a `.ts` file in `src/pages/` with named HTTP method exports:
 
-### Migrating a JS Demo
+```typescript
+// src/pages/feed.xml.ts
+import type { APIRoute } from 'astro';
 
-1. Review the existing demo code in `assets/JS/[name]/`
-2. Decide integration approach:
-   - **Rewrite as component**: for demos that benefit from modern tooling
-   - **Wrap existing code**: for complex demos that work fine as-is
-   - **Keep standalone**: for demos with heavy dependencies (virtual tours)
-3. If rewriting: use ES modules, add TypeScript types, handle cleanup
-4. If wrapping: create a thin component that loads the existing script
-5. Add to the demos listing page
-6. Link to related blog post if one exists
+export const GET: APIRoute = async () => {
+  // generate and return response
+};
+```
+
+## Astro Component Patterns
+
+### Static Components (default — zero JS shipped)
+
+All `.astro` components render to static HTML. No `client:*` directive = no JavaScript.
+
+```astro
+---
+interface Props {
+  title: string;
+  href: string;
+}
+const { title, href } = Astro.props;
+---
+
+<a href={href}>{title}</a>
+```
+
+### Client Directives (only when interactivity is required)
+
+Use framework components (React/Preact) with directives only when vanilla JS in `<script>` isn't sufficient:
+
+| Directive                          | When                 | Use For                                |
+| ---------------------------------- | -------------------- | -------------------------------------- |
+| `client:load`                      | Page load            | Above-the-fold interactive elements    |
+| `client:idle`                      | Browser idle         | Secondary UI (accordions, toggles)     |
+| `client:visible`                   | Enters viewport      | Below-the-fold heavy components        |
+| `client:media="(max-width: 50em)"` | Media query matches  | Mobile-only components                 |
+| `client:only="react"`              | Immediate, skips SSR | Browser-API-only (WebGL, localStorage) |
+
+**Current project pattern:** demos use `.astro` + vanilla JS `<script>` imports, not client directives.
+
+### Layout Composition
+
+Layouts compose via wrapping, not inheritance:
+
+```
+BaseLayout (HTML shell, <head>, header, footer, <slot />)
+  └── PostLayout (article wrapper, metadata, wraps BaseLayout)
+```
+
+### Content Collections (Astro 5 Content Layer)
+
+Schema defined in `src/content.config.ts` using `glob` loader + Zod:
+
+```typescript
+const blog = defineCollection({
+  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/blog' }),
+  schema: z.object({
+    title: z.string(),
+    date: z.date(),
+    tags: z.array(z.string()).optional(),
+    description: z.string().optional(),
+    demo: z.string().optional(),
+  }),
+});
+```
+
+Query with `getCollection('blog')`, render with `render(post)`.
 
 ## Code Quality Standards
 
@@ -80,28 +221,33 @@ Implement features and write code for the portfolio/blog site migration and ongo
 - Prefer `const` over `let`, never use `var`
 - Use descriptive names; avoid abbreviations
 - Keep files under 300 lines; split if larger
+- Use `import type` for type-only imports
 
 ### CSS
 
-- Use CSS custom properties from the design system
+- Use CSS custom properties from the design system (`tokens.css`)
+- Scoped `<style>` blocks in components (Astro auto-scopes)
+- Use `<style is:global>` or `:global()` sparingly, only in layouts
 - Mobile-first media queries
 - No magic numbers; use spacing/sizing tokens
-- Class names: BEM, utility classes, or CSS modules (match project convention)
-- Test at all breakpoints: 640px, 768px, 1024px, 1280px
+- Test at breakpoints: 640px, 768px, 1024px, 1280px
+- Bridge frontmatter values into CSS with `<style define:vars={{ ... }}>`
 
 ### Components
 
 - One component per file
-- Props interface defined and exported
-- Handle loading, error, and empty states
+- Define `Props` interface in frontmatter
+- Use `<slot />` for content projection
 - Clean up side effects on unmount
 - Accessible: semantic HTML, ARIA labels where needed, keyboard navigation
+- No `client:*` directive unless the component genuinely needs browser interactivity
 
 ### Content
 
-- Images: use optimized formats (WebP with fallback)
-- Provide alt text for all images
-- Use responsive image sizes where supported
+- Images: store in `src/assets/` for optimization, not `public/`
+- Use `<Image>` / `<Picture>` from `astro:assets` for optimized output
+- Provide `alt` text for all images
+- Provide explicit `width`/`height` for remote images (prevents CLS)
 - Lazy-load images below the fold
 
 ## Dependency Management
@@ -115,17 +261,10 @@ Implement features and write code for the portfolio/blog site migration and ongo
 ### Local Development
 
 ```bash
-# Install dependencies
-yarn install
-
-# Start dev server
-yarn dev
-
-# Build for production
-yarn build
-
-# Preview production build locally
-yarn preview
+yarn install    # Install dependencies
+yarn dev        # Start dev server
+yarn build      # Build for production
+yarn preview    # Preview production build locally
 ```
 
 ### GitHub Actions Deployment
@@ -138,9 +277,9 @@ The CI/CD pipeline should:
 
 Key considerations:
 
-- Cache `node_modules` and framework cache between builds
+- Cache `node_modules` and `.astro` cache between builds
 - Run build with production environment variables
-- Ensure `base` path is correct for GitHub Pages (usually `""` for user sites)
+- `base` path is `""` for user sites (username.github.io)
 
 ### Pre-Commit Checks
 
@@ -157,13 +296,21 @@ Before committing, also verify manually:
 - [ ] Images are optimized
 - [ ] No console errors in browser
 
+## Common Pitfalls
+
+- **Over-hydrating**: Don't add `client:*` to components that work as static HTML
+- **`client:load` everywhere**: Use graduated hydration (`client:idle`, `client:visible`)
+- **Browser APIs in SSR**: Guard `window`/`document` access or use `client:only`
+- **Images in `public/`**: Put them in `src/assets/` so Astro can optimize them
+- **Missing dimensions on remote images**: Always set `width`/`height` to prevent CLS
+- **Environment variables on client**: Prefix with `PUBLIC_` for client-side access
+
 ## Continuous Improvement
 
 As the project evolves, update this skill:
 
-- Add framework-specific patterns once the framework is chosen
 - Document recurring code patterns as they emerge
 - Add templates for common operations (new post, new demo, new page)
 - Update references when architectural decisions change
 
-See [references/coding-conventions.md](references/coding-conventions.md) for detailed conventions that should be updated as the project matures.
+See [references/coding-conventions.md](references/coding-conventions.md) for detailed conventions.
