@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <BaseLayout
   title="About"
-  description="About Igor Konovalov - JavaScript developer based in Saint Petersburg, Russia."
+  description="About Igor Konovalov - fullstack developer in Belgrade building AI agents, Telegram bots, and creative-coding experiments."
 >
   <article class="post">
     <header class="post-header">
@@ -19,16 +19,53 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       />
 
       <p>
-        Hello everyone! My name is Igor Konovalov - I'm a JavaScript developer.
-        Welcome to my personal site. I like building strange things with JS.
+        Hello! My name is Igor Konovalov — I'm a fullstack developer at EPAM,
+        working mostly in TypeScript and Python, and I live in Belgrade, Serbia.
+        Welcome to my personal site. I like building strange things, and lately
+        the strangest and most interesting of them are AI agents.
       </p>
 
-      <p>Currently I live in Russia, Saint Petersburg.</p>
+      <p>
+        A lot of my recent work sits right at the boundary between solid
+        engineering and letting an LLM agent actually drive. I built <a
+          href="https://github.com/IgorKonovalov/market-analyzer"
+          >market-analyzer</a
+        >, a desktop trading-analysis app where <em
+          >Claude Code is the control surface</em
+        > — you talk to the agent, it calls tools on a local Python service, and a
+        live chart reflects the results. Not a chat box bolted onto a GUI; the agent
+        is the cockpit.
+      </p>
 
       <p>
-        My hobby is photography. Follow me on: <a
+        I also build small, focused Telegram bots as real tools — a Serbian
+        real-estate search bot that scrapes listing sites and tracks price
+        changes, a channel-statistics bot with its own dashboard, a reference
+        bot for traditional medicine. Each one does one thing and stays cheap
+        and boring in production, which is my favourite kind of software.
+      </p>
+
+      <p>
+        The one I'm most into right now is on the more playful side, and it's in
+        Rust: <a href="https://github.com/IgorKonovalov/light-music-visualizer"
+          >light-music-visualizer</a
+        >, a real-time music visualizer built around a shared Rust core (GPU
+        rendering via <code>wgpu</code>) that feeds both a standalone app and a
+        foobar2000 plugin. It's in active development, and it scratches the same
+        itch as the generative-art demos on this site — mathematics and creative
+        coding, and the geometry behind the pretty pictures.
+      </p>
+
+      <p>
+        My hobby is photography. Follow me on <a
           href="https://www.instagram.com/some_strange/">Instagram</a
-        >
+        >.
+      </p>
+
+      <p class="about-links">
+        Find me on <a href="https://github.com/IgorKonovalov">GitHub</a> and <a
+          href="https://www.linkedin.com/in/igor-konovalov/">LinkedIn</a
+        >.
       </p>
 
       <h2 class="virtual-tours-title">Virtual Tours</h2>
