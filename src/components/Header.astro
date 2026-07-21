@@ -41,6 +41,20 @@ const navLinks = [
 </header>
 
 <style>
+  /* Align title and nav on a shared baseline (desktop) */
+  @media screen and (min-width: 641px) {
+    .site-header .wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .site-header .site-title,
+    .site-header .site-nav {
+      float: none;
+    }
+  }
+
   /* Checkbox hack for mobile nav toggle */
   .nav-trigger {
     display: none;

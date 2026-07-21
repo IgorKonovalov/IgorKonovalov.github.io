@@ -31,9 +31,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         >
       </p>
 
-      <p><a href="http://igor-dlinni.livejournal.com">Russian blog</a></p>
-
-      <h2>Virtual Tours</h2>
+      <h2 class="virtual-tours-title">Virtual Tours</h2>
       <ul>
         <li>
           <a href="/assets/FULL/BangTao_house/index.html">Bang Tao House</a>
@@ -53,6 +51,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     float: left;
     padding: 0 var(--space-4) var(--space-4) 0;
     border-radius: var(--radius-md);
+  }
+
+  .virtual-tours-title {
+    clear: both;
   }
 
   @media screen and (max-width: 640px) {
