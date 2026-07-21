@@ -11,9 +11,9 @@ export const ui = {
   en: {
     'nav.about': 'About',
     'nav.archive': 'Archive',
-    'home.title': 'Creative coding & generative art',
+    'home.title': 'Notes on programming',
     'home.tagline':
-      'Experiments in drawing with math and JavaScript — simulations, curves, and patterns you can play with right in the browser.',
+      'A programming blog — experiments and notes on software, AI agents, and generative art.',
     'archive.title': 'Archive',
     'card.read': 'Read',
     'post.postedOn': 'Posted on',
@@ -26,9 +26,9 @@ export const ui = {
   ru: {
     'nav.about': 'Обо мне',
     'nav.archive': 'Архив',
-    'home.title': 'Творческое программирование и генеративное искусство',
+    'home.title': 'Заметки о программировании',
     'home.tagline':
-      'Эксперименты в рисовании с помощью математики и JavaScript — симуляции, кривые и узоры, с которыми можно поиграть прямо в браузере.',
+      'Блог о программировании — эксперименты и заметки о разработке, AI-агентах и генеративном искусстве.',
     'archive.title': 'Архив',
     'card.read': 'Читать',
     'post.postedOn': 'Опубликовано',
