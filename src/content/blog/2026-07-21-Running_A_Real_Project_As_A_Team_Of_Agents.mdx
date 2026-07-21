@@ -1,0 +1,161 @@
+---
+title: 'Running a real project as a team of agents'
+date: 2026-07-21
+tags: ['projects']
+description: 'The agent-coding workflow I refined over one real project: externalized plans, specialist skills, fresh-context review, and guardrails enforced in code.'
+---
+
+import Mermaid from '../../components/Mermaid.astro';
+
+For five or six years my GitHub shows almost nothing outside of paid work. The last personal things on this blog are from 2017 — fractals, L-systems, small creative-coding pieces. Then a gap.
+
+What closed the gap was agent coding, but not for the reason people usually give. The agents do not simply type code for me. What changed is that I stopped spending most of my time producing code by hand, and started spending it on plans and architecture instead. That shift is what let me keep quality high while iterating quickly, and it is what made building for its own sake worth doing again.
+
+This post describes the workflow behind that, refined over a single real project: a [desktop trading-analysis application](https://github.com/IgorKonovalov/market-analyzer). The application itself is not the point here — briefly, it is a Python sidecar (FastAPI on loopback) driven by an agent over MCP, with an Electron viewer that only renders — but the workflow around it is. That workflow has now produced **109 completed plans, 107 architecture decision records, 56 MCP tools, and 10 skills**, built solo over a few months. What follows is the part worth copying.
+
+## It began as a defect, not a design
+
+I did not set out to build a team of agents. I was addressing one specific failure: context loss.
+
+Over a long session the model drifts. It forgets decisions made an hour earlier, re-derives them incorrectly, and contradicts its own earlier output. The correction is to stop holding the context inside the conversation and to write it down outside the model, in durable documents. Martin Fowler's note on [context anchoring](https://martinfowler.com/articles/reduce-friction-ai/context-anchoring.html) describes the same principle: anchor the model on stable external context rather than relying on its memory. A secondary benefit is that external context is legible to a human — you can read it and inspect the diagrams, which is not true of tokens in a context window.
+
+Writing good plans, however, requires a session whose only responsibility is writing plans, holding the relevant templates and conventions in context and nothing else. That constraint produced the `architect` skill. Implementing those plans requires a separate session holding the coding conventions and quality gates. That produced `dev`. The division of labour was not imposed top-down; it fell out of the decision to externalize context into plans.
+
+## The roles
+
+There are now [ten skills](https://github.com/IgorKonovalov/market-analyzer/tree/main/.claude/skills), each governed by one rule: one skill, one responsibility, one bounded region of the codebase. The ownership map is explicit:
+
+<Mermaid
+  code={`
+flowchart TB
+  human["me at the keyboard"]
+  architect["architect: plans, ADRs, diagrams, review"]
+  dev["dev: Python sidecar, persistence, CI"]
+  sa["strategy-author: strategies/"]
+  bt["backtester: backtest/, runs/"]
+  ui["ui-builder: desktop/ (Electron + React)"]
+  human --> architect
+  architect -->|assigns a plan phase| dev
+  architect --> sa
+  architect --> bt
+  architect --> ui
+  dev --> architect
+  sa --> architect
+  bt --> architect
+  ui --> architect
+`}
+/>
+
+Two properties of these skills matter more than the boundaries themselves.
+
+First, on a bare invocation, a skill waits. If I route to `architect` without stating a task, it does not read files or scan the docs tree to infer what I might want. It states what it owns and stops. Repository scanning to determine intent is the precise behaviour that consumes context for no return, so it is prohibited; reads are task-grounded, performed only once a concrete task exists.
+
+Second, the boundaries encode domain rules, not only file ownership. The analyst skills report conditions and are forbidden from recommending an action — conditions are facts, decisions are the user's. Exactly one skill, `advisor`, is permitted to cross that line, and only under a dedicated decision record (ADR-0029): its output is always labelled advisory, always carries a rationale and a backtested or forecasted basis, and it holds no keys and places no orders. The crossing exists in one layer and is prevented from leaking back into the analysts. The point generalizes: a skill boundary is a place to enforce a rule, not merely to partition files.
+
+## Plans state _what_; ADRs state _why_
+
+These are two different documents, and separating them is half of the value.
+
+A **plan** describes what is being built and how: an ordered list of phases, each shipping as its own commit, each tagged with the owning skill and a concrete "done when" criterion. A plan is disposable — once its final phase lands and passes review, the file is moved to `plans/done/`. A representative phase, quoted verbatim from [the plan that added the advisor layer](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/plans/done/0038-advisor-layer.md):
+
+```
+### Phase 1 — advisor/ package: Recommendation model + fusion engine
+- Owner skill: dev
+- Files touched: advisor/models.py, advisor/fusion.py, tests/advisor/*
+- Done when: constructing a Recommendation with an empty/absent basis RAISES a
+  validation error (a test asserts this). The fusion is deterministic: identical
+  inputs produce an identical recommendation. The package imports only analyst
+  OUTPUTS — an import-lint walks the package AST and asserts no import of
+  analyst-internal modules.
+```
+
+The "done when" clause is the mechanism. It is not "implement the advisor"; it is a set of checkable behavioural claims — a validation error on a missing basis, byte-identical output on identical input, an AST-level import check. A plan phrased this way can be verified; a vague one cannot, and is quietly ignored by the implementer. Each plan also states explicitly what it does _not_ do, which bounds scope as firmly as the phase list.
+
+An **ADR** records why a decision was taken over the alternatives, and it is append-only. An accepted ADR is never edited; it is superseded by a later one that references it. This produces a readable decision history: [ADR-0001](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/adrs/0001-tauri-vs-electron.md) chose Tauri for the shell, [ADR-0005](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/adrs/0005-desktop-shell-electron.md) superseded it with Electron; [ADR-0003](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/adrs/0003-vendoring-strategy.md) set a vendoring policy, [ADR-0009](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/adrs/0009-rewrite-data-layer-in-house.md) superseded it with an in-house data layer; [ADR-0014](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/adrs/0014-mcp-as-second-sidecar-protocol.md) framed MCP as a secondary protocol, [ADR-0015](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/adrs/0015-claude-code-primary-control-surface.md) refined it into the primary control surface one day later. The section that earns its keep is the list of rejected options with reasons — for example, on why charts are not rendered in the terminal:
+
+```
+## Alternatives considered
+### Alternative A — Remove Electron entirely; render charts in the terminal
+Rejected because the required visualization fidelity — candlesticks with overlays,
+zoomable equity curves, marker hover-text — does not exist in terminal chart
+libraries. The alternative reads as "consistent" but trades product value for
+ideological purity.
+```
+
+Months later, when the same idea resurfaces, the ADR has already recorded the counter-argument. Numbered plans and ADRs are the first thing I would recommend adopting; every other practice here rests on them. Plan and ADR numbers are independent sequences, assigned from a tracked next-free number so that parallel sessions do not collide on them.
+
+## Design, implementation, and review are three separate sessions
+
+The observation that reorganized the whole workflow is this: an agent's attention is constrained not only by token budget but by its own implementation history. The session that wrote a piece of code is a poor reviewer of it, because it reads the code it intended to write rather than the code actually present.
+
+Consequently, review is a fresh `architect` session with no memory of the implementation, evaluating the entire plan against the agreed design. Moving to that arrangement reduced defects substantially.
+
+Fresh review has a failure mode of its own, which I encountered directly. Early close reviews returned clean almost every time — "no changes required" — and the application nonetheless sometimes failed to run. A review that always passes is not reviewing. The corrective was to give the review concrete obligations rather than a general instruction to "check the work." The reviewer now opens the named test files and reads the assertion bodies; a green CI run is not accepted as evidence. This came out of specific incidents in [the very first plan](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/plans/done/0001-bootstrap.md):
+
+- `sidecar-supervisor.spec.ts` asserted `expect(pid).toBeGreaterThan(0)` against an arbitrary process — a tautology that passed while testing nothing. "3 of 4 specs pass" concealed that one of the three was a stub.
+- `security.spec.ts` promised a "cross-origin fetch is blocked by CSP" assertion in its docstring, but the file contained no such test. The claim lived only in a comment.
+- A load-path fix in a later phase unblocked a previously-skipped spec, `ohlcv-view.spec.ts`, which then failed and exposed a real empty-state bug that had been latent.
+
+Each of these passes a naive "tests are green" check. Reading the assertions catches them. That is now the reviewer's explicit job.
+
+The lifecycle, end to end:
+
+<Mermaid
+  code={`
+flowchart LR
+  plan["architect: plan + ADRs"] -->|explicit go| impl["dev: implement every phase, one session, commit per phase"]
+  impl -->|final phase landed| rev["architect: fresh session, reads assertions, runs done-when"]
+  rev -->|close ceremony| done["plans/done/, ADRs accepted, index refresh, version bump"]
+`}
+/>
+
+The implementer commits once per phase and never pushes; fixes are made forward, never by amending history. The advisor plan, for instance, landed as two phase commits ([`47e7ac9`](https://github.com/IgorKonovalov/market-analyzer/commit/47e7ac9), [`339885e`](https://github.com/IgorKonovalov/market-analyzer/commit/339885e)) followed by two fix-forward commits ([`97099a5`](https://github.com/IgorKonovalov/market-analyzer/commit/97099a5), [`6455786`](https://github.com/IgorKonovalov/market-analyzer/commit/6455786)) when review found the package importing a tool module instead of a domain surface. The close ceremony is a fixed sequence: flip the plan's status to `done` and `git mv` it into `done/`, move any paired ADRs from proposed to accepted, refresh the plan and ADR indexes, reconcile the affected living specs, merge the implementation branch if one exists, and bump the version once for the whole plan (`feat` to a minor, `fix` to a patch). The implementer performs none of these; separating authorship from closure is the point.
+
+## Handoffs are a defined protocol
+
+Because every phase carries an owner-skill tag — drawn from a fixed vocabulary of `dev`, `ui-builder`, `strategy-author`, `backtester`, and `human` — a plan that spans domains hands off deterministically. The active skill implements the contiguous run of phases it owns, commits, and transfers control at the boundary. For the `dev`↔`ui-builder` pair the transfer is automated in-session; for the others it is a manual paste into a fresh session. In every case the receiving skill restates the remaining work and waits for an explicit "go" before writing code. The automation removes the copy-paste step, not the approval gate.
+
+## Guardrails are enforced in code, not requested in prose
+
+Once more than one agent operates on one repository, cooperation cannot depend on the model choosing to behave. Two sessions sharing a working tree will stage each other's unfinished files; this happened before it was prevented. The prevention is mechanical rather than advisory:
+
+- A pre-commit hook rejects broad staging outright — `git add -A`, `git add .`, `--all`, and the `:/` pathspec are all denied. Staging is by explicit path or it does not happen.
+- Destructive and history-rewriting operations — `push`, `reset`, `rebase`, `commit --amend`, `commit --no-verify` — are denied by rule. The agents commit; I push.
+- Even the commit-message path is hardened after a real failure: commit [`db7f17b`](https://github.com/IgorKonovalov/market-analyzer/commit/db7f17b) aborted on its first attempt because an em-dash and internal quotes in the message body were parsed by the shell as separate pathspecs. Commit messages are now constrained to plain ASCII for exactly that reason.
+
+The domain non-negotiables are enforced the same way, in code rather than in reminders. No lookahead bias: a decision at bar _i_ may see only bars up to _i_, enforced by an `as_of` guard at the single data-provider layer that both live and backtest paths share. Determinism: the backtest engine's golden test asserts cross-process byte-identical output under `model_dump(exclude={"run_id", "started_at", "finished_at"})`, so any non-determinism in the financially-meaningful path fails a test. Dependencies are pinned exactly (`==X.Y.Z`, no ranges) and refused until they are at least fourteen days old, which is likewise checked at resolution rather than trusted.
+
+The purpose of all this is not distrust for its own sake. It is that an agent can only be left to run unattended if its failure modes are fenced. The guardrails are what make looking away possible.
+
+## Parallelism: the part that underdelivered
+
+The intended endgame was fan-out: several plans in flight at once, each agent in its own git worktree so that no two share a working tree, all landing in parallel. The machinery for this exists — one worktree and branch per plan, a unique data directory per agent, and each sidecar bound to an OS-assigned port.
+
+<Mermaid
+  code={`
+flowchart TB
+  main["main branch"]
+  b1["worktree plan-0090: own branch, data dir A, port 0"]
+  b2["worktree plan-0091: own branch, data dir B, port 0"]
+  main --> b1
+  main --> b2
+  b1 -->|merge no-ff at close| main
+  b2 -->|merge no-ff at close| main
+`}
+/>
+
+File isolation, however, does not remove every collision, and three survive it. Alembic migrations form one linear chain, so two plans that each add a migration produce two heads at merge with no clean runtime fix — such plans must not run in parallel. The shared index files and the next-free number are append points that race, so all plan and ADR numbers are assigned up front. And shared on-disk state is separated only by the per-agent data directory.
+
+In practice the throughput gain was smaller than expected. Time saved by writing code concurrently is largely returned to orchestration and merging. More fundamentally, the constraint was never the agents' capacity; it was mine. Reviewing and steering several simultaneous sessions without losing quality exceeds the attention I actually have. I therefore run one well-managed loop far more often than several concurrent ones, and treat the parallel machinery as available rather than default. This is a limitation of the human in the loop, and worth stating plainly rather than overselling.
+
+## Skills are developed empirically
+
+One further point: the skills themselves are treated as software under test. A dedicated `skill-creator` runs a skill against a set of prompts with and without the skill present, grades the outputs against written assertions, and reports pass rate, token cost, and latency. It also optimizes the description field — the text that determines whether a skill triggers at all — by measuring trigger accuracy on held-out queries. Prompt and skill authoring is thereby an empirical loop with measured deltas, not a matter of intuition.
+
+## What to take from this
+
+If only one practice is worth adopting, it is this: externalize context into numbered plans, and keep _why_ (ADRs) separate from _what_ (plans). Pulling the context out of the conversation and into durable, readable documents is the foundation; specialist skills, fresh-context review, mechanical guardrails, and worktree parallelism are all methods of protecting that foundation.
+
+The gain, for me, was not primarily speed. It was that personal projects became viable again. For years I wrote code only for work. I now spend that time writing plans and keeping the architecture honest rather than producing boilerplate by hand, and the result is that building things for their own sake is once again something I have the capacity to do.
+
+[Source (the project this workflow was refined on)](https://github.com/IgorKonovalov/market-analyzer)

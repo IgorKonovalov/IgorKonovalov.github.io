@@ -1,0 +1,43 @@
+---
+// Renders a Mermaid diagram. The diagram source is passed as `code`.
+// The actual mermaid runtime is loaded once, lazily, in BaseLayout — but only
+// on pages that contain a `.mermaid` element, so non-diagram pages stay light.
+//
+// The figure breaks out wider than the reading column (centred on the viewport)
+// so diagrams have room without forcing the prose to a wide, hard-to-read column.
+interface Props {
+  code: string;
+}
+const { code } = Astro.props;
+---
+
+<figure class="mermaid-figure">
+  <pre class="mermaid">{code}</pre>
+</figure>
+
+<style>
+  .mermaid-figure {
+    width: min(1100px, 94vw);
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: var(--space-6, 2.5rem) 0;
+    overflow-x: auto;
+  }
+  .mermaid {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: center;
+  }
+  /* Hide the raw diagram source until mermaid has replaced it with an SVG. */
+  .mermaid:not([data-processed='true']) {
+    color: transparent;
+  }
+  /* The SVG is injected at runtime (unscoped), so target it globally. */
+  .mermaid :global(svg) {
+    max-width: 100%;
+    height: auto;
+  }
+</style>
