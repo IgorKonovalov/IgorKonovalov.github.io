@@ -9,9 +9,10 @@ interface Props {
   title?: string;
   description?: string;
   type?: 'website' | 'article';
+  width?: 'default' | 'wide';
 }
 
-const { title, description, type } = Astro.props;
+const { title, description, type, width = 'default' } = Astro.props;
 ---
 
 <!doctype html>
@@ -35,12 +36,12 @@ const { title, description, type } = Astro.props;
     />
   </head>
   <body>
-    <Header />
+    <Header width={width} />
     <main class="page-content" aria-label="Content">
-      <div class="wrapper">
+      <div class={`wrapper${width === 'wide' ? ' wrapper-wide' : ''}`}>
         <slot />
       </div>
     </main>
-    <Footer />
+    <Footer width={width} />
   </body>
 </html>

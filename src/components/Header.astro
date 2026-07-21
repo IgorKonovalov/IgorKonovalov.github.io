@@ -1,4 +1,10 @@
 ---
+interface Props {
+  width?: 'default' | 'wide';
+}
+
+const { width = 'default' } = Astro.props;
+
 const navLinks = [
   { title: 'About', url: '/about/' },
   { title: 'Archive', url: '/archive/' },
@@ -6,7 +12,7 @@ const navLinks = [
 ---
 
 <header class="site-header" role="banner">
-  <div class="wrapper">
+  <div class={`wrapper${width === 'wide' ? ' wrapper-wide' : ''}`}>
     <a class="site-title" rel="author" href="/">Igor Konovalov</a>
 
     <nav class="site-nav">

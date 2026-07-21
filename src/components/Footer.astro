@@ -1,4 +1,10 @@
 ---
+interface Props {
+  width?: 'default' | 'wide';
+}
+
+const { width = 'default' } = Astro.props;
+
 const siteTitle = 'Igor Konovalov';
 const email = 'konovalov.avp@gmail.com';
 const description =
@@ -8,7 +14,7 @@ const instagram = 'some_strange';
 ---
 
 <footer class="site-footer">
-  <div class="wrapper">
+  <div class={`wrapper${width === 'wide' ? ' wrapper-wide' : ''}`}>
     <div class="footer-col-wrapper">
       <div class="footer-col footer-col-1">
         <ul class="contact-list">
