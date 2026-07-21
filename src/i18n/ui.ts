@@ -1,0 +1,75 @@
+import { DEFAULT_LOCALE, type Locale } from '../lib/postUrl';
+
+export { DEFAULT_LOCALE, LOCALES, type Locale } from '../lib/postUrl';
+
+/**
+ * UI string dictionary. `en` is the source of truth and must stay byte-for-byte
+ * identical to the previously hardcoded copy so English output never changes.
+ * `ru` values are author-facing chrome (nav, labels, tagline) — review for tone.
+ */
+export const ui = {
+  en: {
+    'nav.about': 'About',
+    'nav.archive': 'Archive',
+    'home.title': 'Creative coding & generative art',
+    'home.tagline':
+      'Experiments in drawing with math and JavaScript — simulations, curves, and patterns you can play with right in the browser.',
+    'archive.title': 'Archive',
+    'card.read': 'Read',
+    'post.postedOn': 'Posted on',
+    noPosts: 'No posts yet.',
+    'footer.description':
+      'Belgrade, Serbia. Fullstack developer working in TypeScript and Python, building AI agents and creative-coding experiments. Personal blog and portfolio.',
+    'lang.name': 'English',
+    'lang.switchTo': 'Русский',
+  },
+  ru: {
+    'nav.about': 'Обо мне',
+    'nav.archive': 'Архив',
+    'home.title': 'Творческое программирование и генеративное искусство',
+    'home.tagline':
+      'Эксперименты в рисовании с помощью математики и JavaScript — симуляции, кривые и узоры, с которыми можно поиграть прямо в браузере.',
+    'archive.title': 'Архив',
+    'card.read': 'Читать',
+    'post.postedOn': 'Опубликовано',
+    noPosts: 'Пока нет записей.',
+    'footer.description':
+      'Белград, Сербия. Fullstack-разработчик на TypeScript и Python, создаю AI-агентов и эксперименты с генеративным искусством. Личный блог и портфолио.',
+    'lang.name': 'Русский',
+    'lang.switchTo': 'English',
+  },
+} as const;
+
+export type UIKey = keyof (typeof ui)['en'];
+
+/** Look up a UI string for a locale, falling back to the default locale. */
+export function t(locale: Locale, key: UIKey): string {
+  return ui[locale][key] ?? ui[DEFAULT_LOCALE][key];
+}
+
+/** The BCP-47 tag used for `Intl` date formatting per locale. */
+export const DATE_LOCALE: Record<Locale, string> = {
+  en: 'en-US',
+  ru: 'ru-RU',
+};
+
+/**
+ * The current locale for a page, derived from its URL path. Anything under
+ * `/ru/` (or `/ru`) is Russian; everything else is the unprefixed default.
+ */
+export function getLocaleFromPath(pathname: string): Locale {
+  return pathname === '/ru' || pathname.startsWith('/ru/') ? 'ru' : 'en';
+}
+
+/** The home path for a locale (`/` for en, `/ru/` for ru). */
+export function localeHome(locale: Locale): string {
+  return locale === DEFAULT_LOCALE ? '/' : `/${locale}/`;
+}
+
+/**
+ * Prefix an absolute, unprefixed site path (`/about/`) with the locale segment
+ * when it is not the default locale (`/ru/about/`).
+ */
+export function localizePath(path: string, locale: Locale): string {
+  return locale === DEFAULT_LOCALE ? path : `/${locale}${path}`;
+}

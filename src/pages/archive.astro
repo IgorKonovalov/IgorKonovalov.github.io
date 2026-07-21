@@ -1,12 +1,15 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
-import { postHref } from '../lib/postUrl';
+import { getLocale, postHref } from '../lib/postUrl';
+import { getLocaleFromPath, t } from '../i18n/ui';
 
+const locale = getLocaleFromPath(Astro.url.pathname);
+const dateLocale = locale === 'ru' ? 'ru-RU' : 'en-GB';
 const posts = await getCollection('blog');
-const sortedPosts = posts.sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
-);
+const sortedPosts = posts
+  .filter((post) => getLocale(post) === locale)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
 const postsByYear = new Map<number, typeof sortedPosts>();
 for (const post of sortedPosts) {
@@ -18,10 +21,10 @@ for (const post of sortedPosts) {
 const years = [...postsByYear.keys()].sort((a, b) => b - a);
 ---
 
-<BaseLayout title="Archive">
+<BaseLayout title={t(locale, 'archive.title')}>
   <article class="post">
     <header class="post-header">
-      <h1 class="post-title">Archive</h1>
+      <h1 class="post-title">{t(locale, 'archive.title')}</h1>
     </header>
 
     <div class="post-content">
@@ -32,7 +35,7 @@ const years = [...postsByYear.keys()].sort((a, b) => b - a);
             <ul>
               {postsByYear.get(year)!.map((post) => (
                 <li class="archive-item">
-                  {post.data.date.toLocaleDateString('en-GB', {
+                  {post.data.date.toLocaleDateString(dateLocale, {
                     day: '2-digit',
                     month: 'short',
                   })}{' '}
@@ -43,7 +46,7 @@ const years = [...postsByYear.keys()].sort((a, b) => b - a);
           </>
         ))
       }
-      {years.length === 0 && <p>No posts yet.</p>}
+      {years.length === 0 && <p>{t(locale, 'noPosts')}</p>}
     </div>
   </article>
 </BaseLayout>

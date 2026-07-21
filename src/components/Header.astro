@@ -1,19 +1,23 @@
 ---
+import { getLocaleFromPath, localeHome, localizePath, t } from '../i18n/ui';
+
 interface Props {
   width?: 'default' | 'wide';
 }
 
 const { width = 'default' } = Astro.props;
 
+const locale = getLocaleFromPath(Astro.url.pathname);
+const homeHref = localeHome(locale);
 const navLinks = [
-  { title: 'About', url: '/about/' },
-  { title: 'Archive', url: '/archive/' },
+  { title: t(locale, 'nav.about'), url: localizePath('/about/', locale) },
+  { title: t(locale, 'nav.archive'), url: localizePath('/archive/', locale) },
 ];
 ---
 
 <header class="site-header" role="banner">
   <div class={`wrapper${width === 'wide' ? ' wrapper-wide' : ''}`}>
-    <a class="site-title" rel="author" href="/">Igor Konovalov</a>
+    <a class="site-title" rel="author" href={homeHref}>Igor Konovalov</a>
 
     <nav class="site-nav">
       <input type="checkbox" id="nav-trigger" class="nav-trigger" />

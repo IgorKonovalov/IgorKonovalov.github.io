@@ -1,14 +1,16 @@
 ---
+import { getLocaleFromPath, t } from '../i18n/ui';
+
 interface Props {
   width?: 'default' | 'wide';
 }
 
 const { width = 'default' } = Astro.props;
 
+const locale = getLocaleFromPath(Astro.url.pathname);
 const siteTitle = 'Igor Konovalov';
 const email = 'konovalov.avp@gmail.com';
-const description =
-  'Belgrade, Serbia. Fullstack developer working in TypeScript and Python, building AI agents and creative-coding experiments. Personal blog and portfolio.';
+const description = t(locale, 'footer.description');
 const github = 'IgorKonovalov';
 const instagram = 'some_strange';
 ---

@@ -2,6 +2,7 @@
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import SEO from '../components/SEO.astro';
+import { getLocaleFromPath } from '../i18n/ui';
 import '../styles/tokens.css';
 import '../styles/global.css';
 
@@ -13,10 +14,11 @@ interface Props {
 }
 
 const { title, description, type, width = 'default' } = Astro.props;
+const locale = getLocaleFromPath(Astro.url.pathname);
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

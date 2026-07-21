@@ -1,21 +1,20 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
-import { postHref } from '../lib/postUrl';
+import { getLocale, postHref } from '../lib/postUrl';
+import { DATE_LOCALE, getLocaleFromPath, t } from '../i18n/ui';
 
+const locale = getLocaleFromPath(Astro.url.pathname);
 const posts = await getCollection('blog');
-const sortedPosts = posts.sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
-);
+const sortedPosts = posts
+  .filter((post) => getLocale(post) === locale)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 ---
 
 <BaseLayout width="wide">
   <section class="home-intro">
-    <h1 class="home-title">Creative coding &amp; generative art</h1>
-    <p class="home-tagline">
-      Experiments in drawing with math and JavaScript — simulations, curves, and
-      patterns you can play with right in the browser.
-    </p>
+    <h1 class="home-title">{t(locale, 'home.title')}</h1>
+    <p class="home-tagline">{t(locale, 'home.tagline')}</p>
   </section>
 
   <ul class="post-grid">
@@ -31,7 +30,7 @@ const sortedPosts = posts.sort(
                 class="post-card__date"
                 datetime={post.data.date.toISOString()}
               >
-                {post.data.date.toLocaleDateString('en-US', {
+                {post.data.date.toLocaleDateString(DATE_LOCALE[locale], {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',
@@ -43,13 +42,14 @@ const sortedPosts = posts.sort(
               <p class="post-card__desc">{post.data.description}</p>
             )}
             <span class="post-card__more">
-              Read<span class="post-card__arrow"> &rarr;</span>
+              {t(locale, 'card.read')}
+              <span class="post-card__arrow"> &rarr;</span>
             </span>
           </a>
         </li>
       ))
     }
-    {sortedPosts.length === 0 && <p>No posts yet.</p>}
+    {sortedPosts.length === 0 && <p>{t(locale, 'noPosts')}</p>}
   </ul>
 </BaseLayout>
 
