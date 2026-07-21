@@ -1,9 +1,17 @@
 ---
+import { DEFAULT_LOCALE, getLocaleFromPath, type Locale } from '../i18n/ui';
+
 interface Props {
   title?: string;
   description?: string;
   canonicalUrl?: string;
   type?: 'website' | 'article';
+  /**
+   * Locale → site path for versions of this page that actually exist. When
+   * provided, hreflang alternates (plus x-default) are emitted. Omit it and no
+   * hreflang tags are rendered — so pages without a translation stay clean.
+   */
+  alternates?: Partial<Record<Locale, string>>;
 }
 
 const siteTitle = 'Igor Konovalov';
@@ -11,24 +19,51 @@ const siteDescription =
   'Belgrade, Serbia. Fullstack developer working in TypeScript and Python, building AI agents and creative-coding experiments. Personal blog and portfolio.';
 const siteUrl = 'https://igorkonovalov.github.io';
 
+const OG_LOCALE: Record<Locale, string> = { en: 'en_US', ru: 'ru_RU' };
+
 const {
   title,
   description = siteDescription,
   canonicalUrl,
   type = 'website',
+  alternates,
 } = Astro.props;
 
+const locale = getLocaleFromPath(Astro.url.pathname);
 const pageTitle = title ? `${title} | ${siteTitle}` : siteTitle;
 const canonical = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
+
+const hreflangs = alternates
+  ? [
+      ...Object.entries(alternates).map(([loc, path]) => ({
+        hreflang: loc,
+        href: new URL(path, siteUrl).href,
+      })),
+      ...(alternates[DEFAULT_LOCALE]
+        ? [
+            {
+              hreflang: 'x-default',
+              href: new URL(alternates[DEFAULT_LOCALE], siteUrl).href,
+            },
+          ]
+        : []),
+    ]
+  : [];
 ---
 
 <title>{pageTitle}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={canonical} />
+{
+  hreflangs.map((alt) => (
+    <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />
+  ))
+}
 
 <!-- Open Graph -->
 <meta property="og:title" content={pageTitle} />
 <meta property="og:description" content={description} />
 <meta property="og:type" content={type} />
 <meta property="og:url" content={canonical} />
+<meta property="og:locale" content={OG_LOCALE[locale]} />
 <meta property="og:site_name" content={siteTitle} />

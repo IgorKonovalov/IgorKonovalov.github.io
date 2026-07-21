@@ -2,7 +2,7 @@
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import SEO from '../components/SEO.astro';
-import { getLocaleFromPath } from '../i18n/ui';
+import { getLocaleFromPath, type Locale } from '../i18n/ui';
 import '../styles/tokens.css';
 import '../styles/global.css';
 
@@ -11,9 +11,10 @@ interface Props {
   description?: string;
   type?: 'website' | 'article';
   width?: 'default' | 'wide';
+  alternates?: Partial<Record<Locale, string>>;
 }
 
-const { title, description, type, width = 'default' } = Astro.props;
+const { title, description, type, width = 'default', alternates } = Astro.props;
 const locale = getLocaleFromPath(Astro.url.pathname);
 ---
 
@@ -22,7 +23,12 @@ const locale = getLocaleFromPath(Astro.url.pathname);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <SEO title={title} description={description} type={type} />
+    <SEO
+      title={title}
+      description={description}
+      type={type}
+      alternates={alternates}
+    />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link
       rel="alternate"
