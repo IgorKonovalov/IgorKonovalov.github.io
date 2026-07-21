@@ -51,3 +51,25 @@ export function postHref(post: BlogPost): string {
 export function postSlugParam(post: BlogPost): string {
   return postHref(post).slice(1, -1);
 }
+
+/** The post's filename without its locale folder — the translation key. */
+export function translationKey(post: BlogPost): string {
+  return post.id.replace(/^(en|ru)\//, '');
+}
+
+/**
+ * The same post in the other locale, paired by identical filename, or
+ * `undefined` when no translation exists.
+ */
+export function findCounterpart(
+  post: BlogPost,
+  allPosts: BlogPost[],
+): BlogPost | undefined {
+  const key = translationKey(post);
+  return allPosts.find(
+    (p) =>
+      p.id !== post.id &&
+      getLocale(p) !== getLocale(post) &&
+      translationKey(p) === key,
+  );
+}

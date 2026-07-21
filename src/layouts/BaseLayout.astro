@@ -2,7 +2,7 @@
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import SEO from '../components/SEO.astro';
-import { getLocaleFromPath, type Locale } from '../i18n/ui';
+import { getLocaleFromPath, toggleLocalePath, type Locale } from '../i18n/ui';
 import '../styles/tokens.css';
 import '../styles/global.css';
 
@@ -12,10 +12,22 @@ interface Props {
   type?: 'website' | 'article';
   width?: 'default' | 'wide';
   alternates?: Partial<Record<Locale, string>>;
+  switchHref?: string;
 }
 
-const { title, description, type, width = 'default', alternates } = Astro.props;
+const {
+  title,
+  description,
+  type,
+  width = 'default',
+  alternates,
+  switchHref,
+} = Astro.props;
 const locale = getLocaleFromPath(Astro.url.pathname);
+// The language toggle target. Static pages pass an explicit switchHref;
+// otherwise fall back to the same path in the other locale.
+const langHref = switchHref ?? toggleLocalePath(Astro.url.pathname);
+const feedHref = locale === 'ru' ? '/ru/rss.xml' : '/rss.xml';
 ---
 
 <!doctype html>
@@ -34,7 +46,7 @@ const locale = getLocaleFromPath(Astro.url.pathname);
       rel="alternate"
       type="application/rss+xml"
       title="Igor Konovalov"
-      href="/feed.xml"
+      href={feedHref}
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -44,7 +56,7 @@ const locale = getLocaleFromPath(Astro.url.pathname);
     />
   </head>
   <body>
-    <Header width={width} />
+    <Header width={width} switchHref={langHref} />
     <main class="page-content" aria-label="Content">
       <div class={`wrapper${width === 'wide' ? ' wrapper-wide' : ''}`}>
         <slot />

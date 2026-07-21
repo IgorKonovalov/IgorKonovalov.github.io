@@ -1,0 +1,116 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { pageI18n } from '../../i18n/ui';
+
+const { switchHref, alternates } = pageI18n(Astro.url.pathname);
+---
+
+<BaseLayout
+  title="Обо мне"
+  description="Игорь Коновалов — fullstack-разработчик из Белграда: AI-агенты, Telegram-боты и эксперименты с творческим программированием."
+  switchHref={switchHref}
+  alternates={alternates}
+>
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Обо мне</h1>
+    </header>
+
+    <div class="post-content">
+      <img
+        src="/images/about/about_photo.jpg"
+        alt="Игорь Коновалов"
+        class="about-photo"
+      />
+
+      <p>
+        Привет! Меня зовут Игорь Коновалов — я fullstack-разработчик в EPAM,
+        работаю в основном на TypeScript и Python, живу в Белграде, Сербия.
+        Добро пожаловать на мой личный сайт. Мне нравится создавать странные
+        штуки, и в последнее время самые странные и интересные из них — это
+        AI-агенты.
+      </p>
+
+      <p>
+        Многое из моих недавних проектов находится прямо на границе между
+        качественной инженерией и тем, чтобы дать LLM-агенту действительно
+        управлять процессом. Я сделал <a
+          href="https://github.com/IgorKonovalov/market-analyzer"
+          >market-analyzer</a
+        > — десктопное приложение для анализа торгов, где <em
+          >Claude Code выступает управляющим интерфейсом</em
+        >: вы разговариваете с агентом, он вызывает инструменты локального
+        Python-сервиса, а живой график отражает результаты. Это не чат,
+        прикрученный к GUI; агент здесь — кабина пилота.
+      </p>
+
+      <p>
+        Ещё я делаю небольшие узкоспециализированные Telegram-боты как настоящие
+        инструменты — бот для поиска недвижимости в Сербии, который парсит сайты
+        объявлений и отслеживает изменения цен; бот статистики каналов с
+        собственной панелью; справочный бот по традиционной медицине. Каждый
+        делает что-то одно и остаётся дешёвым и скучным в продакшене — это мой
+        любимый вид софта.
+      </p>
+
+      <p>
+        Больше всего сейчас меня увлекает проект из более игровой области, и он
+        на Rust: <a
+          href="https://github.com/IgorKonovalov/light-music-visualizer"
+          >light-music-visualizer</a
+        > — визуализатор музыки в реальном времени вокруг общего ядра на Rust (GPU-рендеринг
+        через <code>wgpu</code>), которое питает и отдельное приложение, и
+        плагин для foobar2000. Он в активной разработке и закрывает ту же
+        потребность, что и демо с генеративным искусством на этом сайте —
+        математика и творческое программирование, и геометрия, стоящая за
+        красивыми картинками.
+      </p>
+
+      <p>
+        Моё хобби — фотография. Подписывайтесь на меня в <a
+          href="https://www.instagram.com/some_strange/">Instagram</a
+        >.
+      </p>
+
+      <p class="about-links">
+        Найти меня можно на <a href="https://github.com/IgorKonovalov">GitHub</a
+        >
+        и <a href="https://www.linkedin.com/in/igor-konovalov/">LinkedIn</a>.
+      </p>
+
+      <h2 class="virtual-tours-title">Виртуальные туры</h2>
+      <ul>
+        <li>
+          <a href="/assets/FULL/BangTao_house/index.html">Bang Tao House</a>
+        </li>
+        <li>
+          <a href="/assets/FULL/vtour_A1/tour.html">Виртуальный тур A1</a>
+        </li>
+        <li>
+          <a href="/assets/FULL/vtour_P1_fin/tour.html">Виртуальный тур P1</a>
+        </li>
+      </ul>
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .about-photo {
+    width: 33%;
+    float: left;
+    padding: 0 var(--space-4) var(--space-4) 0;
+    border-radius: var(--radius-md);
+  }
+
+  .virtual-tours-title {
+    clear: both;
+  }
+
+  @media screen and (max-width: 640px) {
+    .about-photo {
+      width: 100%;
+      float: none;
+      padding: 0 0 var(--space-4) 0;
+    }
+  }
+</style>

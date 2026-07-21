@@ -1,10 +1,15 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { pageI18n } from '../i18n/ui';
+
+const { switchHref, alternates } = pageI18n(Astro.url.pathname);
 ---
 
 <BaseLayout
   title="About"
   description="About Igor Konovalov - fullstack developer in Belgrade building AI agents, Telegram bots, and creative-coding experiments."
+  switchHref={switchHref}
+  alternates={alternates}
 >
   <article class="post">
     <header class="post-header">

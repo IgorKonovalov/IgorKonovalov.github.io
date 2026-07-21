@@ -1,19 +1,27 @@
 ---
 import BaseLayout from './BaseLayout.astro';
-import { DATE_LOCALE, getLocaleFromPath, t } from '../i18n/ui';
+import { DATE_LOCALE, getLocaleFromPath, t, type Locale } from '../i18n/ui';
 
 interface Props {
   title: string;
   date: Date;
   tags?: string[];
   description?: string;
+  switchHref?: string;
+  alternates?: Partial<Record<Locale, string>>;
 }
 
-const { title, date, tags, description } = Astro.props;
+const { title, date, tags, description, switchHref, alternates } = Astro.props;
 const locale = getLocaleFromPath(Astro.url.pathname);
 ---
 
-<BaseLayout title={title} description={description} type="article">
+<BaseLayout
+  title={title}
+  description={description}
+  type="article"
+  switchHref={switchHref}
+  alternates={alternates}
+>
   <article class="post">
     <header class="post-header">
       <h1 class="post-title">{title}</h1>

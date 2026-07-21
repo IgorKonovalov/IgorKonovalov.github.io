@@ -1,17 +1,38 @@
 ---
 import { getCollection, render } from 'astro:content';
 import PostLayout from '../layouts/PostLayout.astro';
-import { postSlugParam } from '../lib/postUrl';
+import {
+  findCounterpart,
+  getLocale,
+  postHref,
+  postSlugParam,
+} from '../lib/postUrl';
+import { localeHome, otherLocale } from '../i18n/ui';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
-  return posts.map((post) => ({
-    params: { slug: postSlugParam(post) },
-    props: { post },
-  }));
+  return posts.map((post) => {
+    const counterpart = findCounterpart(post, posts);
+    const loc = getLocale(post);
+    // The switcher always has a target: the translation if it exists, else the
+    // other locale's home. hreflang alternates are only set for a real pair.
+    const switchHref = counterpart
+      ? postHref(counterpart)
+      : localeHome(otherLocale(loc));
+    const alternates = counterpart
+      ? {
+          en: postHref(loc === 'en' ? post : counterpart),
+          ru: postHref(loc === 'ru' ? post : counterpart),
+        }
+      : undefined;
+    return {
+      params: { slug: postSlugParam(post) },
+      props: { post, switchHref, alternates },
+    };
+  });
 }
 
-const { post } = Astro.props;
+const { post, switchHref, alternates } = Astro.props;
 const { Content } = await render(post);
 ---
 
@@ -20,6 +41,8 @@ const { Content } = await render(post);
   date={post.data.date}
   tags={post.data.tags}
   description={post.data.description}
+  switchHref={switchHref}
+  alternates={alternates}
 >
   <Content />
 </PostLayout>

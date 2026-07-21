@@ -73,3 +73,39 @@ export function localeHome(locale: Locale): string {
 export function localizePath(path: string, locale: Locale): string {
   return locale === DEFAULT_LOCALE ? path : `/${locale}${path}`;
 }
+
+/** The other locale in the pair. */
+export function otherLocale(locale: Locale): Locale {
+  return locale === 'en' ? 'ru' : 'en';
+}
+
+/**
+ * The same page's path in the other locale: add the `/ru` prefix on default
+ * pages, strip it on Russian ones. `/` ↔ `/ru/`, `/about/` ↔ `/ru/about/`.
+ */
+export function toggleLocalePath(pathname: string): string {
+  if (pathname === '/ru' || pathname.startsWith('/ru/')) {
+    const stripped = pathname.replace(/^\/ru/, '');
+    return stripped === '' ? '/' : stripped;
+  }
+  return pathname === '/' ? '/ru/' : `/ru${pathname}`;
+}
+
+/**
+ * hreflang + switcher info for a page whose translation is *known to exist*
+ * (the static pages: home, archive, about). `alternates` maps each locale to
+ * its path; `switchHref` is where the language toggle points.
+ */
+export function pageI18n(pathname: string): {
+  switchHref: string;
+  alternates: Record<Locale, string>;
+} {
+  const isRu = pathname === '/ru' || pathname.startsWith('/ru/');
+  const other = toggleLocalePath(pathname);
+  return {
+    switchHref: other,
+    alternates: isRu
+      ? { en: other, ru: pathname }
+      : { en: pathname, ru: other },
+  };
+}
