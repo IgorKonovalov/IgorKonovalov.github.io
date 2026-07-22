@@ -35,6 +35,16 @@ const feedHref = locale === 'ru' ? '/ru/rss.xml' : '/rss.xml';
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // Apply the saved theme before first paint so there is no flash. With no
+      // saved choice, the page falls back to the OS preference via CSS.
+      (() => {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'light' || saved === 'dark') {
+          document.documentElement.setAttribute('data-theme', saved);
+        }
+      })();
+    </script>
     <SEO
       title={title}
       description={description}

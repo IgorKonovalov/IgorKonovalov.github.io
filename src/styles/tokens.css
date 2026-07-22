@@ -95,9 +95,12 @@
   --syntax-deletion-bg: #ffeef0;
 }
 
-/* === Dark Mode === */
+/* === Dark Mode ===
+   The dark palette lives in one custom-property block reused by two selectors:
+   the OS preference (unless the user has explicitly forced light) and the
+   explicit data-theme="dark" override set by the header toggle. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --color-bg-primary: #141418;
     --color-bg-secondary: #1e1e24;
     --color-bg-code: #1a1a20;
@@ -136,4 +139,53 @@
     --syntax-deletion-fg: #ffa198;
     --syntax-deletion-bg: #490202;
   }
+}
+
+/* Explicit dark override (toggle), regardless of OS preference. Same palette
+   as the media query above — keep the two in sync. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg-primary: #141418;
+  --color-bg-secondary: #1e1e24;
+  --color-bg-code: #1a1a20;
+  --color-bg-card: #1e1e24;
+
+  --color-text-primary: #e8e8ec;
+  --color-text-secondary: #a8a8b8;
+  --color-text-muted: #68687a;
+
+  --color-accent: #8f88ff;
+  --color-accent-hover: #ada7ff;
+  --color-accent-subtle: #2b2766;
+  --color-accent-warm: #f0916f;
+
+  --color-border: #2a2a34;
+  --color-border-hover: #3a3a48;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35), 0 14px 30px rgba(0, 0, 0, 0.3);
+
+  --syntax-comment: #8b949e;
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-number: #79c0ff;
+  --syntax-function: #d2a8ff;
+  --syntax-variable: #ffa657;
+  --syntax-type: #7ee787;
+  --syntax-tag: #7ee787;
+  --syntax-attribute: #d2a8ff;
+  --syntax-operator: #ff7b72;
+  --syntax-error-fg: #ffa198;
+  --syntax-error-bg: #490202;
+  --syntax-addition-fg: #7ee787;
+  --syntax-addition-bg: #0d2117;
+  --syntax-deletion-fg: #ffa198;
+  --syntax-deletion-bg: #490202;
+}
+
+/* Explicit light override (toggle) wins over OS dark; light values already
+   live on :root, so only the color-scheme hint needs restating. */
+:root[data-theme='light'] {
+  color-scheme: light;
 }

@@ -59,10 +59,44 @@ const langCode = otherLocale(locale).toUpperCase();
         >
           {langCode}
         </a>
+        <button
+          type="button"
+          class="theme-toggle"
+          aria-label="Toggle dark and light theme"
+        >
+          <span
+            class="theme-toggle__icon theme-toggle__icon--light"
+            aria-hidden="true">☀️</span
+          >
+          <span
+            class="theme-toggle__icon theme-toggle__icon--dark"
+            aria-hidden="true">🌙</span
+          >
+        </button>
       </div>
     </nav>
   </div>
 </header>
+
+<script is:inline>
+  // Toggle the theme and persist the choice. The effective current theme is the
+  // explicit data-theme if set, otherwise whatever the OS prefers.
+  (() => {
+    const btn = document.querySelector('.theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const root = document.documentElement;
+      const current =
+        root.getAttribute('data-theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light');
+      const next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+  })();
+</script>
 
 <style>
   /* Align title and nav on a shared baseline (desktop) */
@@ -114,5 +148,68 @@ const langCode = otherLocale(locale).toUpperCase();
   .lang-switch:hover,
   .lang-switch:focus-visible {
     color: var(--color-accent);
+  }
+
+  /* Theme toggle: emoji-only button. The icon shown reflects the *current*
+     theme, driven entirely by CSS so it never flashes the wrong glyph. */
+  .theme-toggle {
+    margin-left: var(--space-4);
+    padding: 2px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font-size: var(--text-lg);
+    line-height: 1;
+    border-radius: var(--radius-sm);
+    opacity: 0.85;
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  .theme-toggle:hover,
+  .theme-toggle:focus-visible {
+    opacity: 1;
+    transform: scale(1.1);
+    outline: none;
+  }
+
+  /* Default / light: show the sun, hide the moon. */
+  .theme-toggle__icon--dark {
+    display: none;
+  }
+
+  /* OS dark (unless the user forced light): show the moon. */
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .theme-toggle__icon--light {
+      display: none;
+    }
+    :global(:root:not([data-theme='light'])) .theme-toggle__icon--dark {
+      display: inline;
+    }
+  }
+
+  /* Explicit overrides from the toggle win in either direction. */
+  :global(:root[data-theme='dark']) .theme-toggle__icon--light {
+    display: none;
+  }
+  :global(:root[data-theme='dark']) .theme-toggle__icon--dark {
+    display: inline;
+  }
+  :global(:root[data-theme='light']) .theme-toggle__icon--light {
+    display: inline;
+  }
+  :global(:root[data-theme='light']) .theme-toggle__icon--dark {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-toggle {
+      transition: none;
+    }
+    .theme-toggle:hover,
+    .theme-toggle:focus-visible {
+      transform: none;
+    }
   }
 </style>
