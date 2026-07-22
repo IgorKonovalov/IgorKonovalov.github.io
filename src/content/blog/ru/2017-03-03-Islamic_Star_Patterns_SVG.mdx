@@ -1,0 +1,33 @@
+---
+title: 'Исламские звёздные узоры в SVG'
+date: 2017-03-08
+tags: ['projects']
+description: 'Исламские звёздные узоры на чистом JavaScript и SVG'
+demo: 'islamic-star-patterns'
+---
+
+import IslamicStarPatterns from '../../../components/demos/IslamicStarPatterns.astro';
+
+Небольшой проект, сделанный под влиянием ещё одного [видео](https://www.youtube.com/watch?v=sJ6pMLp_IaI) Дэвида Шиффмана. Реализация показалась мне довольно любопытной, и её было интересно повторить в SVG. Вот моя попытка — я взял код из репозитория [Coding Train](https://github.com/CodingTrain) для [исламских звёздных узоров](https://github.com/CodingTrain/StarPatterns) и полностью переписал его на чистом JavaScript с отрисовкой в SVG. Этот проект помог мне разобраться с парадигмой ООП в JS, сильно пригодился в следующем проекте (скоро увидите) и помог понять, как работает анимация в SVG.
+
+Если есть предложения — напишите мне в [twitter](https://twitter.com/igor_dlinni). Весь код доступен на моём [Github](https://github.com/IgorKonovalov/Islamic_Star_Patterns_SVG) — на этот раз я решил, что проект достаточно большой для отдельного репозитория, так что не стесняйтесь заводить issue/PR/форк и т.д. Улучшать есть что — другие объекты (треугольники и прочее), настройка через CSS и так далее.
+
+Интересная часть проекта — реализация стандартных векторных объектов из P5.JS. Лучший способ что-то понять для меня — переписать это самому. Чтобы всё заработало, понадобилось много векторных методов. Вот, например, функция поворота:
+
+```javascript
+Vector.prototype.rotate = function (angle) {
+  x =
+    Math.round(10000 * (this.x * Math.cos(angle) - this.y * Math.sin(angle))) /
+    10000;
+  y =
+    Math.round(10000 * (this.x * Math.sin(angle) + this.y * Math.cos(angle))) /
+    10000;
+  return new Vector(x, y);
+};
+```
+
+И многое другое — загляните в [репозиторий](https://github.com/IgorKonovalov/Islamic_Star_Patterns_SVG).
+
+Экспериментируйте и делитесь мыслями.
+
+<IslamicStarPatterns />

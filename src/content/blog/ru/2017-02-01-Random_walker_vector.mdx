@@ -1,0 +1,46 @@
+---
+title: 'Случайное блуждание с векторным объектом (полёт Леви)'
+date: 2017-02-01
+tags: ['projects']
+description: 'Реализация случайного блуждания с использованием векторных объектов и полёта Леви'
+demo: 'random-walker-2'
+---
+
+import RandomWalker2 from '../../../components/demos/RandomWalker2.astro';
+
+После вчерашней попытки написать случайное блуждание я решил реализовать почти то же самое, но с векторным объектом. Насколько я знаю, использовать векторы для описания координат и скорости объектов — обычная практика, и в этом небольшом проекте «сделать, вернувшись с работы» это оказалось удачной идеей. Предыдущая версия случайного блуждания — [здесь](/ru/projects/2017/01/31/simple_random_walker/).
+
+Сначала посмотрите на результат, пояснения ниже:
+
+<RandomWalker2 />
+
+Код векторного объекта довольно прост — он описывает координаты на canvas:
+
+```javascript
+function Vector(x, y) {
+  this.x = x;
+  this.y = y;
+}
+```
+
+Мне также понадобился случайный вектор заданной длины — чтобы описать следующий шаг блуждателя:
+
+```javascript
+function randomNumber(min, max) {
+  if (min > 0) return (max - min) * Math.random();
+  else return (max - min) * Math.random() + min;
+}
+function randomSign() {
+  let test = Math.round(Math.random() * 2);
+  if (test == 1) return -1;
+  else return 1;
+}
+Vector.prototype.random = function (length) {
+  x = randomNumber(-length, length);
+  y = Math.sqrt(Math.pow(length, 2) - Math.pow(x, 2)) * randomSign();
+  return new Vector(x, y);
+};
+```
+
+После этого оставалось лишь поместить начало отрезка в предыдущую точку (исходный вектор), прибавить к нему случайный вектор и нарисовать отрезок. Совсем просто.
+Полный код — на моём [GitHub](https://github.com/IgorKonovalov/Little_projects/tree/master/Random_walker)
