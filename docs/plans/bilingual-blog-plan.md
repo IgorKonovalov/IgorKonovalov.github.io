@@ -1,6 +1,6 @@
 # Implementation Plan: Bilingual (EN / RU) Blog
 
-> **Status: Planned** — not yet started. Decisions are recorded in [ADR-001](../adrs/ADR-001-bilingual-blog-i18n.md). This document is the step-by-step implementation guide.
+> **Status: Done** — implemented 2026-07 on branch `feat/i18n-russian-blog` (Phases 0–6). Decisions are recorded in [ADR-001](../adrs/ADR-001-bilingual-blog-i18n.md). This document is the step-by-step implementation guide; kept for historical reference. Remaining work is content-only: the author adds Russian posts into `src/content/blog/ru/`.
 
 ## Summary
 

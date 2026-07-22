@@ -33,16 +33,18 @@ GitHub Pages                     Static hosting at igorkonovalov.github.io
 
 ### Source (`src/`)
 
-| Path                | Files                                                                          | Role                                                                                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pages/`            | `index.astro`, `about.astro`, `archive.astro`, `[...slug].astro`, `rss.xml.ts` | File-based routing — 3 static pages + 1 dynamic + 1 API endpoint                                                                                                           |
-| `layouts/`          | `BaseLayout.astro`, `PostLayout.astro`                                         | HTML shell and post wrapper                                                                                                                                                |
-| `components/`       | `Header.astro`, `Footer.astro`, `SEO.astro`                                    | Shared layout components                                                                                                                                                   |
-| `components/demos/` | 9 `.astro` files                                                               | Demo wrappers: GameOfLife, CellularAutomaton, RandomWalker1, RandomWalker2, RandomLinesInShape, MaurerRose, MaurerRoseWalker, IslamicStarPatterns, Phyllotaxis             |
-| `content/blog/`     | 13 files (`.md` + `.mdx`)                                                      | Blog posts with frontmatter (dates 2016–2017)                                                                                                                              |
-| `content.config.ts` | 1 file                                                                         | Collection schema — `glob` loader + Zod                                                                                                                                    |
-| `scripts/demos/`    | 9 `.js` files                                                                  | Demo logic: game-of-life, cellular-automaton, random-walker-1, random-walker-2, random-lines-in-shape, maurer-rose, maurer-rose-walker, islamic-star-patterns, phyllotaxis |
-| `styles/`           | `tokens.css`, `global.css`                                                     | Design system tokens + CSS reset/base                                                                                                                                      |
+| Path                | Files                                                                                 | Role                                                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pages/`            | `index.astro`, `about.astro`, `archive.astro`, `[...slug].astro`, `rss.xml.ts`, `ru/` | File-based routing — en pages (unprefixed) + `ru/` mirror (index, about, archive, rss) + 1 dynamic post route + API endpoints                                              |
+| `i18n/`             | `ui.ts`                                                                               | en/ru string dictionary, `t()`, and locale/path helpers                                                                                                                    |
+| `lib/`              | `postUrl.ts`, `feed.ts`                                                               | Single source of truth for post URLs + locale; shared per-locale RSS builder                                                                                               |
+| `layouts/`          | `BaseLayout.astro`, `PostLayout.astro`                                                | HTML shell and post wrapper                                                                                                                                                |
+| `components/`       | `Header.astro`, `Footer.astro`, `SEO.astro`, `HomeView.astro`, `ArchiveView.astro`    | Shared layout components + locale-aware home/archive bodies; Header has the language switcher                                                                              |
+| `components/demos/` | 9 `.astro` files                                                                      | Demo wrappers: GameOfLife, CellularAutomaton, RandomWalker1, RandomWalker2, RandomLinesInShape, MaurerRose, MaurerRoseWalker, IslamicStarPatterns, Phyllotaxis             |
+| `content/blog/`     | `en/`, `ru/` subfolders (`.md` + `.mdx`)                                              | Blog posts with frontmatter; locale = leading path segment, translations paired by filename                                                                                |
+| `content.config.ts` | 1 file                                                                                | Collection schema — `glob` loader + Zod                                                                                                                                    |
+| `scripts/demos/`    | 9 `.js` files                                                                         | Demo logic: game-of-life, cellular-automaton, random-walker-1, random-walker-2, random-lines-in-shape, maurer-rose, maurer-rose-walker, islamic-star-patterns, phyllotaxis |
+| `styles/`           | `tokens.css`, `global.css`                                                            | Design system tokens + CSS reset/base                                                                                                                                      |
 
 ### Public (`public/`)
 
@@ -59,15 +61,15 @@ GitHub Pages                     Static hosting at igorkonovalov.github.io
 
 ### Configuration (root)
 
-| File                           | Role                                                                                    |
-| ------------------------------ | --------------------------------------------------------------------------------------- |
-| `astro.config.mjs`             | Site URL (`https://igorkonovalov.github.io`), static output, MDX + sitemap integrations |
-| `tsconfig.json`                | TypeScript strict, extends `astro/tsconfigs/strict`                                     |
-| `package.json`                 | Dependencies (exact versions), scripts, lint-staged config                              |
-| `eslint.config.js`             | ESLint with `eslint-plugin-astro` + `@typescript-eslint`                                |
-| `.prettierrc`                  | Prettier config with `prettier-plugin-astro`                                            |
-| `.husky/`                      | Pre-commit hook running lint-staged                                                     |
-| `.github/workflows/deploy.yml` | GitHub Actions build + deploy pipeline                                                  |
+| File                           | Role                                                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `astro.config.mjs`             | Site URL (`https://igorkonovalov.github.io`), static output, i18n (en default unprefixed, ru under `/ru/`), MDX + i18n-aware sitemap integrations |
+| `tsconfig.json`                | TypeScript strict, extends `astro/tsconfigs/strict`                                                                                               |
+| `package.json`                 | Dependencies (exact versions), scripts, lint-staged config                                                                                        |
+| `eslint.config.js`             | ESLint with `eslint-plugin-astro` + `@typescript-eslint`                                                                                          |
+| `.prettierrc`                  | Prettier config with `prettier-plugin-astro`                                                                                                      |
+| `.husky/`                      | Pre-commit hook running lint-staged                                                                                                               |
+| `.github/workflows/deploy.yml` | GitHub Actions build + deploy pipeline                                                                                                            |
 
 ## Key Architectural Decisions
 
@@ -99,13 +101,18 @@ Tours are self-contained apps (HTML + JS + assets) stored in `public/assets/FULL
 
 Blog posts generate at the same paths Jekyll used (`/projects/YYYY/MM/DD/slug/`) via computed slugs in `getStaticPaths()`. This ensures zero SEO disruption and no broken links.
 
+### Internationalization (en / ru)
+
+Native Astro i18n with `prefixDefaultLocale: false`: English is unprefixed (URLs preserved), Russian lives under `/ru/`. Posts sit in `blog/en/` and `blog/ru/` subfolders, paired by filename. All URL/locale logic is centralized in `src/lib/postUrl.ts`; UI strings and locale/path helpers in `src/i18n/ui.ts`. `HomeView`/`ArchiveView` are locale-aware shared bodies so the en and ru routes are thin wrappers. The language switcher, per-locale RSS, `og:locale`, and `hreflang` alternates (emitted only when a translation exists) complete the setup. Decision record: [ADR-001](../../../../docs/adrs/ADR-001-bilingual-blog-i18n.md).
+
 ## Patterns & Conventions
 
 ### Adding a New Blog Post
 
-1. Create `src/content/blog/YYYY-MM-DD-title.md` (or `.mdx` if embedding a demo)
+1. Create `src/content/blog/en/YYYY-MM-DD-title.md` (or `.mdx` if embedding a demo)
 2. Add frontmatter: `title`, `date`, `tags`, `description`
-3. The post auto-appears on homepage and archive
+3. The post auto-appears on the homepage and archive of its locale
+4. To add a translation, drop a file with the **same name** in `src/content/blog/ru/` — the switcher link and `hreflang` alternates wire up automatically
 
 ### Adding a New Demo
 

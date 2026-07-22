@@ -1,6 +1,8 @@
 # ADR-001: Bilingual (English / Russian) Blog via Astro Native i18n
 
-## Status: Proposed
+## Status: Accepted
+
+_Implemented 2026-07 on branch `feat/i18n-russian-blog`. English URLs verified byte-identical to the pre-change build; Russian site (`/ru/`) live with language switcher, per-locale RSS, and hreflang. Russian blog posts are added incrementally by the author._
 
 ## Context
 
