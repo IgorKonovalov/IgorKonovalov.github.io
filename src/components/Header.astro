@@ -21,10 +21,10 @@ const navLinks = [
   { title: t(locale, 'nav.about'), url: localizePath('/about/', locale) },
   { title: t(locale, 'nav.archive'), url: localizePath('/archive/', locale) },
 ];
-// Language toggle: label is the other language's name; target is provided by
-// the page (a real translation) or falls back to the same path in the pair.
+// Language toggle: a compact two-letter code for the other language; target is
+// provided by the page (a real translation) or falls back to the pair path.
 const langHref = switchHref ?? toggleLocalePath(Astro.url.pathname);
-const langLabel = t(otherLocale(locale), 'lang.name');
+const langCode = otherLocale(locale).toUpperCase();
 ---
 
 <header class="site-header" role="banner">
@@ -55,8 +55,9 @@ const langLabel = t(otherLocale(locale), 'lang.name');
           class="page-link lang-switch"
           href={langHref}
           hreflang={otherLocale(locale)}
+          aria-label={`Switch language to ${otherLocale(locale).toUpperCase()}`}
         >
-          {langLabel}
+          {langCode}
         </a>
       </div>
     </nav>
@@ -76,6 +77,19 @@ const langLabel = t(otherLocale(locale), 'lang.name');
     .site-header .site-nav {
       float: none;
     }
+
+    /* The .wrapper clearfix ::after would otherwise become a third flex item
+       and get pushed to the right by space-between, stranding the nav in the
+       middle. Drop it in the flex context so the nav hugs the column edge. */
+    .site-header .wrapper::after {
+      display: none;
+    }
+
+    /* Lay the nav out as a row so its links hug the right edge as one group. */
+    .site-header .trigger {
+      display: flex;
+      align-items: center;
+    }
   }
 
   /* Checkbox hack for mobile nav toggle */
@@ -88,10 +102,12 @@ const langLabel = t(otherLocale(locale), 'lang.name');
     padding-bottom: 5px;
   }
 
-  /* Language switch: set apart from the page links */
+  /* Language switch: a compact code set apart from the page links, pinned to
+     the far right (the column's right edge). */
   .lang-switch {
-    font-variant: small-caps;
-    letter-spacing: 0.03em;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    letter-spacing: 0.04em;
     color: var(--color-text-muted);
   }
 
