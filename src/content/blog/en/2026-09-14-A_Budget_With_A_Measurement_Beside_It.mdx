@@ -1,0 +1,204 @@
+---
+title: 'A budget with a measurement beside it'
+date: 2026-09-14
+tags: ['projects']
+description: 'What makes a non-functional requirement bind: naming the unit, deriving the number, scoping it to what you control, admitting what it does not cover, and noticing when your instrument reports zero because it measured nothing.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+
+Most non-functional requirements are decoration. "Fast", "lightweight", "responsive" — written once during a planning exercise, never measured, contradicted by the third release and never corrected, because nobody could have said what would count as a contradiction. They are not lies. They are unfalsifiable, which is worse, because an unfalsifiable requirement survives indefinitely while doing nothing.
+
+[Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/)'s `nfr.md` opens by refusing that in one sentence:
+
+> Each section is a **budget with a measurement beside it, not an aspiration.**
+
+This post is about what that sentence costs to honour, and about a second project whose budgets come from somewhere else entirely.
+
+## The unit is in the number
+
+The standalone binary has a soft cap of **10,000,000 bytes**. Not "10 MB", and the document explains why in a clause I have never seen anyone else bother to write:
+
+> The unit is in the number because "~10 MB" reads two ways **4.9 % apart** and nothing here said which.
+
+Ten megabytes is either 10,000,000 or 10,485,760 depending on who is talking, and the gap between the two readings is larger than most of the changes you would be measuring against them. Someone adds a feature that costs 400 KB; whether that breached the budget depends on which megabyte the person who wrote the budget meant, and they are not available to ask. A budget you cannot compare a measurement against is not a budget — it is a topic.
+
+The same entry then does something rarer, which is to admit that the number is not earned:
+
+> the _value_ is the inherited one, and it has never been measured against what the exe actually contains.
+
+The cap is arbitrary. It came from an earlier decision, it has never been justified against the binary's actual contents, and rather than retroactively inventing a rationale, the document says so out loud.
+
+That admission is worth more than a fabricated derivation would be. A budget with honest provenance can be argued with: someone can say "this number is inherited and the binary genuinely needs 11 MB now," and the conversation is about the binary. A budget with an invented derivation cannot be argued with, because the invention has to be defended first, and whoever defends it will discover halfway through that they are defending a decision nobody made.
+
+## Deriving one, when you can
+
+The foobar2000 component gets its own cap — **12,582,912 B**, twelve binary megabytes — and this one _is_ derived, because the two artifacts do not carry the same things. The component carries the whole core, the embedded preset library and the SDK shim, and carries neither the windowing library, nor the window, nor the audio capture stack.
+
+The derivation is the part to steal:
+
+> 9,789,952 B plus one more step the size of the `text` step, rounded up to the next binary boundary — so it **admits one more feature of the largest class this project has shipped, and a second one has to be argued for.**
+
+Start from what the artifact measures today. Add one increment the size of the biggest single feature you have ever actually added — not a guess at a future feature, the largest real one in your history. Round up to a boundary. The result is a number with a specific meaning: _there is room for one more big thing, and then we talk._
+
+Compare that to the usual method, which is to pick a round number and hope. The round number carries no information about how much slack it represents, so nobody knows whether being at eighty percent of it is comfortable or alarming.
+
+The obvious cheaper move — give the component the same cap as the binary, they are "the same ballpark" — was rejected on the grounds that they contain different things. This matters more than it sounds. A budget shared between two artifacts binds neither: it is either too loose for the smaller one, in which case the smaller one is unconstrained, or too tight for the larger one, in which case it gets waived, and a waived budget teaches everyone that budgets get waived.
+
+## Soft, and knowing it
+
+The packaging script prints the component's length on every build and **warns above 11,324,620 B**, which is ninety percent of the cap. It never fails a release over size:
+
+> these caps are **soft**, while the seven fatal checks beside the measurement are **properties of a correct artifact.**
+
+That distinction is the whole design, and it is the one most projects get wrong in the direction of strictness.
+
+A component that is too big is worse than it should be. A component that fails one of the seven checks is _wrong_. Those are different categories, and treating them the same has a predictable failure mode: block a release on size, and the first time a genuinely urgent release is 40 KB over, someone either ships a hole in the real checks to make room or disables the size check. Once the size check has been disabled once under pressure, it is decoration again — and now it is decoration that everyone has learned to route around, which is worse than the honest warning it replaced.
+
+So the size cap warns, loudly, at ninety percent, on every single build, and a human decides. The seven checks that describe a correct artifact fail hard.
+
+The size budget also reaches upstream of the binary, into what may be added to it. The graphics library is named as the one accepted fixed cost; little else is. Any new crate dragging in more than about twenty transitive dependencies needs a stated justification — a comment beside it in the manifest, or a decision record if it cuts across the project. That is the same budget expressed as a rule about intake rather than a number about output, and it catches the cost before it is paid, which is the only point at which it is cheap to decline.
+
+## When the number wins the argument
+
+The interesting moment for any budget is its first real collision with something you want to build. Until then it is theory.
+
+Ritmolux needed a studio: presets authored live while music plays, projects gathering presets for one show, clips rendered from a track, a diffusion pass driven from the same window. Every one of those is a screen with sliders, a code editor, a file list or a progress bar. Compiled into the player, they would have pushed it far past the cap — and the player, measured at 10,277,888 B, was already over it.
+
+The budget won. The [studio became a separate application that never draws a frame](/projects/2026/09/10/ritmolux_one_core_two_frontends/), and the player stayed one small executable that opens, captures and draws, with nothing installed beside it. Without the cap, the likely outcome is obvious: the editor goes in, the binary doubles, and every user who only ever wanted to watch pretty pictures pays to carry a text editor they will never open.
+
+That is the test of whether a budget is real. Not whether it is written down. Not whether it is measured. Whether it has ever _changed a design that someone wanted_. This one produced an entire second application, which is about as loud as that signal gets.
+
+There is a second-order effect worth noticing. The cap did not merely say no; it forced a better answer. A studio compiled into the player would have been the easy design and a worse one — the player would have grown a mode, the mode would have grown state, and the thing that had to stay small and reliable for a live show would have been sharing a process with a file browser. The constraint produced a cleaner separation than deliberation alone probably would have.
+
+## Scoping a claim to what you actually control
+
+The latency budget is **under 60 ms** from audible beat to visible reaction, about three frames at 60 Hz, with a working allocation across each stage:
+
+<Mermaid
+  code={`
+flowchart LR
+  subgraph inside["under 60 ms — what this document speaks for"]
+    direction LR
+    cap["capture / delivery<br/>≤ 15 ms"] --> ring["ring read-behind<br/>≤ 20 ms"] --> fft["FFT hop<br/>≤ ~11 ms"] --> pres["render + present<br/>1–2 frames"]
+  end
+  pres --> send["frame tap → sender"]
+  send --> app["another application<br/>composites and presents<br/>on its own schedule"]
+  app --> seen["what that viewer sees"]
+`}
+/>
+
+Three things about how this is stated are worth stealing.
+
+**It constrains behaviour, not the artifact.** The document is explicit: _"The ring buffer may hold more than 60 ms of capacity; the requirement is that the DSP reads near the write head, not that the buffer is small."_
+
+The naive version of this requirement caps the buffer size. That is easy to check, easy to enforce, and the wrong property — a small buffer that is being read from the wrong end has the same latency as a large one, and a large buffer read near the head has none of the problem the requirement was written to prevent. It is the difference between measuring the thing and measuring something correlated with the thing that happens to be easier to see.
+
+**It names what it deliberately excludes.** The engine can publish frames to another application, which composites and presents them on its own schedule:
+
+> This budget binds the window, and the streamed picture sits outside it … everything after the sender is out of our hands and is **deliberately not budgeted.** A latency claim about the streamed path is a claim about **two** applications, and this document only speaks for one.
+
+A requirement that quietly extends past your process boundary is one you can neither meet nor disprove. Someone will eventually measure the composite path, find 140 ms, and file a bug against a budget that was never about that path — and the only defence is a document that drew the line in advance. Drawing it explicitly is also what keeps the _other_ numbers honest, because it forces the question of where each one stops.
+
+**It accepts physics instead of pretending.** A change added a second, longer analysis window for the low bands, which the shorter window cannot resolve at all. That costs roughly **85 ms of group delay** on low-band level response, and the document records it as _"accepted as physics rather than compensated away."_
+
+Then it does the work that makes the acceptance safe: it names exactly which parameters the delay touches, and states why the headline budget is unaffected — the beat-to-reaction path never touches the long window, because onset, beat and tempo all still read the short one. The 60 ms claim survives, scoped, rather than being quietly falsified by a change nobody connected to it.
+
+The measured cost of that change was 31.5 µs per hop, up from 17.2 µs, against roughly 11 ms allocated — about **350× headroom**, written as a number rather than as "negligible". The cold start moved from ~43 ms to ~171 ms, once per stream, and that is written down too, even though nobody would have noticed.
+
+## A budget that adapts, and the shape of its adaptation
+
+Performance gets a different treatment, because it cannot be a single number across unknown hardware.
+
+The engine ships two named quality tiers, carried as a set of capacity values — particle counts, a segment budget, internal grid caps — resolved when the renderer is constructed. Since one later decision, one of those capacities is no longer even a single number: the attractor's sample budget is a _density against the render target_, so the drawn count scales with how many pixels are actually being filled, clamped between an anchor and a ceiling.
+
+The constraint that governs all of it is the one I would put on a wall:
+
+> A tier changes _how much_ the engine draws, never _what_ — so the same preset reads the same on both, at different budgets.
+
+That is what makes an adaptive quality system safe to have. If a tier could change _what_ is drawn, then a preset authored on one machine is a different preset on another, every visual test result is conditional on the tier it ran at, and "it looks wrong on my laptop" becomes unanswerable. Restricting adaptation to _quantity_ keeps one preset meaning one thing.
+
+The selection logic is equally deliberate. The expensive tier is the default; a frame-time governor demotes to the cheap one on a sustained miss of the display's refresh budget — **once per session, one way**, reported in the diagnostics overlay and on stderr, never silently. There is no automatic promotion back up, and the reason given is about testability rather than about performance:
+
+> a demotion is predictable and testable, where an oscillating or continuously feature-shedding design is neither.
+
+A system that continuously renegotiates its own quality is a system whose behaviour you cannot reproduce, which means you cannot debug a report about it. One demotion per session, announced, is a fact you can put in a bug report.
+
+And there is an escape hatch with a clearly-stated precedence: a pin, via a flag, an environment variable or a config key in that order, is honoured in both directions and the governor never touches it — which covers the capable machine that a transient stall demoted unfairly.
+
+## The instrument that reported zero because it measured nothing
+
+The best thing in either project's requirements is not a budget at all. It is a rule about measurement, and it came out of a measurement that was wrong in a way nobody noticed at first.
+
+The task was to price a secondary display surface: five arms, one hands-off window, mean frame rate with the surface closed against open. The first run reported 165.0 → 165.0 fps, 40.0 → 40.4, and 29.4 → 28.7.
+
+Read as a measurement, that says the feature is free. It is not readable as a measurement, and the reason is structural:
+
+> `AuxTarget::present` returns `Ok(())` on `Timeout | Occluded` and again on `Outdated | Lost`, both **before any encoder work**; nothing counts. A console that presented every frame and a console whose surface was occluded for the whole run produce **the same `Ok`, the same log, and the same frame rate.** The instrument reports zero cost in both cases, and no surface in this project distinguishes them.
+
+A zero that means _this is free_ and a zero that means _this never ran_ are the same zero. Without a witness that the work actually happened, a null result is unreadable — and a null result is exactly the kind you are most inclined to accept, because it is good news and it requires no follow-up.
+
+The contrast that made the rule obvious is in the same codebase: the main render path calls a dropped-frame counter on the identical skip, and reaches the frame counter only after the present succeeds. So its frame rate counts presents rather than loop iterations. One path was built to distinguish "did nothing" from "did the thing quickly", and the other was not, and comparing them is what produced the rule: **a null-cost measurement names the witness that the thing ran.**
+
+A companion decision covers a subtler statistical version. Four tests price a rendering feature against the case it replaces, each rendering a short run and a long run and dividing the difference by the frame delta. The slope is the right instrument — subtracting the short run cancels shader compilation, first-use allocation, and every other fixed setup cost, leaving per-frame work.
+
+The estimator around it was wrong. Each test repeated the pair three times and kept the **minimum of the difference**. But the minimum of `long − short` selects the repeat where the long run happened to be fast _and_ the short run happened to be slow — it picks up noise from both ends and biases the estimate downward. The fix is in the title: **take the best of each duration, not the best difference.** Minimum of the long runs, minus minimum of the short runs.
+
+That is a small change with a general lesson. When you are subtracting two noisy measurements, minimising the difference is not the same as differencing the minima, and the first one flatters you.
+
+## The other project's budgets come from somewhere else
+
+[market-analyzer](https://github.com/IgorKonovalov/market-analyzer) is a market-analysis workbench, and its non-functional requirements are not about hardware at all.
+
+Ritmolux's budgets come from physics. A display refreshes every 16.67 ms whether you are ready or not. An audio device delivers buffers at its own cadence. A download is a number of bytes somebody waits for. There is a machine on the other end of every one of those, and it does not negotiate.
+
+market-analyzer's come from the domain being dangerous. Its README states the reason in one sentence:
+
+> a backtest that peeks at the future or drifts between runs is **worse than useless because it looks confident.**
+
+That is a completely different failure mode, and it is the one that does not announce itself. Nothing crashes. Nothing is slow. You get a number, the number is wrong, and it arrives wearing exactly the same clothes as a right one — same formatting, same decimal places, same equity curve shape. There is no exception to catch and no log line to grep, and the person receiving it is going to act on it.
+
+So the budgets are stated as invariants in a spec, in `MUST` form, and they read like a safety standard rather than like performance targets:
+
+- **No lookahead.** A decision at bar `i` executes at bar `i + 1` and fills at that bar's open. The engine must not let a signal fill against any price at index `≤ i`, and must drop a signal whose executable bar does not exist.
+- **Re-run byte-identity**, and not merely in-process: cross-process and cross-machine identity, so the same inputs on a different computer produce the same equity curve.
+- **No hidden non-determinism in the financially-meaningful path** — no iterating a set, no reading a clock, between reading the inputs and returning the result.
+- **Exits before entries** when both fall on the same bar, via a stable sort, so a deterministic strategy yields a deterministic trade list.
+- **Data identity recorded, not assumed** — every result carries a hash of the bars it ran on.
+- **Purity**: the core touches no disk, no database, no network.
+
+Different origin, same discipline: each one names a measurement or a test that holds it, rather than describing a quality someone should aim for. And the spec states its own purpose in a line I would copy into any behavioural contract: _"A reader should be able to restate the determinism contract from this file alone."_
+
+The real-time safety section in Ritmolux does the same trick from the other side. It is headed _"testable restatement"_, and instead of "the audio thread must be fast", it says: zero heap allocation, zero locks, zero logging, zero file I/O, and no panicking calls on the per-frame paths. Every one of those is a property you can check by reading the code or by instrumenting the thread. "Fast" is not.
+
+## Honest nulls
+
+The thing both projects do that I would take to any codebase is reserve room for what a requirement does _not_ cover.
+
+Ritmolux does it inline, and repeatedly: the unbudgeted streamed path; the group delay accepted as physics; a coverage floor that admits it was measured on a box with a hardware GPU where CI has software rendering, and is therefore owed a re-measurement; a note that no CI runner can load foobar2000, so the component's installation is checked by hand.
+
+The most striking one is the hardware matrix, which is headed **"what the user has"** — not what the project supports, what physically exists to test on. And under it:
+
+> **There is no Mac in this matrix, and that is the point.** An earlier revision of this table listed a "Mac, macOS 13+" as available hardware; it is not … The macOS standalone path is therefore validated by a **recipient**, not in-house, and until one reports back **it has never executed on Apple hardware at all.**
+
+A shipped artifact, built by CI, attached to every release, that has never once run on the platform it targets — written down, in the requirements document, in the section about what validates what. The earlier revision of that table was wrong in the flattering direction, and correcting it made the document worse-sounding and much more useful.
+
+market-analyzer's backtest spec gives the same idea a heading: **"Known gaps / honest nulls."** Under it, among others, the scope limit on the guarantee it has just made — determinism holds for the financially-meaningful path, and explicitly not for the run identifier or the timestamps.
+
+This is the same instinct as [every gate stating its blind spot](/projects/2026/09/13/every_gate_states_its_blind_spot/), applied to requirements instead of tests. A guarantee whose boundary is unstated will be read as universal, and then leaned on somewhere it was never meant to reach — usually by someone who was not there when it was written, which after a few months is everyone.
+
+## What makes a number bind
+
+Five things, on this evidence.
+
+**A unit**, so a measurement can be compared against it without anyone having to guess which convention was meant.
+
+**A derivation, or an admission that there isn't one.** An inherited number is fine. An inherited number wearing a fake justification is not, because nobody can revise it.
+
+**A scope**, naming what falls outside — especially where your process ends and someone else's begins.
+
+**A measurement that actually runs**, printing the current value on every build, whether or not it can fail one. This is the load-bearing item. Everything else is a document; this is the thing that notices.
+
+**A witness that the measurement measured something.** A zero from an instrument that never ran and a zero from a free operation are indistinguishable, and the first one is the more likely of the two.
+
+What none of this requires is that the budget be strict. The size cap only warns. The latency budget has 350× headroom on one of its terms and admits that a related path is unbudgeted entirely. Strictness is not the property that makes a requirement real — being checkable is, and being honest about its edges is what keeps it checkable a year later, when the person reading it is not the person who wrote it.

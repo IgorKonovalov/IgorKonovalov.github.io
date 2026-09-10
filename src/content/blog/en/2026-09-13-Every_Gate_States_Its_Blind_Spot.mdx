@@ -1,0 +1,210 @@
+---
+title: 'Every gate states its blind spot'
+date: 2026-09-13
+tags: ['projects']
+description: 'What a green test suite licenses you to believe, written down: five visual gates, the questions each one cannot answer, an impossibility result kept as a permanent ignored test, and a blind spot created by the very thing that makes a baseline good.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+
+Most test suites never say what green means. They accumulate assertions, the assertions pass, and the passing is treated as evidence of something nobody has defined. Then a defect ships through a green suite and the post-mortem discovers that no test was ever asking that question — not because someone deleted it, but because nobody had ever written down which questions were being asked at all.
+
+[Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/) is a music visualizer, which makes this worse than usual. The output is a picture, and a picture is hard to assert on: there is no return value to compare, no exception to catch, and the failure modes people care about — _it looks dead, it looks like the other one, it ignores the music_ — are perceptual. A preset ships when the behavioural suite is green, so what green is evidence _of_ had to be written down rather than inferred.
+
+This post is about what that turned out to require, which was considerably more than I expected when I started reading the file.
+
+## Five gates, and only one of them hears anything
+
+Five gates sweep every shipped preset. Here is the table from the testing document, and the third column is the one that matters:
+
+| Gate           | Where its numbers come from                                                                                                    | Would it notice a preset that ignores the music?                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `reactivity`   | PCM through the real analyzer — four clips (a 60 Hz sine, a mid chord, a 12 kHz tone, a 240 BPM click track) pushed hop by hop | **Yes.** This is the only one.                                       |
+| `sanity`       | one synthesized analysis frame                                                                                                 | No — it asks whether the frame is lit, spread and tonally structured |
+| `animation`    | a zeroed frame, and a fully-driven one for the second reading — neither from PCM                                               | No, by design                                                        |
+| `distinctness` | one synthesized frame, shared across a family                                                                                  | No — it asks whether two presets look alike                          |
+| `golden`       | frozen fixtures with constant params                                                                                           | No — it asks whether the renderer still draws what it drew           |
+
+Four of the five never hear a sample. The reason is structural rather than incidental, and a picture of where each gate taps into the pipeline makes it obvious:
+
+<Mermaid
+  code={`
+flowchart TB
+  pcm["four PCM clips<br/>60 Hz sine · mid chord · 12 kHz tone · 240 BPM click"]
+  an["Analyzer<br/>(hop by hop, with warm-up)"]
+  real["a real AnalysisFrame"]
+  fake["a synthesized AnalysisFrame<br/>constant, or zeroed"]
+  scene["the preset's expressions → scene → pixels"]
+  r["reactivity"]
+  rest["sanity · animation · distinctness · golden"]
+
+pcm --> an --> real --> scene
+fake --> scene
+scene --> r
+scene --> rest
+`}
+/>
+
+The `animation` gate's row is the one worth sitting with. It holds an analysis frame _constant_ and asks whether the picture moves anyway. So a preset whose bindings are wired to the wrong band — treble where the author meant bass — still animates on the scene's own clock, and still passes. The gate is not broken. It is answering a different question than the one you would assume from its name.
+
+The document is explicit that this is a choice rather than an accident:
+
+> **Four of the five are right to synthesize.** Their questions are about the _frame_ — is it lit, does it move, is it distinct, does it match its baseline — and a made-up analysis frame answers those correctly and several times faster than pushing samples would. Converting them would buy nothing and cost the sweep a multiple of what it costs now. **That is a decision, not an omission.**
+
+And then, a paragraph later, a move I want to single out, because it is the kind of thing that only shows up in a document somebody maintains rather than writes once.
+
+The cost argument that originally justified synthesizing had since weakened. A later plan removed the warm-up renders from the measurement, so converting a gate to real audio is meaningfully cheaper now than it was when the decision was taken. The document records the new number — and then declines to reopen the decision:
+
+> the reasoning above does not turn on the price, so the decision stands.
+
+That is the correct handling of a fact which undermines a _supporting_ argument but leaves the _load-bearing_ one intact. The load-bearing argument was never "it is too slow"; it was "these four gates are asking about the frame, and a synthetic frame answers that correctly." Cost was a bonus. Most codebases faced with the new measurement would do one of two things: quietly ignore it, or reflexively reverse the decision because a stated reason turned out to be weaker than believed. Having written down _which_ argument was carrying the weight is what makes the third option available, and the third option is the right one.
+
+## What green licenses you to believe
+
+Having established what each gate cannot see, the document states the conjunction:
+
+> So read a green suite as: **the renderer produced a plausible, distinct, moving frame, and the preset responds to at least one band of real audio.**
+
+That is a much smaller claim than "the presets are good", and having it in one sentence is worth the paragraphs it took to earn. You can hold it up against what you _thought_ green meant and notice the gap. Two things are then named as sitting outside it.
+
+The first is curation. Green _"says nothing about whether the library wants another preset like this one; that is a curation judgement made at a plan's close, not a property a gate can hold."_ The boundary between what a machine can check and what needs a person is drawn in advance, rather than discovered at the moment someone objects to a preset that passed every test. Nobody has to argue about whether the suite should have caught it.
+
+The second is sharper, because it is a limitation of the one gate that _does_ hear audio:
+
+> What green still does not say is that the preset responds **well** — `reactivity` compares a driven band against silence, and against silence a binding that saturates just above the noise floor is maximally responsive.
+
+Sit with that. A parameter that slams to its maximum the instant any sound at all arrives is, by the measure `reactivity` uses, perfectly reactive: the driven reading is as far from the silent reading as it is possible to be. It is also useless — it responds identically to a whisper and a kick drum, which is to say it does not respond to music, it responds to the presence of audio.
+
+The gate measures _difference from silence_, and difference from silence cannot distinguish a responsive parameter from a saturated one. Those are different questions that happen to produce the same number at one end of the range. A separate check covers the gap — a CPU-only expression walk over a twelve-second probe, which renders nothing and so costs almost nothing — and the reason it exists at all is that somebody wrote down what `reactivity` was actually comparing, rather than what it was named after.
+
+## The result that is kept because it is negative
+
+The `animation` gate asks whether the picture changes between frame N and frame N+k. There is a class of figure for which that question cannot be answered by any statistic over the image at all:
+
+> a **rotationally symmetric figure cannot score its own spin** — a figure invariant under rotation by `2*pi/k` produces an _identical_ image under that rotation, so its frame difference is zero at **every** resolution and no image-domain statistic lifts it.
+
+This is not a threshold problem. A twelve-pointed star that rotates by exactly one twelfth of a turn between two captures produces the same pixels it started with. Raise the capture resolution and it produces the same pixels, more precisely. Change the statistic and it still sees two identical images. There is nothing to tune, because the information is not in the images; it was destroyed by the symmetry before any measurement was taken.
+
+Two things were done with that, and both are worth copying.
+
+**The investigation is preserved as a runnable artifact.** The resolution ladder that established the result is committed as an `#[ignore]`d test — _"the recorded negative result, and it is why `SIZE` never moved."_ At some point somebody will look at a symmetric preset scraping past the animation floor and wonder whether capturing at 1024 instead of 512 would help. The answer is in the repository, it is executable, and it is attached to the parameter it explains. Compare the usual alternative, which is that the investigation happened, the conclusion lived in one person's head, and the question gets re-litigated every eighteen months.
+
+**The conclusion is pushed out of the suite and into the authoring rules.** Such a figure _"must move radially, and that is an **authoring constraint, not a gate defect**."_ When a gate cannot see something, there are exactly three options: weaken the claim the gate makes, constrain the input so the invisible case cannot arise, or pretend the gate covers it. The third is the one that ships defects, and it is also the default, because it requires no action and no writing.
+
+## A measurement that speaks for half the library, and says so
+
+The most disciplined entry in the whole document is about a measure that only applies to some of the code, and leads with that fact.
+
+The in-frame geometry fraction measures the share of drawn line length that lands inside the render target's world rectangle. It exists because the obvious alternative — pixel coverage — cannot see a figure whose tips leave the frame. A comb roots every bar on a shared baseline; a corona roots every spoke at a centre. Clipping the tips costs a rounding error of lit pixels, so two badly over-scaled presets scored _above_ the lowest legitimate content, in an ordering where no threshold separates them. Repairing those two moves the geometry measure by `0.4975` and `0.7788` — nine and fourteen times the `0.055` of headroom pixel coverage had between its lowest legitimate preset and a plausible threshold.
+
+So it is a better instrument, for that question. And then:
+
+> `fragment_field`, `reaction_diffusion`, `attractor`, `swarm` and `emitter` build no segment list, are **not covered at all**, and keep pixel coverage. The split follows whether a scene rasterizes a segment list — not a line an author would guess — so **this is not an engine-wide gate and no number it prints says anything about half the library.**
+
+Four scene families in, five out. The boundary is an implementation detail — does this scene build a CPU-side segment list — which means it is _not_ where an author would intuitively draw it. That is exactly the situation in which someone reads a number as covering more than it does, so the document says the quiet part in bold.
+
+Then it enumerates four things the measure cannot see, each with its own answer:
+
+**It measures length, not area.** Stroke width is not counted, so a hairline and a 24-pixel bar of the same length weigh the same, and a thick stroke leaving the frame is under-counted relative to the picture it actually costs. The verdict: _"It is the right measure for overshoot and a poor one for anything else; a stroke-width-weighted version is a different measure with a different failure mode, and it is deliberately not built."_ Not an oversight, not a TODO — a different instrument, considered and declined.
+
+**A figure collapsed to a point scores a perfect `1.0`.** Zero-length segments contribute to neither sum, so a curve that has degenerated to a dot is entirely in frame, which is all this instrument was asked. _Is anything actually drawn_ is a different gate's question, and the two are described as complements rather than as a progression. A figure drawing nothing reports no fraction at all rather than a zero, for the same reason — a missing measurement and a measurement of zero are different facts and should not be spelled the same way.
+
+**It cannot tell a deliberately zoomed-in figure from an over-scaled one, because they are the same picture.** This one has numbers attached: a preset zooming on purpose measures `0.3492`, one overflowing by accident measures `0.3659`, and they _bracket_ the frozen over-scaled control at `0.3563` — one just below, one just above. No threshold can be placed between them, because there is nothing between them. The distinction is intent, and intent is not in the frame.
+
+That third item is the general case of the symmetry result. Some questions are not underdetermined by the current measurement; they are underdetermined by the _image_, and no amount of better statistics changes it.
+
+## The same file, green or convicted, depending on a flag
+
+The most unsettling entry concerns emitters — presets whose particle population builds up over time rather than being present from the first frame.
+
+Every gate captures 30 frames, half a second. An emitter's population ramps toward its steady state over a whole particle lifetime, starting from an empty pool. So a gate looking at the first half-second is scoring the first few percent of the world rather than the world. A `prewarm` flag back-dates that ramp so that frame one is already the steady state.
+
+The same draft, changed in nothing else:
+
+| Statistic                         | `prewarm = 0`                       | `prewarm = 1`                             | Floor             |
+| --------------------------------- | ----------------------------------- | ----------------------------------------- | ----------------- |
+| `sanity` coverage / radial shells | `0.0074`, 0 of 10 — convicted blank | `0.1470`, 10 of 10 — structurally present | `0.25` / 4 shells |
+| `animation` footprint motion      | `0.0629`                            | `0.1702`                                  | `0.01`            |
+| `reactivity` best band            | `0.0002`                            | `0.0195`                                  | `0.02`            |
+
+One flag moves a preset from convicted-blank to structurally-present across three independent statistics, and **no gate can see which side of the flag it is on.**
+
+What makes this hard is that both readings are legitimate. `prewarm = 1` scores the world the author is designing — the steady state they will actually be looking at ten seconds into a track. `prewarm = 0` scores what the first seconds of a live set look like, which is a real question and the one the unprewarmed number was answering all along. Neither is the bug. The bug would be believing one number answers both.
+
+So the consequences are drawn in both directions, and this is the part I would copy verbatim into any project: a slow emitter failing `sanity` _"may be failing its warm-up rather than its design — check `prewarm` before touching the look"_, and a green row on a prewarmed world _"says nothing about what the first seconds of a live set look like."_ One sentence protecting an author from a false negative; one protecting a reviewer from a false positive.
+
+And then the line that shows the discipline actually held: **"Neither the capture length nor any floor moved to accommodate this."**
+
+The obvious fix was available and was rejected. Capture ninety frames instead of thirty; or lower `sanity`'s floor until the unprewarmed draft clears it. Either would have made the immediate problem go away. Both would have degraded every other preset's gate to buy it. What got attacked instead was the warm-up itself. Moving a floor so that one specific input passes is how a suite stops meaning anything — not all at once, but one justified exception at a time, each of which was reasonable on the day.
+
+## The blind spot created by the thing that makes a baseline good
+
+The entry I find most instructive is about backdrops, because the blind spot is manufactured by a decision that is _correct_.
+
+Nearly every golden baseline runs with the backdrop black. That is the right call for a baseline: on black, every lit pixel provably came from the scene rather than from the backdrop, so a baseline diff is unambiguous about what changed. It is also, in the document's words, a structural blind spot:
+
+> **on a black backdrop, correctly compositing over the backdrop and wrongly covering it are the same picture.**
+
+A stage that mishandles alpha costs nothing on black. It punches a hole in the frame the moment a preset turns the backdrop up — which is exactly what the shipped library does.
+
+That blind spot has produced **four** defects, all after one decision moved the backdrop out of the post chain and made every stage's alpha load-bearing: a fold fading to black, a bloom recombine driving alpha past one and _subtracting_ the backdrop, and two separate draw seams each emitting a constant alpha of one across their whole quad. Each was fixed with a guard of the same shape, and the guards are deliberately per-seam rather than global, because _"nothing structurally forces a shader's colour and alpha to stay in step."_
+
+The response was not to relight every baseline — that would destroy the property that makes baselines useful. It was to add exactly two lit ones, as explicitly-marked extra fixtures rather than rostered entries, so the per-system roster stays uniformly dark and the sentence about what a drift baseline is for stays true.
+
+And the reason those two are needed is sharper than "coverage of a lit case". The backdrop pass is **lazy**: below a visible backdrop it does not build its gradient pipeline at all. So no dark baseline anywhere in the suite executes a single line of that code. The second lit fixture is not redundant with the first, either — it turns on a curved band that is an untaken `select` branch at the first fixture's settings, so the first executes none of it.
+
+This is the same shape as the `animation` gate's synthetic input, arrived at from the opposite direction: a test configuration that is correct for its purpose, and blind for a specific structural reason, and the fix is a named exception rather than a change to the rule.
+
+## Weakening a gate in public
+
+At some point `animation` was too strict, and presets that were genuinely moving failed it. The fix was to weaken the verdict into a disjunction: a preset passes on the silent reading **or** on a driven one.
+
+That is a real loss of strength, and the repository refuses to let it be a quiet one. Each preset's test _prints which branch carried its pass_, for a reason given in one clause:
+
+> because that weakening is real and **an unprinted property is one nobody re-reads.**
+
+A weakened gate that reports nothing looks exactly like a strong gate, from the outside, forever. A weakened gate that prints which of its two branches saved each preset is auditable at a glance: if everything has started passing on the driven branch, the silent one has stopped doing work, and that is visible to anyone reading the output without anybody going looking for it.
+
+The same instinct shows up in how a static control is handled. There is a preset pinned to _fail_ both branches, kept in the suite permanently, so that the gate's non-vacuity is itself under test. A gate that has quietly started passing everything is indistinguishable from a gate that is working, unless something is guaranteed to fail it.
+
+## Baselines, and not blessing a bug back in
+
+Twenty-seven golden baselines pin what the renderer draws. The standing risk with any baseline suite is obvious and universal: when output changes legitimately, you re-bless, and a defect can ride along inside the re-blessing.
+
+There are two guards, and they work differently.
+
+**The first is ordering.** One test asserts a _relative_ property — that a joint in a stroke is not a local luminance minimum relative to the segment interiors either side of it, which is a threshold-free way of saying the line has no hole at the corner. That assertion **runs first, even under the environment variable that accepts new baselines**, so _"the notch cannot be blessed back in."_
+
+The relative claim outranks the image. You cannot bless away a property that is stated independently of any particular picture, which means the class of defect that was once found and fixed cannot silently return through the mechanism designed to accept legitimate change. That is a genuinely good idea and I had not seen it before: **order your baseline acceptance behind your invariants.**
+
+**The second is what happened when all 27 legitimately moved at once**, after a change to how the display write dithers. They were re-blessed in a single commit, and:
+
+> The re-bless is **bounded**, and that was **asserted rather than trusted.**
+
+The claim that the change was small — that every baseline moved by at most a level or two, and in the direction the dithering change predicts — was itself checked, rather than being an assurance in a commit message. That is the same instinct as the executable probes attached to backlog claims in [the documentation post](/projects/2026/09/12/how_315_markdown_files_stay_true/): a stamp saying somebody looked is not evidence, because it cannot be re-run, and it records that someone looked rather than what they saw.
+
+The prose around all this is unusually direct about what tooling cannot do. _"Eyeball the regenerated PNGs before committing"_ — the first baseline is the easy one to get wrong, and no amount of machinery removes that, because the first baseline is definitionally not being compared to anything. Elsewhere, on a proposal to simplify a fourth capture away: _"do not 'simplify' it away."_ And the sentence that could be the epigraph for the entire document:
+
+> **Narrowing it leaves the test green and blind.**
+
+There is one more admission worth quoting, because it is a gap the project has chosen to live with rather than close. Headless captures pin the cheap quality tier by construction — the expensive tier is exercised by spot checks and an on-device checklist, not by the sweep. The document calls this _"a real QA gap, named rather than solved."_ Which is the correct thing to write when you have decided not to solve something, and much better than the alternative, which is silence that reads as coverage.
+
+## What generalizes
+
+None of this is about graphics.
+
+The transferable part is a single habit: **for every check, write down the question it actually asks, and what remains unasked.** Not the question you named it after. The one it is literally computing.
+
+That habit produces four things a test suite does not otherwise get.
+
+**A statement of what green means**, in one sentence, that you can hold against what you believed it meant. In this project the two turned out to differ — the gap between "the presets are good" and "a plausible, distinct, moving frame that responds to at least one band" is where the defects live.
+
+**A map of the gaps**, so they are known rather than discovered. Curation is not covered. Responding _well_ is not covered by the gate that measures responding. Half the library is outside the geometry measure. None of these are problems; all of them would be problems if they were surprises.
+
+**Negative results as runnable artifacts**, so a settled impossibility is not re-investigated. The ignored test that proves resolution cannot help costs nothing to keep and saves the next person a day.
+
+**A bright line between machine and human.** Eyeball the first baseline. Judge whether the library wants this preset. Check the hardware CI cannot run. Naming these as human work is what stops them being quietly assumed into the suite's coverage.
+
+The cost is real and worth stating plainly: the testing document is long, writing it took work, and every gate that gained a blind-spot paragraph gained it because someone sat down and worked out what the code was actually comparing. It is not free.
+
+What it buys is that a green suite makes a specific, bounded claim instead of a vague reassuring one — and a vague reassuring claim is worse than no claim at all, because you act on it.

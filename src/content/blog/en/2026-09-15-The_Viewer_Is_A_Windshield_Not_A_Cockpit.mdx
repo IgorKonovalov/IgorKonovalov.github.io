@@ -1,0 +1,207 @@
+---
+title: 'The viewer is a windshield, not a cockpit'
+date: 2026-09-15
+tags: ['projects']
+description: 'A desktop market-analysis workbench with no buttons worth pressing: one local sidecar exposing one capability set twice, an agent as the control surface, a window that only draws, and a reversal taken one day after the decision it reversed.'
+image: '/images/og/market-analyzer.jpg'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+
+Two of the posts here have used [market-analyzer](https://github.com/IgorKonovalov/market-analyzer) as a vehicle and said, each time, that the application itself was not the point. This one is about the application.
+
+![A desktop viewer showing MSFT daily candlesticks with an agent-drawn 20-period EMA, a labelled R1 resistance level, and highlighted hammer, engulfing and star candlestick patterns](/images/market-analyzer/hero.webp)
+
+It is a market-analysis workbench you drive by talking to an agent. A local **Python sidecar** turns market data into indicators, patterns, backtests, forecasts and on-chain reads, and exposes that one capability set **twice on a single loopback port**: as 59 MCP tools at `/mcp` for an agent, and as 29 HTTP routes plus an event stream for a window. Claude Code is the control surface. The Electron viewer draws what the agent asked for and does nothing else.
+
+Everything computes on your machine. Nothing in it places an order.
+
+## The inversion
+
+The design that makes it interesting was a reversal, and a fast one.
+
+An earlier decision framed MCP as _"a second sidecar protocol alongside renderer HTTP"_. The renderer was the primary client; the agent was an additive surface that could query data and write annotations onto a chart the user was driving. The interaction model was the conventional one — the one nearly every AI feature shipped in the last two years has: **you click in the app, and the agent helps from the side.**
+
+That decision was one day old when it was refined into its opposite:
+
+> - The user types prompts to an agent.
+> - The agent drives analysis, backtests, screens, and chart visualisations by calling MCP tools.
+> - The Electron app exists to **show** what the agent renders.
+> - **The user does not type symbols into a form, does not click "run backtest" buttons.** The renderer's "control surface" role shrinks to near-zero; its "viewer" role expands.
+
+The README compresses it: _the agent is the control surface, not a chat box bolted onto a GUI. You steer with natural language; the viewer is a windshield, not a cockpit._
+
+The distinction that phrase draws is worth being precise about, because most "AI-powered" applications sit on the other side of it. A chat box bolted onto a GUI leaves the GUI in charge: the buttons still exist, still work, still define what is possible, and the assistant is a convenience layer that eventually presses them for you. The capability surface is whatever the UI already exposed.
+
+Invert it, and the tool surface _becomes_ the product. What the system can do is defined by the tools; the window's job is to render results legibly. There is no form to fill in, because there is no form.
+
+The ADR does not pretend this was free. It names the cost plainly — the reframing _"cuts the perceived value of a non-trivial amount of recently-shipped UI work"_ — and then states what is actually being decided about that work:
+
+> We are deciding to **keep** that work and **change what it does for the user**, not to throw it away.
+
+Which is the right framing, and rarer than it sounds. A form you no longer need and a chart you very much still need shipped in the same week; the inversion kills the first and promotes the second. Writing that down is what stops the decision being remembered later as "we threw away a month of UI" — the version that makes everyone defensive about the _next_ reversal.
+
+## What the inversion forced
+
+Making the agent primary broke two assumptions immediately, and each broke hard enough to need its own decision record.
+
+**The agent has to outlive the window.** Under the old framing, MCP availability being tied to the app's lifecycle was a documented, acceptable caveat: the agent was secondary, so its going away with the window was a nuisance. Once the agent is the primary surface, the same caveat is fatal — closing a window you were only using to _look_ at something would end the session you were working in.
+
+So the sidecar became a standalone process. Every capability is reachable with the window never opened, and the viewer is genuinely optional: it attaches to a running sidecar rather than owning one.
+
+**Polling stopped being enough.** One-hertz polling for annotations is entirely adequate for _"the agent dropped a marker on yesterday's candle."_ It is not adequate for _"render this chart, with these overlays, focused on this date range — now change it, now zoom, now add the 200-day."_ Conversational interaction produces bursts of small corrections, and a second of latency on each one turns a conversation into a wait.
+
+So the viewer subscribes to a server-sent event stream, and the agent's render commands, completed-run notifications and alert fires reach it in something close to real time.
+
+<Mermaid
+  code={`
+flowchart LR
+  user["human at the keyboard"]
+  agent["Claude Code — MCP client<br/>the control surface"]
+
+subgraph side["Python sidecar — standalone process"]
+direction TB
+mcp["/mcp · 59 tools<br/>Streamable HTTP"]
+routes["29 HTTP routes<br/>+ /events (SSE)"]
+logic["analysis · strategies · backtest<br/>forecast · advisor · alerts · defi"]
+db[("SQLite · 12 tables")]
+mcp --> logic
+routes --> logic
+logic --> db
+end
+
+subgraph win["Electron viewer — optional, attachable"]
+rend["renderer · charts · 14 views<br/>SSE subscriber"]
+end
+
+user --> agent --> mcp
+routes --> rend
+logic -. events .-> routes
+`}
+/>
+
+The seam that holds it together is that the sidecar is **consumer-agnostic**: it answers a tool call the same way whether an agent or a window asked. That single abstraction is what lets a chat prompt and a chart share one analysis codebase, and it is why the tool surface and the route surface have not drifted into two implementations of the same idea.
+
+The separation is enforced rather than encouraged. The agent and the viewer authenticate with **different bearer tokens** and reach **different transports** on the same port — the agent's long-lived, in a file it can be pointed at; the viewer's minted per sidecar launch. And the viewer never reaches the network except to talk to its own sidecar: every external fetch, every RPC call, every rate-limited third-party API lives on the Python side. A renderer process that cannot reach the internet is a renderer process that cannot leak anything to it.
+
+## The same shape, twice, in different languages
+
+If that architecture sounds familiar from [the Ritmolux post](/projects/2026/09/10/ritmolux_one_core_two_frontends/), it should — and the resemblance is not a coincidence to wave at. It is the same decision taken twice.
+
+There, a Rust core takes PCM audio frames and knows nothing about where they came from; a standalone app feeds it from operating-system loopback capture, and a foobar2000 component feeds it from the player's own visualisation stream. Here, a Python sidecar takes tool calls and knows nothing about who made them; an agent calls over MCP, a window calls over HTTP.
+
+The payoff is identical in both, and worth naming explicitly. There is exactly one implementation of the hard part — the DSP and render engine in one case, the analysis and backtest engine in the other. Adding a third consumer requires touching none of it.
+
+And, less obviously: the core cannot acquire a dependency on its caller's peculiarities, because it has two callers with _different_ peculiarities and satisfying both means abstracting over them. One consumer is how a "core" quietly grows UI assumptions — a parameter shaped like a form field, a return value shaped like a table someone was rendering. Two consumers is what prevents it, structurally, without anyone having to police it.
+
+The difference between the two is which side the constraint came from. Ritmolux's split was _forced_: a foobar2000 component is a C++ DLL, so anything shared with the standalone Rust app had to be expressible across a C boundary, and that boundary made the abstraction non-negotiable. market-analyzer's split was _chosen_ — twice, once when MCP was added as a second protocol and again the next day when it became the first.
+
+## What it does
+
+The surface, grouped by what you would ask for rather than by module.
+
+**Charts.** Candlesticks for one symbol at a time across timeframes from fifteen minutes to monthly, routed per symbol to Yahoo Finance, Binance or Coinbase — exchange pairs to spot venues, equities to Yahoo. The first fetch backfills; everything after serves from a local SQLite cache, with lazy history as you scroll back.
+
+**Technical condition.** Trailing indicators — _trailing_ meaning anti-lookahead, a decision at a bar sees only bars up to it — Japanese candlestick patterns, classical chart patterns with a forming-to-confirmed lifecycle, Ichimoku, volume-weighted support and resistance, Fibonacci and pivot levels, momentum divergences, market-structure reads, and a one-shot condition snapshot that gathers the lot.
+
+![A chart of NVDA daily bars with confirmed classical chart patterns outlined — rising wedge, inverse head and shoulders, double top, symmetrical and ascending triangles — each with its measured-move target](/images/market-analyzer/chart.webp)
+
+**Strategies and backtests.** Nine strategies ship, each a pure `generate_signals(bars, params)` module emitting flat, long or short, with a typed parameter model. The engine produces an equity curve, a trade log, extended metrics — Sharpe, Sortino, Calmar, profit factor and the rest — and rolling walk-forward validation.
+
+![A backtest result: a row of metrics, an equity curve coloured green in profit and red in drawdown, and the trade log beneath it](/images/market-analyzer/backtest.webp)
+
+**Forecasts.** One tool, three kinds, all read-only conditions rather than advice. Volatility predicts realised per-bar magnitude with an uncertainty band, scored by QLIKE against exponentially-weighted and persistence baselines. Regime predicts the next trend-by-volatility state as a distribution, Brier-scored against persistence. Direction survives as the _demoted_ kind: a calibrated up/down/flat probability per horizon, each horizon **independently** gated on beating a walk-forward baseline, shipping `null` with its validation basis when the gate fails.
+
+That last detail is the one I would point at hardest. **An honest "no edge" is a normal answer here, not a bug.** A forecasting surface that always returns a number returns noise on the days it has nothing — and noise formatted as a probability is indistinguishable from signal formatted as a probability. Building the null into the contract, with the evidence for the null attached, is what stops the system being confidently wrong on exactly the days it should have been quiet.
+
+**On-chain reads.** Decoded positions across several EVM chains, enriched with liquidity-pool state read directly from RPC. Cost basis is reconstructed by transaction replay with block-time pricing rather than estimated, and positions the replay cannot fully account for are flagged incomplete **with the reason named, never guessed** — the same instinct as the forecast null, in a different subsystem.
+
+**Alerting and screening.** Persisted condition watches run inside the sidecar on closed bars and fire edge-triggered, so a condition that stays true does not re-fire every bar. Watchlist scans rank a supplied list by squeeze, momentum or a composite; sector rotation ranks self-defined sectors by constituent momentum; an event calendar assembles dated forward facts — macro releases, earnings, listings.
+
+**Two-way drawing.** This is the part I did not expect to like as much as I do. The agent writes trendlines, levels and pattern highlights onto the chart. You draw by hand. Both live in one annotation layer with **provenance-scoped edit rights**, so each side can modify what it created and cannot silently clobber the other's work. And the agent can **read back what you drew**: trendlines, rays, rectangles, fib grids, position boxes, range measures. Drag-selected ranges and bar clicks reach it the same way.
+
+The chart stops being an output device and becomes a shared surface. You can draw a line where you think support is and ask what the backtest says about it — which is a genuinely different interaction from describing the line in words and hoping it was understood.
+
+All of it is reachable as 59 MCP tools, pinned by an exhaustive registration test, with several verbs deliberately consolidated behind a discriminating argument rather than fanned out one tool per read. A tool surface is a namespace an agent has to hold in its head, and sixty well-named tools are more usable than two hundred narrow ones.
+
+## Two constraints the domain hands you
+
+Everything above is shaped by two non-negotiables, and the README explains why in a sentence worth borrowing wholesale:
+
+> a backtest that peeks at the future or drifts between runs is **worse than useless because it looks confident.**
+
+That is a specific and nasty failure mode. Nothing crashes, nothing is slow. You get a number, the number is wrong, and it arrives looking exactly like a right one — same shape of equity curve, same plausible Sharpe ratio. There is no exception to catch and no log line to grep, and the person receiving it is about to act on it.
+
+So both constraints are written as `MUST` invariants in a spec rather than carried as habits:
+
+**No lookahead.** A decision at bar `i` executes at bar `i + 1`, filling at that bar's open. The engine must not let a signal fill against any price at index `≤ i`, and must drop a signal whose executable bar does not exist. Lookahead is the easiest bug in this domain to introduce and the hardest to notice, because it makes results _better_ — nobody investigates a strategy that suddenly started working.
+
+**Determinism**, and not merely within one process: cross-process and cross-machine byte-identity, so the same inputs on another computer produce the same equity curve. In the financially-meaningful path there is no iterating a set and no reading a clock. Exits are processed before entries when both land on the same bar, via a stable sort, so a deterministic strategy yields a deterministic trade list. Every result carries a hash of the bars it ran on — data identity recorded rather than assumed, so a result and the data behind it cannot drift apart silently.
+
+I wrote about both in [the post on budgets](/projects/2026/09/14/a_budget_with_a_measurement_beside_it/), because they are this project's non-functional requirements — and unlike a frame-time budget, they come from the domain being dangerous rather than from any hardware.
+
+## Conditions are facts; decisions are yours
+
+The principle the whole thing was built on is that the analysis surface reports conditions and never recommends. Detect the pattern, classify the regime, run the backtest — and stop. The synthesis is the user's.
+
+Exactly one layer is permitted to cross that line, under [its own decision record](https://github.com/IgorKonovalov/market-analyzer/blob/main/docs/architecture/adrs/0029-advisory-recommendation-boundary.md): an advisor that fuses conditions, live strategy signals, backtested edge and forecasts into a labelled recommendation — or into an honest flat. Three rules bind every one it emits. It is labelled advisory. It carries its rationale and its backtested basis with honest uncertainty. And the user remains the decision-maker.
+
+Those are enforced at the artifact rather than by intent: a recommendation constructed without a basis raises a validation error, and a test asserts it. The advisor also scores its own past calls against what actually happened afterwards, path-dependently — did the stop or the target come first — so its track record is a computed fact rather than a memory.
+
+The analyst surfaces keep their read-only contract unchanged. The crossing is contained to one named component instead of relaxing the rule everywhere, and the reasoning behind _that_ choice deserves its own post.
+
+The boundary at the far end is the one that matters most:
+
+> **Nothing in this app places an order.** Every surface is read-only research or labeled advisory; the one layer allowed to say _buy_ holds no keys, and trade execution is a designed-but-unbuilt arc. There is no broker connection anywhere in this repository.
+
+## The catalogue generates itself
+
+The full tool, route and event catalogue is generated from the live sidecar and gated in CI, so it cannot drift.
+
+That is not incidental tidiness, and it has a history. This README once claimed 56 MCP tools while the code exposed 59, and claimed version 0.9.0 while the project was at 0.26.0 — the drift that opens [the post on documentation gates](/projects/2026/09/12/how_315_markdown_files_stay_true/). A tool count typed into a manifest has nothing re-running it. A tool count generated from the registration test does.
+
+Alongside the generated catalogue sit four hand-written **specs** — living behavioural contracts for the backtest engine, the data provider, the MCP tool surface and the advisory boundary. These are a different document from a decision record: an ADR says why a choice was made and is append-only, while a spec says what the subsystem currently guarantees and is kept current. Each one carries invariants in `MUST` form, the scenarios that exercise them with the test that does it, and a section for what is _not_ guaranteed. The backtest spec states its own success criterion — a reader should be able to restate the determinism contract from that file alone — which is a better test of a document than any review checklist.
+
+The same instinct shows up in how the project photographs itself. The screenshots in this post were captured from the real application at full size, driven **over MCP** through a Playwright harness — the app was told to render each view through the same interface an agent uses, then photographed. A screenshot produced that way cannot show a state the tool surface is incapable of producing, which is a surprisingly common way for product screenshots to lie.
+
+## It reverses fast, and writes down why
+
+The one-day inversion is not an isolated incident. It is how this project behaves, and the second example is sharper because the reversal happened on the _same day_ as the decision it overturned.
+
+An early decision committed the project to **vendoring** its data layer from a companion project the author had lying around: reuse roughly six thousand lines of working code, own only the adapter wrappers, and police divergence with a drift-check script later. That is a defensible call, and it is the one most people would make.
+
+It was superseded the same day, and the reasoning is a model of how to reopen a decision without drama. Two facts had changed:
+
+The companion repository was going to be **deleted** once this project was complete. There was no upstream to pull fixes from and no divergence to police — the planned drift-check script would have compared the tree against a reference that no longer existed.
+
+And the carve-out actually in use was **tiny**. Three files, around 250 lines, of which exactly one function — about forty lines of HTTP and JSON parsing against a public chart API — was the only thing the adapter ever called. The "battle-tested code" argument was doing almost no work in practice.
+
+Then the general rule, which is the part worth keeping:
+
+> A vendoring discipline pays off when the upstream is alive, divergence is a real risk, and the volume is large enough that copy-with-discipline beats rewrite-from-scratch. **None of those conditions hold here.**
+
+That sentence is reusable. It states the conditions under which the _original_ decision would have been right, checks them, and finds none satisfied. Nobody has to argue about whether vendoring is good; they have to check three conditions. And the cost of keeping the policy is named concretely rather than in the abstract: a `Vendored from …` header in the source, a lock file, an unused package path, and _"a constant cognitive pull on contributors to think about a repository that will not exist by the time this app ships."_
+
+The replacement decision also does the housekeeping properly. The upstream is permitted as a read-only reference for ideas and structure, is not copied or depended on at runtime, and is _named nowhere_ afterwards — source, comments, headers, plans, diagrams, skill files, the lock file itself. A superseded decision that leaves its vocabulary scattered through the tree is a decision that keeps getting half-followed.
+
+## Two rules about dependencies
+
+Since this thing pulls from two large public registries, it carries a deliberate pair of dependency rules, and I think the reasoning behind the first one is under-appreciated generally.
+
+**A 14-day cooldown.** No package version younger than fourteen days may be resolved, enforced through mechanisms both package managers ship natively. The threat model is specific: a malicious version of a legitimate package, or a freshly-published typosquat, is pushed to a registry and lives in the wild for hours to days before it is flagged and yanked. The historical detect-and-takedown window is on the order of one to fourteen days.
+
+Lockfiles already protect _installs_ — CI runs frozen, so a committed lockfile cannot silently absorb a new upstream version. The exposure is at **resolution time**, the moment a developer adds or upgrades a package, because whatever the resolver picks then gets pinned into the lockfile and propagates to every machine and to CI. The cooldown closes that window with configuration rather than custom tooling.
+
+And then the honesty that makes it a real policy rather than a posture:
+
+> the same mechanism that blocks malicious young versions also blocks legitimate young CVE patches. We need to **accept that lag explicitly and document the override path**, rather than design an automated bypass that the policy can't actually defend.
+
+An automated bypass for urgent security patches sounds responsible and would gut the policy, because "urgent security patch" is exactly what a supply-chain attack claims to be. Taking the lag, writing down that you took it, and requiring a human to override is the version that survives contact with an actual incident.
+
+**Exact pinning of direct dependencies**, as the companion rule. The cooldown bounds how _new_ a resolved version may be; the pin bounds _intent_, so no silent upgrade arrives from someone refreshing a lockfile. The two are described as a pair, which is right — either alone leaves a gap the other covers.
+
+## Where it stands
+
+Version 0.26.0, pre-1.0, in active development. Both halves run: 59 MCP tools, 29 REST operations, 28 SSE event kinds, twelve SQLite tables, thirty-odd data adapters, and fourteen views in the viewer. The MCP surface and the REST contract may still change between releases; stability begins at 1.0.0. There are no end-user installers — it is cloned and run.
+
+The part I would keep if I rebuilt it from scratch is the smallest part: a sidecar that does not know who is asking. Everything else followed from that, including the reversal itself — because once the capability set is genuinely independent of its consumer, changing which consumer is primary becomes a decision about the product rather than a rewrite of it.
