@@ -1,2 +1,7 @@
 npx lint-staged
 yarn typecheck
+
+# Reports blog post word counts against the floor in AGENTS.md. Advisory: it
+# prints and always exits 0, so it can never block a commit. See the script
+# header for why a prose-length gate that fails would not survive.
+node scripts/check-post-length.mjs || true

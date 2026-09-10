@@ -116,6 +116,50 @@ tags: [javascript, generative-art]
 
 Optional: `draft`, `demo` (related demo slug), `image` (featured image)
 
+### Post Length
+
+**Floor: 3,500 body words (English) / 3,100 (Russian)** for a long-form technical post.
+Measure it, do not estimate it:
+
+```
+node scripts/check-post-length.mjs [en|ru]
+```
+
+**Why Russian gets its own number.** Measured across the seven 2026 post pairs, a
+Russian translation of identical content runs at **0.889** of its English source —
+range 0.855–0.926, so the ratio is stable rather than an artifact of one post.
+Russian has no articles and its cases do the work of prepositions; the same content
+is genuinely fewer words. Holding it to 3,500 would measure the language, not the
+post. 3,500 × 0.889 = 3,111, rounded down to 3,100; the rounding is the only
+judgement, the ratio is measured. Re-derive it by running the script with no
+language argument and comparing the two columns.
+
+The script counts **body prose only** — frontmatter, code fences, Mermaid blocks,
+tables, image markup and MDX imports are stripped — so its numbers run 10–15% below
+a naive `wc -w`. The floor is set against the script's metric, not against the file.
+
+**Scope.** The floor applies to posts dated 2026 or later that carry no `demo` field.
+It does not apply to:
+
+- **Demo write-ups** (posts with `demo:`). The embedded canvas is the artifact and the
+  prose is a caption; the 2017 posts are 27–350 words and that is correct.
+- **Posts before 2026.** Legacy, counted and shown, never measured.
+
+**It warns, it never fails.** A short post is worse than it should be; it is not
+incorrect. A gate that blocked a commit over prose length would be disabled the first
+time a genuinely short post was the right call, and then it would be worth less than
+nothing. A human decides.
+
+**Why a floor exists at all.** The blog had no stated length and nothing measuring one.
+Six posts written 2026-09-10 to 2026-09-15 came in at 1,551–1,990 words against the
+2,163 of the post preceding them, trending down — the newest were the shortest. Nobody
+chose that; it is what happens to a number nothing prints.
+
+**The floor is not a target to pad toward.** Length comes from material — more of the
+real reasoning, the measurements, the rejected alternatives, the things that did not
+work. If a post cannot reach the floor on material, it is the wrong length _or_ the
+wrong scope, and the fix is a bigger subject, never more words about a small one.
+
 ### Interactive Demos
 
 - Lazy-loadable: no side effects at module level
