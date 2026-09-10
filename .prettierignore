@@ -14,3 +14,6 @@ _sass/
 
 # Static passthrough
 public/tours/
+# Legacy 2017 CV, served as-is. Formatting it produces a 900-line diff and no
+# benefit, and `yarn format:fix` would otherwise rewrite it on every run.
+public/archive/
