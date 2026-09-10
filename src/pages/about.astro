@@ -52,13 +52,28 @@ const { switchHref, alternates } = pageI18n(Astro.url.pathname);
 
       <p>
         The one I'm most into right now is on the more playful side, and it's in
-        Rust: <a href="https://github.com/IgorKonovalov/light-music-visualizer"
-          >light-music-visualizer</a
-        >, a real-time music visualizer built around a shared Rust core (GPU
+        Rust: <a href="https://github.com/IgorKonovalov/Ritmolux">Ritmolux</a>,
+        a real-time music visualizer built around a shared Rust core (GPU
         rendering via <code>wgpu</code>) that feeds both a standalone app and a
-        foobar2000 plugin. It's in active development, and it scratches the same
-        itch as the generative-art demos on this site — mathematics and creative
-        coding, and the geometry behind the pretty pictures.
+        foobar2000 component. Both ship, the visuals are driven by editable text
+        presets rather than code, and it has since picked up a second job:
+        driving real stage lighting over Art-Net. There's a <a
+          href="https://igorkonovalov.github.io/Ritmolux/">documentation site</a
+        > with a gallery of every preset, and I wrote about <a
+          href="/projects/2026/09/10/ritmolux_one_core_two_frontends/"
+          >how it fits together</a
+        >. It scratches the same itch as the generative-art demos on this site —
+        mathematics and creative coding, and the geometry behind the pretty
+        pictures.
+      </p>
+
+      <p>
+        The newest one is <a href="https://github.com/IgorKonovalov/piano-tutor"
+          >piano-tutor</a
+        >, a desktop piano tutor that reads a MIDI keyboard, shows what you play
+        as you play it, and gives per-bar feedback on a piece. It is early, and
+        it exists mostly because I wanted to find out how quickly the working
+        habits behind the other two would transfer to a new project.
       </p>
 
       <p>
