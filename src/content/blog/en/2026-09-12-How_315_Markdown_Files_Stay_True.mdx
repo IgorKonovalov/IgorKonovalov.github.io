@@ -1,0 +1,113 @@
+---
+title: 'How 315 markdown files stay true'
+date: 2026-09-12
+tags: ['projects']
+description: 'Documentation conventions decay silently in an agent-written repository. Eight gates that make prose rules executable, the rot each one was written against, and the stronger move: generating the reference instead of checking it.'
+---
+
+Some time in August I noticed that one of my repositories was lying.
+
+Its README said the application exposed 56 MCP tools. The code exposed 59. The README also said the project was at v0.9.0; it was at v0.26.0. The SQLite roster listed 8 tables against 12, the secrets roster 7 keys against 12, and the forecaster was described as direction-only months after it had stopped being that.
+
+Nobody wrote anything false. Every one of those sentences was true when it was written. What went wrong is that **nothing re-ran them.** My own commit message, fixing it, put the diagnosis in one line:
+
+> A number hardcoded in a manifest has no gate and goes stale silently, which is exactly how the README came to claim 56 tools at v0.9.0.
+
+This post is about the other repository, where I had already started taking that seriously, and about what it costs.
+
+## Volume is the thing that changed
+
+Documentation has always rotted. What is different in an agent-written repository is the rate and the shape.
+
+[Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/)'s documentation corpus is **6,714,932 bytes across 315 markdown files**. About 5.5 MB of that is the working record — the decision records, the plans, the design backlog — written to be grepped by fresh sessions. Roughly 1 MB is reader-facing.
+
+Those documents are written by sessions that do not come back. A session writes a plan, implements it, closes it, and ends; the next session reads what it left and writes more. There is no author holding the whole corpus in mind and noticing that a sentence on page 200 has stopped being true. There is no one who _remembers_ the convention. There is only what is written down, and what is checked.
+
+The reader-facing subset contains **1,059 relative markdown links, and 926 of them — 87% — point at documents outside that subset.** That is the shape of the thing: a corpus this cross-referenced cannot be held together by care.
+
+## The convention that failed, measurably
+
+I had tried the obvious thing first, and I have the numbers on how it went.
+
+Three files in the corpus are rosters — the decision-record index, the plans index, the closed-entries ledger. Each exists so a session can find the right document without opening a hundred of them. All three grew rows that _summarized_ the document they pointed at instead of pointing at it. The decision-record index reached **188,820 bytes — 16% of the entire corpus it indexes.** Rows 0101–0115 averaged 3,302 bytes against 152 bytes for rows 0001–0020.
+
+The fix was tried as a convention. A plan moved the write-ups out and wrote **"One line per plan."** three lines above the rows.
+
+**Eight days later that section had regrown 7.1×**, under its own rule, in plain sight of it.
+
+That is the whole argument, and I did not have to construct it — the repository ran the experiment on itself:
+
+> A rule nothing re-runs is a rule nobody follows, so this is a gate rather than a paragraph.
+
+## Eight gates
+
+There are now six checks that run in the pre-push hook and again in CI, and two more in the Pages workflow that need a built site. None of them checks code. Each was written against a specific rot, after it had already happened.
+
+| Gate                    | Asserts                                                                  |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `check-doc-links`       | every relative markdown link resolves on disk                            |
+| `check-comment-hygiene` | no relative links, no plan-relative narration in `.rs` / `.cpp` comments |
+| `check-index-rows`      | every row in a roster is a pointer, not an abstract                      |
+| `check-backlog-claims`  | every live backlog claim carries a probe, and the probe still passes     |
+| `check-reader-prose`    | in reader documents, a citation is a link and never a bare number        |
+| `check-filter-figures`  | one subsystem's cost figures appear in exactly one document              |
+| `check-site-links`      | every rewritten link resolves on the built site                          |
+| `check-site-routes`     | every published route is reachable from the menu, not only by search     |
+
+The rest of this section is what each of those was written against.
+
+**`check-doc-links.mjs`** — every relative markdown link resolves to a file that exists. The close ceremony `git mv`s a finished plan into `plans/done/`, which breaks links in _both_ directions: every document that named the plan at its old path, and every `../adrs/...` link inside the plan itself, now one directory too high. Link rot degrades silently and only in a browser, so nothing surfaced it. By one plan's close it had accumulated to **74 broken links across 23 files, from six consecutive closes.**
+
+**`check-comment-hygiene.mjs`** — rejects two kinds of rot in Rust and C++ comments. A relative link in a `.rs` comment fails silently in three ways at once: it breaks when a plan moves to `done/`, the markdown link checker cannot see it because that script walks `.md` only, and it does not resolve in rendered rustdoc at all. Eleven were broken on `main` when this was written. The second kind is **plan-relative narration** — `this plan`, `used to`, `no longer` — written from inside a session and illegible at its close, when there is no "this plan" left, there is only the code.
+
+The subtlety in that one is worth the whole gate. The naive word list catches `this plan`. It does not catch `before Plan 0038 Phase 2 bound it`, which reads like a citation, passes the word list, and is narration all the same — it dates the code against an event, so a reader has to reconstruct a history to decode a sentence about the present. So an elapsed-time preposition in front of a numbered citation — before / since / until / pre- / after — is reported, while the bare citation it decorates is not.
+
+**`check-index-rows.mjs`** — every row inside a marked roster region is a pointer, not an abstract. This is the 7.1× gate.
+
+**`check-backlog-claims.mjs`** — re-runs the machine-runnable probes that live backlog entries carry beside their claims. Four entries had been falsified, and all four the same way: each asserted something about _the repository_ — what it contains, what it documents, what is built — and each was wrong when written or shortly after. Three carried no verification stamp at all. The fourth carried one that was dated, recent and **true**, and verified the half of the entry that survived rather than the half in its own title.
+
+That fourth case is why a prose stamp is not enough. It records that somebody looked, not what they looked at, and it cannot be re-run when the subject moves.
+
+**`check-reader-prose.mjs`** — in the five documents a preset author reads, a citation must be inside a link, never a bare number. The repository's convention elsewhere is the opposite and stays: a code comment must name the record that earned a claim, so a threshold can be traced to the measurement behind it. But **235 bare citations** across three reader documents addressed a session reconstructing why a number exists, and were being read by someone who wanted to know what a parameter does. The rule for those five is one line: _keep the fact, demote the provenance to the link._ A link is inert until clicked; a bare number interrupts a sentence.
+
+**`check-filter-figures.mjs`** — one subsystem's cost figures must live in exactly one document. And the design of this one is the most transferable idea here.
+
+## Enforce the absence of copies, not the agreement of copies
+
+That gate exists because a plan shipped one tool and documented it in three files at once — profiles, flags, the check and the cost table each written out in full, **in different words**, in three places.
+
+Copies written in different words cannot be diffed, so they disagree silently by construction. That was not hypothetical: at that plan's close review, a correction to the cost figures enumerated two of the three copies and missed the third. It was found by grepping the numerals _after_ the file list had been written down and committed.
+
+The obvious gate would compare the three copies for agreement. It would have reproduced the miss exactly, because **the copy that broke it was the one outside the list.** A same-value check across a known list can only ever be as good as the list, and the list is written by the same person who forgot the third file.
+
+So the gate asserts the _absence_ of copies instead. There is one canonical page, and a stray figure anywhere else is the failure. You cannot forget to add a new copy to the list, because there is no list.
+
+## The stronger move is to generate it
+
+Gating prose is a holding action. The end state is prose that cannot be wrong because nobody writes it.
+
+The largest public surface of Ritmolux is the preset format, and its reference is a 268 KB file. That file was already guarded — a test asserted that every parameter the engine declares is named in it — and the guard proved the wrong property. It asserted that each declared name appeared in backticks _somewhere_, which a single one-row-per-system table satisfied. So it could not notice that a parameter's default had changed, that a documented range no longer read, or that a parameter was named and never explained.
+
+Put precisely: the three copies of each name — the declaration list, the setter match, the reference — were held to each other. **The meaning was held to nothing.**
+
+[ADR-0170](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0170-a-parameters-reference-row-is-generated-from-the-declaration-the-engine-reads.md) replaced the bare name list in the engine with a `ParamSpec` — name, default, the range that reads, and a one-line doc — and generates the reference tables from those declarations into a block between markers. A hand edit inside the markers fails the test. The essays below the markers stay hand-written, and are where depth lives.
+
+The old test is retired by construction: a declared parameter cannot be absent from a block generated from the declarations. What replaces it is the assertion the old test could not state — that every spec carries a non-empty doc line.
+
+I am not going to pretend it was free. The decision's own list of negatives is the honest part:
+
+- **Roughly two hundred one-line docs had to be written, in Rust, once.** The material existed in the essays; the work was condensing it, not researching it.
+- **A doc line in Rust is a second place to say what a parameter does**, beside its essay. The rule is that the spec's line is the _definition_ and the essay is the _discussion_, and the plan's review checks that no essay contradicts its table.
+- A default declared in a spec and a default applied at reset are **two copies of one number** until the scene reads its default _from_ the spec. The plan required that read, so the table cannot state a default the engine does not apply.
+
+That last bullet is the pattern in miniature. Generating a document from a declaration only helps if the declaration is the thing the program actually uses. Otherwise you have moved the lie one file to the left.
+
+## What this does not buy
+
+It does not make the documentation good. Every one of these gates is a check on a _mechanical_ property — a link resolves, a row is short, a figure appears once, a citation is wrapped, a claim carries a runnable probe. None of them can tell whether an explanation is clear, whether an example is well chosen, or whether the document answers the question a reader actually arrived with. That work is still done by reading, and it is still the harder half.
+
+And there is a cost I would name to anyone considering this. Every gate above was written _after_ the rot it prevents, which means each one cost a plan phase to build and each one is a thing that can fail on a Friday for reasons unrelated to what you were doing. The pre-push hook is deliberately kept to the fast subset for exactly this reason — a gate that hurts gets disabled, and then it is worth less than nothing, because its existence was the reason nobody was checking by hand.
+
+What it buys is narrow and, I think, worth it: the documentation is allowed to be **large**. 315 files, 6.7 MB, 1,059 cross-references, written by sessions that never met. That corpus is only navigable because a fixed set of mechanical properties are true of all of it, always, and are true because a machine re-asserts them on every push rather than because someone remembered.
+
+The result of that is [igorkonovalov.github.io/Ritmolux](https://igorkonovalov.github.io/Ritmolux/) — the same documents the repository holds, published in place and never copied, with search over them.
