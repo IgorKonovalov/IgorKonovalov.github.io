@@ -9,7 +9,7 @@ import Mermaid from '../../../components/Mermaid.astro';
 
 Most non-functional requirements are decoration. "Fast", "lightweight", "responsive" — written once during a planning exercise, never measured, contradicted by the third release and never corrected, because nobody could have said what would count as a contradiction. They are not lies. They are unfalsifiable, which is worse, because an unfalsifiable requirement survives indefinitely while doing nothing.
 
-[Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/)'s `nfr.md` opens by refusing that in one sentence:
+[Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/)'s [`nfr.md`](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/nfr.md) opens by refusing that in one sentence:
 
 > Each section is a **budget with a measurement beside it, not an aspiration.**
 
@@ -59,6 +59,23 @@ So the size cap warns, loudly, at ninety percent, on every single build, and a h
 
 The size budget also reaches upstream of the binary, into what may be added to it. The graphics library is named as the one accepted fixed cost; little else is. Any new crate dragging in more than about twenty transitive dependencies needs a stated justification — a comment beside it in the manifest, or a decision record if it cuts across the project. That is the same budget expressed as a rule about intake rather than a number about output, and it catches the cost before it is paid, which is the only point at which it is cheap to decline.
 
+## The whole entry, in full
+
+Two sections of this post have come out of a single entry in that document. Here it is [verbatim](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/nfr.md#4-size-and-dependencies), so the ratio of commentary to source is visible — six bullets, one of which is deliberately not a cap at all:
+
+> ### 4. Size and dependencies
+>
+> - **Soft cap 10,000,000 B** for the standalone release exe. The unit is in the number because "~10 MB" reads two ways 4.9 % apart and nothing here said which; the _value_ is the inherited one, and it has never been measured against what the exe actually contains.
+> - **Soft cap 12,582,912 B (12 MiB)** for the foobar2000 component, `foo_ritmolux.dll` — its own figure rather than "the same ballpark", because the two artifacts do not carry the same things. The component carries the whole core, the embedded preset library and the SDK shim, and carries neither `winit`, the window, nor the WASAPI capture stack. Derived in [ADR-0159](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0159-the-component-gets-its-own-size-cap-and-the-recipe-carries-it.md) as 9,789,952 B plus one more step the size of the `text` step, rounded up to the next binary boundary — so it admits one more feature of the largest class this project has shipped, and a second one has to be argued for. `packaging/foobar/build-component.ps1` prints the length on every build and **warns** above 11,324,620 B (90 % of the cap). It never fails a release over a size: these caps are soft, while the seven fatal checks beside the measurement are properties of a correct artifact.
+> - **Recorded, not capped: 118,073,278 B** for the Windows studio zip, `ritmolux-studio-v0.113.0-windows-x64.zip`, measured from the first zip `packaging/studio/build-studio.ps1` produced ([ADR-0178](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0178-the-studio-shell-conventions.md) asks for the figure in bytes; the macOS universal zip carries two Electron architectures and will be larger, and its figure joins this row when the first release measures it). It decomposes, from the unpacked 291,321,974 B: **277,424,419 B of prebuilt Electron runtime**, 10,701,824 B of player, and **3,195,731 B of `app.asar` — everything this project wrote**. That ratio is why the row records rather than caps: 95 % of the artifact is a dependency whose size no edit here moves, so a cap would measure Electron's release cadence rather than our restraint, and the two soft caps above exist to be readings on the latter. What _would_ move it is dropping a bundle, not trimming one; the studio is never shipped inside the player, and nothing shipped depends on it.
+> - wgpu is the accepted fixed cost; little else is.
+> - Release profile: LTO on, symbols stripped, exact-version pins for direct deps.
+> - Gate: any new crate pulling > ~20 transitive deps needs a stated justification (comment in `Cargo.toml` or, if cross-cutting, an ADR).
+
+The third bullet is the one there was no room for above, and it may be the best argument in the entry. The studio zip is 118 MB and carries no cap, because 95 % of it is a prebuilt Electron runtime whose size no edit in this repository moves. A cap there would measure Electron's release cadence rather than anyone's restraint — it would be breached by a dependency upgrade and met again by a different one, and neither event would say anything about the project. So the row records the number instead, and the two caps above it stay readings on the part that is actually ours.
+
+That is the same judgement as the soft/fatal split, one level up. Not everything worth measuring is worth constraining, and a number you cannot influence should be written down without a threshold attached, so that nobody later mistakes crossing it for a fault.
+
 ## When the number wins the argument
 
 The interesting moment for any budget is its first real collision with something you want to build. Until then it is theory.
@@ -73,7 +90,7 @@ There is a second-order effect worth noticing. The cap did not merely say no; it
 
 ## Scoping a claim to what you actually control
 
-The latency budget is **under 60 ms** from audible beat to visible reaction, about three frames at 60 Hz, with a working allocation across each stage:
+The [latency budget](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/nfr.md#3-latency--audio-to-visual) is **under 60 ms** from audible beat to visible reaction, about three frames at 60 Hz, with a working allocation across each stage:
 
 <Mermaid
   code={`
@@ -110,7 +127,7 @@ The measured cost of that change was 31.5 µs per hop, up from 17.2 µs, against
 
 Performance gets a different treatment, because it cannot be a single number across unknown hardware.
 
-The engine ships two named quality tiers, carried as a set of capacity values — particle counts, a segment budget, internal grid caps — resolved when the renderer is constructed. Since one later decision, one of those capacities is no longer even a single number: the attractor's sample budget is a _density against the render target_, so the drawn count scales with how many pixels are actually being filled, clamped between an anchor and a ceiling.
+The engine ships [two named quality tiers](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/nfr.md#1-performance--adaptive-quality), carried as a set of capacity values — particle counts, a segment budget, internal grid caps — resolved when the renderer is constructed. Since one later decision, one of those capacities is no longer even a single number: the attractor's sample budget is a _density against the render target_, so the drawn count scales with how many pixels are actually being filled, clamped between an anchor and a ceiling.
 
 The constraint that governs all of it is the one I would put on a wall:
 
@@ -169,7 +186,7 @@ So the budgets are stated as invariants in a spec, in `MUST` form, and they read
 
 Different origin, same discipline: each one names a measurement or a test that holds it, rather than describing a quality someone should aim for. And the spec states its own purpose in a line I would copy into any behavioural contract: _"A reader should be able to restate the determinism contract from this file alone."_
 
-The real-time safety section in Ritmolux does the same trick from the other side. It is headed _"testable restatement"_, and instead of "the audio thread must be fast", it says: zero heap allocation, zero locks, zero logging, zero file I/O, and no panicking calls on the per-frame paths. Every one of those is a property you can check by reading the code or by instrumenting the thread. "Fast" is not.
+The [real-time safety section](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/nfr.md#5-real-time-safety-testable-restatement) in Ritmolux does the same trick from the other side. It is headed _"testable restatement"_, and instead of "the audio thread must be fast", it says: zero heap allocation, zero locks, zero logging, zero file I/O, and no panicking calls on the per-frame paths. Every one of those is a property you can check by reading the code or by instrumenting the thread. "Fast" is not.
 
 ## Honest nulls
 
@@ -177,7 +194,7 @@ The thing both projects do that I would take to any codebase is reserve room for
 
 Ritmolux does it inline, and repeatedly: the unbudgeted streamed path; the group delay accepted as physics; a coverage floor that admits it was measured on a box with a hardware GPU where CI has software rendering, and is therefore owed a re-measurement; a note that no CI runner can load foobar2000, so the component's installation is checked by hand.
 
-The most striking one is the hardware matrix, which is headed **"what the user has"** — not what the project supports, what physically exists to test on. And under it:
+The most striking one is the [hardware matrix](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/nfr.md#9-test-hardware-matrix-what-the-user-has), which is headed **"what the user has"** — not what the project supports, what physically exists to test on. And under it:
 
 > **There is no Mac in this matrix, and that is the point.** An earlier revision of this table listed a "Mac, macOS 13+" as available hardware; it is not … The macOS standalone path is therefore validated by a **recipient**, not in-house, and until one reports back **it has never executed on Apple hardware at all.**
 
@@ -186,6 +203,16 @@ A shipped artifact, built by CI, attached to every release, that has never once 
 market-analyzer's backtest spec gives the same idea a heading: **"Known gaps / honest nulls."** Under it, among others, the scope limit on the guarantee it has just made — determinism holds for the financially-meaningful path, and explicitly not for the run identifier or the timestamps.
 
 This is the same instinct as [every gate stating its blind spot](/projects/2026/09/13/every_gate_states_its_blind_spot/), applied to requirements instead of tests. A guarantee whose boundary is unstated will be read as universal, and then leaned on somewhere it was never meant to reach — usually by someone who was not there when it was written, which after a few months is everyone.
+
+## What keeps a number from going stale
+
+A budget with a measurement beside it still rots if the document and the artifact drift apart. A plan moves a figure, the entry keeps the old one, and a year later someone is comparing this week's build against last quarter's cap without knowing it. Every number quoted in this post is a number that has to be swept when something moves it.
+
+Ritmolux handles that with a checklist rather than with diligence. The [architect skill](https://github.com/IgorKonovalov/Ritmolux/blob/main/.claude/skills/architect/SKILL.md) — the role that writes the plans and the decision records — carries a close ceremony, and one of its steps is a doc-freshness table pairing each document with the event that makes it stale. One row is:
+
+> `docs/nfr.md` | a quantified budget moved
+
+That is the entire mechanism, and the shape of it is the point. Not "keep the NFRs current", which is an instruction nobody can visibly fail, but a named file beside the specific trigger that obliges a sweep of it, read at the moment a plan closes — which is the moment the person who moved the number is still holding it. It is the same instinct as the [documentation gates](/projects/2026/09/12/how_315_markdown_files_stay_true/): move the burden out of memory and into a step someone has to walk past.
 
 ## What makes a number bind
 
