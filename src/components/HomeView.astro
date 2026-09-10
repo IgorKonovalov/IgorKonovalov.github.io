@@ -3,16 +3,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { getLocale, postHref } from '../lib/postUrl';
 import { DATE_LOCALE, getLocaleFromPath, pageI18n, t } from '../i18n/ui';
+import { personSchema, websiteSchema } from '../lib/seo';
 
 const locale = getLocaleFromPath(Astro.url.pathname);
 const { switchHref, alternates } = pageI18n(Astro.url.pathname);
+const schema = [personSchema(locale), websiteSchema(locale)];
 const posts = await getCollection('blog');
 const sortedPosts = posts
   .filter((post) => getLocale(post) === locale)
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 ---
 
-<BaseLayout width="wide" switchHref={switchHref} alternates={alternates}>
+<BaseLayout
+  width="wide"
+  switchHref={switchHref}
+  alternates={alternates}
+  schema={schema}
+>
   <section class="home-intro">
     <h1 class="home-title">{t(locale, 'home.title')}</h1>
     <p class="home-tagline">{t(locale, 'home.tagline')}</p>

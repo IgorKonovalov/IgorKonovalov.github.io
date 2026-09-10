@@ -1,5 +1,12 @@
 ---
 import { DEFAULT_LOCALE, getLocaleFromPath, type Locale } from '../i18n/ui';
+import {
+  DEFAULT_OG_IMAGE,
+  DEFAULT_OG_IMAGE_SIZE,
+  SITE_TITLE,
+  SITE_URL,
+  absolute,
+} from '../lib/seo';
 
 interface Props {
   title?: string;
@@ -12,12 +19,23 @@ interface Props {
    * hreflang tags are rendered — so pages without a translation stay clean.
    */
   alternates?: Partial<Record<Locale, string>>;
+  /**
+   * The whole `<title>`, bypassing the `… | Igor Konovalov` suffix. For pages
+   * whose title already carries the site name, so it is not said twice.
+   */
+  fullTitle?: string;
+  /** Social card image, site-relative or absolute. Defaults to the site card. */
+  image?: string;
+  /** Alt text for the social card. */
+  imageAlt?: string;
+  /** JSON-LD nodes to embed, one `<script>` each. */
+  schema?: unknown[];
 }
 
-const siteTitle = 'Igor Konovalov';
+const siteTitle = SITE_TITLE;
 const siteDescription =
   'Belgrade, Serbia. Fullstack developer working in TypeScript and Python, building AI agents and creative-coding experiments. Personal blog and portfolio.';
-const siteUrl = 'https://igorkonovalov.github.io';
+const siteUrl = SITE_URL;
 
 const OG_LOCALE: Record<Locale, string> = { en: 'en_US', ru: 'ru_RU' };
 
@@ -27,11 +45,21 @@ const {
   canonicalUrl,
   type = 'website',
   alternates,
+  fullTitle,
+  image = DEFAULT_OG_IMAGE,
+  imageAlt,
+  schema = [],
 } = Astro.props;
 
 const locale = getLocaleFromPath(Astro.url.pathname);
-const pageTitle = title ? `${title} | ${siteTitle}` : siteTitle;
+const pageTitle = fullTitle ?? (title ? `${title} | ${siteTitle}` : siteTitle);
 const canonical = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
+
+const ogImage = absolute(image);
+const ogImageAlt = imageAlt ?? title ?? siteTitle;
+// Dimensions are only known for the bundled card; a per-post override may be
+// any size, and a wrong width/height is worse than none.
+const isDefaultImage = image === DEFAULT_OG_IMAGE;
 
 const hreflangs = alternates
   ? [
@@ -67,3 +95,37 @@ const hreflangs = alternates
 <meta property="og:url" content={canonical} />
 <meta property="og:locale" content={OG_LOCALE[locale]} />
 <meta property="og:site_name" content={siteTitle} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:image:alt" content={ogImageAlt} />
+{
+  isDefaultImage && (
+    <>
+      <meta
+        property="og:image:width"
+        content={String(DEFAULT_OG_IMAGE_SIZE.width)}
+      />
+      <meta
+        property="og:image:height"
+        content={String(DEFAULT_OG_IMAGE_SIZE.height)}
+      />
+    </>
+  )
+}
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+<meta name="twitter:image:alt" content={ogImageAlt} />
+
+<!-- Structured data -->
+{
+  schema.map((node) => (
+    <script
+      is:inline
+      type="application/ld+json"
+      set:html={JSON.stringify(node)}
+    />
+  ))
+}

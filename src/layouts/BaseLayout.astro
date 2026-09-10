@@ -13,6 +13,10 @@ interface Props {
   width?: 'default' | 'wide';
   alternates?: Partial<Record<Locale, string>>;
   switchHref?: string;
+  fullTitle?: string;
+  image?: string;
+  imageAlt?: string;
+  schema?: unknown[];
 }
 
 const {
@@ -22,6 +26,10 @@ const {
   width = 'default',
   alternates,
   switchHref,
+  fullTitle,
+  image,
+  imageAlt,
+  schema,
 } = Astro.props;
 const locale = getLocaleFromPath(Astro.url.pathname);
 // The language toggle target. Static pages pass an explicit switchHref;
@@ -50,6 +58,10 @@ const feedHref = locale === 'ru' ? '/ru/rss.xml' : '/rss.xml';
       description={description}
       type={type}
       alternates={alternates}
+      fullTitle={fullTitle}
+      image={image}
+      imageAlt={imageAlt}
+      schema={schema}
     />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link
