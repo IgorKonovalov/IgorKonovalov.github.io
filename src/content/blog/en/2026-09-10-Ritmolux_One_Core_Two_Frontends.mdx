@@ -6,6 +6,8 @@ description: 'A real-time music visualizer in Rust: one shared engine feeding a 
 image: '/images/og/ritmolux.jpg'
 ---
 
+import Mermaid from '../../../components/Mermaid.astro';
+
 The last post here went up on 21 July. [Ritmolux](https://github.com/IgorKonovalov/Ritmolux) was created that same day, and this is what it is now.
 
 ![A neon kaleidoscopic mandala: a deep violet eight-lobed core ringed by cyan and magenta petals, with pale swept arcs opening outward into black](/images/Ritmolux/hero.webp)
@@ -14,6 +16,8 @@ It is a real-time music visualizer for Windows and macOS. A **shared Rust core**
 
 The project is pre-1.0 and in active development. The preset format and the C ABI may still change between releases; stability begins at 1.0.0.
 
+Two things about that split are worth stating before anything else, because everything downstream follows from them. The first is that the shared piece is genuinely the whole engine — analysis, scene, render, post-processing — and not a utility library with two applications built on top. The second is that the boundary is a **C ABI**, not a Rust crate boundary. A foobar2000 component is a C++ DLL loaded into somebody else's process, so anything the two frontends share had to survive being expressed as thirteen `extern "C"` functions. That constraint is unforgiving, and it is the reason the abstraction held: you cannot accidentally leak a Rust type, a lifetime or an assumption about the caller across a boundary that only speaks C.
+
 ## The core does not know where the audio came from
 
 That is the one architectural fact everything else follows from. The core takes interleaved or mono PCM frames and has no opinion about their origin — no WASAPI types, no ScreenCaptureKit types, no foobar types anywhere in `core/`. Loopback capture lives in the standalone binary; foobar hands its own samples to the C ABI. One visual codebase serves both because neither can reach into it.
@@ -21,6 +25,67 @@ That is the one architectural fact everything else follows from. The core takes 
 The seam between audio and picture is a **lock-free SPSC ring buffer**. Audio arrives at the device's cadence, frames render at the display's, and neither loop drives the other. The ring is its own crate, `rlx-ring`, split out with zero dependencies for a specific reason: Miri can check it in CI that way.
 
 The rule governing the capture side is stated as a prohibition rather than a goal. The audio callback never blocks, allocates, locks, or logs — it hands samples to the ring and returns.
+
+<Mermaid
+  code={`
+flowchart TD
+  subgraph src["Audio sources"]
+    loop["OS loopback capture<br/>WASAPI · ScreenCaptureKit"]
+    fb["foobar2000<br/>visualisation_stream"]
+  end
+  subgraph fe["Frontends"]
+    sa["Standalone app<br/>window + GPU surface"]
+    pl["foobar component<br/>C++ shim over the C ABI"]
+  end
+  subgraph core["The engine — source-agnostic, GPU-abstract"]
+    ring["Lock-free ring buffer — the seam"]
+    dsp["Analysis<br/>spectrum · onset · beat"]
+    scene["Preset + scene"]
+    render["Render engine"]
+    ring --> dsp --> scene --> render
+  end
+  loop --> sa
+  fb --> pl
+  sa -->|push PCM frames| ring
+  pl -->|push PCM frames, C ABI| ring
+  render -->|Metal| mac["macOS"]
+  render -->|DX12 / Vulkan| win["Windows"]
+`}
+/>
+
+## What happens between a sound and a shape
+
+Analysis runs on a **hop** — a fixed step through the stream, 512 samples at 48 kHz — rather than once per frame. That detail matters more than it looks: it means what a preset reads does not change with your display's refresh rate, so the same preset behaves the same on a 60 Hz laptop and a 165 Hz monitor.
+
+Sample rate, channel count and buffer size are validated **once**, where audio enters the engine. Everything downstream assumes they are good, on the principle that _a hot path that re-validates is a hot path doing the wrong work_.
+
+**Two FFT windows run, not one.** A 2048-sample window feeds everything time-sensitive — onset, beat, tempo, and the mid and treble bands. An 8192-sample window feeds only the bands below about 246 Hz, because a 23.4 Hz bin cannot tell a kick drum from a bass note. The long window costs about 85 ms of group delay on those low bands, which is accepted as physics rather than compensated away; the beat-to-reaction path never touches it, so the latency budget is unaffected.
+
+### The levels are ratios, and that is the whole trick
+
+`bass`, `mid`, `treb` and `onset` are each divided by **their own slowly-decaying running peak**, with a silence floor so a quiet room reads zero rather than amplified noise.
+
+That one decision is what makes presets portable. `bass > 0.5` means _loud for this track_ — on every track, at every gain setting, whether the source is a loudness-war master or a quiet acoustic recording. A threshold written into a preset by one person on one system means the same thing on someone else's.
+
+The cost is deliberate and stated: absolute dynamics are hidden. A quiet passage and a loud one both reach `1.0` against their own peaks. Where a preset genuinely needs the absolute figure, `bass_raw` and its three siblings carry it, un-normalized.
+
+### Onsets are not beats
+
+Onset detection is **spectral flux** — how much the spectrum _changed_ since the last hop. It spikes on attacks rather than on loudness, so a sustained note does not fire it and a muted hit does.
+
+A tempo tracker turns those onsets into a BPM estimate and a **beat phase**: zero on each beat, ramping to one before the next. Above that sits a bar clock — which beat of the bar you are on, how far through, how many bars have passed.
+
+The distinction is load-bearing and easy to get wrong. The onset detector fires between **1.2 and 2.3 times per beat** depending on material. That is why the beat counter is a ratchet rather than a meter, and why bar phase exists as its own thing. A preset that treats onsets as beats will look correct on a four-on-the-floor kick and fall apart on anything with syncopation.
+
+### Every scene rides the same chain
+
+A preset names one rendering system, and that system draws the frame — but never straight to the screen. Every scene rides a shared composite chain:
+
+**background → scene → trails → kaleidoscope → transition → ink → present**
+
+A background pre-pass; the scene; feedback trails holding a decaying copy of previous frames; a screen-space kaleidoscope fold; a two-input dissolve that crossfades the outgoing preset into the incoming one; and a terminal ink tone-remap.
+
+The payoff is that a new rendering system inherits all of it for free. Write a scene that draws shapes, and it arrives with trails, kaleidoscope folding, palette handling and preset crossfade already working — which is why twelve systems exist rather than three.
 
 ## Twelve systems, and every one of them is text
 
@@ -65,6 +130,44 @@ Getting the gain wrong is the single most common way a preset ends up looking de
 Some systems also take a **structural table** — `[curve]` above, and `[generator]`, `[particles]`, `[spectrum]` elsewhere — read once at load rather than every frame. Those choose _which figure_; the params then animate it.
 
 Presets are seeded into a per-user directory that the standalone app and the foobar component **share**, so a file edited in either shows up in both.
+
+### What the twelve actually are
+
+Naming them is not much use without saying what each is _for_, so briefly.
+
+**`fragment_field`** is a fullscreen shader — every pixel computed from a domain-warped noise field and coloured through the shared palette. No geometry, no particle count; the whole frame is the subject. The cheapest system to make busy and the hardest to make sparse.
+
+**`swarm`** is around ten thousand CPU-simulated particles drifting through a flow field, drawn as instanced additive marks. Their world is a torus, so nothing ever leaves the frame and the field stays populated without respawn hitches.
+
+**`emitter`** is the counterpart: objects that spawn, follow an analytic ballistic path, age and retire. It is the only system whose **population is not fixed**, which is exactly what the swarm's wrap-around torus cannot express — and the reason it exists is that some things should be _triggered by a beat_ rather than modulated by a band.
+
+**`parametric_curve`** is one continuous line, resampled every frame from a closed-form curve rather than cached, so audio can sweep the _shape itself_ and not merely its colour and scale.
+
+**`lsystem`** is a turtle walking a string produced by rewriting an axiom with production rules. The expansion happens once at load — one cached segment buffer per depth — so per frame the scene only picks a visible depth and transforms it.
+
+**`star_pattern`** builds a Hankin star rosette by the contact-angle method: n contact points on a circle, rays leaving at a continuous contact angle, meeting at the petal tips. Because the angle is continuous, the interlacing can open and close.
+
+**`reaction_diffusion`** is a Gray-Scott simulation stepped on a ping-pong texture pair. It is _stateful_ — each frame's field depends on the last — which is what produces the restructuring, growing, organic look that stateless scenes cannot reach.
+
+**`attractor`** iterates a very large number of points through a chaotic map and deposits them into an accumulating trail buffer that fades. The figure is not drawn so much as **exposed**: it builds up over seconds, so it is the family that most rewards a late capture.
+
+**`spectrum`** is a direct readout of the 64-band log-spaced analysis, as bars, a polyline or a radial ring. It is the one system where the audio is literally legible in the picture.
+
+**`shape_field`** draws a silhouette as a fullscreen distance field, which makes the palette coordinate a _distance_ — turn the palette steps up and you get concentric offset contours **of that shape**, not concentric circles. It is also the one system where the figure can be _authored_ rather than selected: a `[path]` table takes inline SVG path data pasted out of a design tool, and a second contour makes the figure able to _become_ another figure on the beat.
+
+**`warp_mesh`** covers the frame with a grid and resamples the **previous** frame through it, giving every vertex its own zoom, rotation, stretch and drift — so the past can spiral in one corner and drift in another. It is the only scene with nothing of its own to draw: turn the deposit off and the frame goes black in about a second.
+
+**`shape_collage`** completes the set.
+
+The list is worth reading as a design record rather than a feature list. `emitter` exists because `swarm` cannot change population. `warp_mesh` exists because no single whole-frame feedback transform can express a different motion per region. Each one was added because a specific thing could not be said with what already existed.
+
+### The vocabulary a preset writes against
+
+About two dozen read-only variables reach the expression layer: the four normalized levels, their un-normalized twins, the beat gate, the beat and bar clocks, the tempo, and a handful that carry _position_ rather than sound. Expressions are compiled once when the preset loads and evaluated once per frame, so a preset costs a few floating-point operations per parameter and not a parse.
+
+The grammar is deliberately small — arithmetic, a set of functions, and `select()` for branching — because it is a binding language rather than a programming one. There are no loops and no state; a parameter's value this frame is a pure function of the analysis this frame. That is what makes a preset a _description_ instead of a program, and it is why a bad preset fails at load with a message rather than misbehaving at frame 4,000.
+
+Colour is its own surface. A preset can name a built-in palette or supply custom stops, and there is an A/B crossfade so a palette can be swept as a bound parameter like anything else. Because the shared chain handles palette lookup, every system gets the same colour vocabulary — which is why presets from different systems can sit in one show without looking like they came from different applications.
 
 ## Tuning is measured
 
@@ -117,7 +220,27 @@ The `README` keeps exactly one operator fact, the hotkey table, because a strang
 
 One detail about the pictures. Every image in this post except the photograph above, and **every image in that repository without exception, is a headless render of the engine** — captured by the `shot` CLI under a synthesized audio clip, not a screenshot of the application window. They are regenerated by a script whose manifest records the preset, stimulus, hop, size and tier behind each one. There is no picture anywhere of the preset browser, the settings menu or the diagnostics overlay. The one photograph here is of a room, not of software.
 
+There is one more thing the site does that I have not seen elsewhere, and it comes out of the same instinct. The per-system parameter reference — every parameter, its default, the range that reads, and a one-line meaning — is **generated from the declarations the engine itself uses**, into a block between markers that a hand edit will fail a test over. The essays around the generated block stay hand-written and are where depth lives, but the table of facts cannot be wrong, because it is derived from the code that reads those parameters at runtime.
+
 That was a deliberate choice and it has a cost: the documentation cannot show you the interface. What it buys is that no picture in it can drift from what the engine actually does, because every one is regenerated from the engine.
+
+## Running it
+
+The application is meant to be operated during a show, not configured before one, so the whole surface is keys.
+
+`Space` moves to the next preset, dissolving rather than cutting, and restarts the auto-rotate timer. `A` toggles auto-rotate, which is off by default. `Tab` opens the preset browser, `S` the settings menu, `F` fullscreen, `D` cycles to the next display, and `F3` toggles a diagnostics overlay.
+
+Two keys are less obvious and more useful. `C` opens an **operator console on a second display** — the thing you actually want when the primary output is a projector you cannot cover with menus. And `[` and `]` drop and raise the quality tier live.
+
+That tier system is worth a paragraph, because its constraint is unusual. The engine ships two named tiers carried as capacity values — particle counts, a segment budget, internal grid caps. A frame-time governor demotes from the expensive tier to the cheap one on a sustained miss of the display's refresh budget, **once per session, one way**, reported on screen and on stderr and never silently. There is no automatic promotion back, deliberately: a single announced demotion is predictable and testable, where a system continuously renegotiating its own quality is neither, and you cannot debug a bug report about a machine that was quietly changing its mind.
+
+The governing rule is the one that makes any of this safe:
+
+> A tier changes _how much_ the engine draws, never _what_.
+
+The same preset reads the same on both, at different budgets. If a tier could change _what_ is drawn, a preset authored on one machine would be a different preset on another, and "it looks wrong on my laptop" would be unanswerable. A pin — by flag, environment variable or config key, in that precedence — is honoured in both directions and the governor never touches it, which covers the capable machine that one transient stall unfairly demoted.
+
+For authoring, pointing `RLX_PRESET_DIR` at a folder runs the app against it instead of the per-user one, which is how you work on the repository's own presets without copying anything. Edits hot-reload in about 150 ms, so the loop is: keep the window open on a second monitor, edit the file, save, look.
 
 ## Getting it
 

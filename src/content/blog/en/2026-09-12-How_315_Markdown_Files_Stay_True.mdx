@@ -15,6 +15,18 @@ Nobody wrote anything false. Every one of those sentences was true when it was w
 
 This post is about the other repository, where I had already started taking that seriously, and about what it costs.
 
+I should say at the outset that none of the eight checks below was designed in advance. Every one was written _after_ the rot it now prevents, by someone annoyed at having found the same class of problem twice. That is worth knowing before you read them as a system: they are not a framework, they are a scar tissue, and the ones you would need are the ones your own repository has already produced.
+
+### Why this is not just "documentation rots"
+
+Documentation has always rotted, and everyone knows it. The reason this needed separate thought rather than more diligence is that two of the usual defences are unavailable.
+
+The first is the author. In an ordinary codebase, somebody has been around long enough to feel that a page is wrong — they remember writing it, they remember the change that invalidated it, and the connection fires. Here, a session writes a plan, implements it, closes it and ends. The next session reads what it left. There is no continuous author holding the corpus in mind, so the ordinary mechanism by which staleness gets noticed does not exist. Nothing feels wrong, because nothing feels.
+
+The second is scarcity. Documentation rot is usually bounded by how much documentation anyone was willing to write, which is not very much. Remove that constraint — sessions will happily write a four-page decision record at three in the morning — and the corpus grows to a size where nobody has read all of it, which means nobody can notice a contradiction between two parts of it.
+
+So the volume that makes the documentation valuable is the same volume that makes it unmaintainable by attention. That is the actual problem, and it is why the answer has to be mechanical.
+
 ## Volume is the thing that changed
 
 Documentation has always rotted. What is different in an agent-written repository is the rate and the shape.
@@ -23,7 +35,17 @@ Documentation has always rotted. What is different in an agent-written repositor
 
 Those documents are written by sessions that do not come back. A session writes a plan, implements it, closes it, and ends; the next session reads what it left and writes more. There is no author holding the whole corpus in mind and noticing that a sentence on page 200 has stopped being true. There is no one who _remembers_ the convention. There is only what is written down, and what is checked.
 
-The reader-facing subset contains **1,059 relative markdown links, and 926 of them — 87% — point at documents outside that subset.** That is the shape of the thing: a corpus this cross-referenced cannot be held together by care.
+The reader-facing subset contains **1,059 relative markdown links, and 926 of them — 87% — point at documents outside that subset.** That is the shape of the thing: a corpus this cross-referenced cannot be held together by care. Nine hundred and twenty-six links is more than anyone will ever check by hand, once, let alone on every change — and each one of them is a small promise that a document somewhere still exists at a path somebody wrote down months ago.
+
+### Two documents wearing one hat
+
+The corpus is not one thing, and the split is what makes the problem tractable.
+
+About 5.5 MB is the **working record**: the decision records, the plans, the design backlog and its archive. That material exists to be grepped by a fresh session that needs to know why a threshold is what it is. It is well served by being plain files in a tree — no rendering, no navigation, no search beyond `rg`. Nobody reads it linearly and nobody should.
+
+The remaining megabyte is **reader-facing** — the preset guide, the expression reference, the palette surface, the operator documentation, the capture CLI. Different audience, different failure mode. A working-record document that is slightly stale costs a session five minutes of confusion. A reader-facing document that is stale costs a stranger their impression of whether the project is maintained.
+
+The two need different treatment, and separating them is half the value of having thought about it at all. It is also what made publishing possible: the site publishes the reader-facing subset and leaves the working record as files, which is the only reason a documentation site for a project with 183 decision records is not an unnavigable wall.
 
 ## The convention that failed, measurably
 
@@ -38,6 +60,14 @@ The fix was tried as a convention. A plan moved the write-ups out and wrote **"O
 That is the whole argument, and I did not have to construct it — the repository ran the experiment on itself:
 
 > A rule nothing re-runs is a rule nobody follows, so this is a gate rather than a paragraph.
+
+### What was actually measured
+
+One more note on where the numbers in this post came from, because "the index grew" and "the index reached 16% of the corpus it indexes" are claims of different weight, and the second requires somebody to have measured both sizes.
+
+That is how all of the figures below were arrived at. The 74 broken links across 23 files were counted by running the future gate over history. The 7.1x regrowth in eight days is two measurements of one section, dated. The 235 bare citations, the eleven broken links in code comments, the four falsified backlog entries — all counts taken _before_ the gate was written, rather than estimates made afterwards.
+
+That order is not incidental, and it explains why there are eight gates rather than thirty. Each began as an irritation, continued as a count — how common is this, actually? — and only then became code. More irritations failed the counting step than passed it: what feels like systemic rot is often two instances, and two instances are cheaper to fix by hand than to police forever.
 
 ## Eight gates
 
@@ -62,7 +92,7 @@ The rest of this section is what each of those was written against.
 
 The subtlety in that one is worth the whole gate. The naive word list catches `this plan`. It does not catch `before Plan 0038 Phase 2 bound it`, which reads like a citation, passes the word list, and is narration all the same — it dates the code against an event, so a reader has to reconstruct a history to decode a sentence about the present. So an elapsed-time preposition in front of a numbered citation — before / since / until / pre- / after — is reported, while the bare citation it decorates is not.
 
-**`check-index-rows.mjs`** — every row inside a marked roster region is a pointer, not an abstract. This is the 7.1× gate.
+**`check-index-rows.mjs`** — every row inside a marked roster region is a pointer, not an abstract. This is the 7.1× gate, and the arithmetic behind its cap is worth a section of its own below.
 
 **`check-backlog-claims.mjs`** — re-runs the machine-runnable probes that live backlog entries carry beside their claims. Four entries had been falsified, and all four the same way: each asserted something about _the repository_ — what it contains, what it documents, what is built — and each was wrong when written or shortly after. Three carried no verification stamp at all. The fourth carried one that was dated, recent and **true**, and verified the half of the entry that survived rather than the half in its own title.
 
@@ -71,6 +101,18 @@ That fourth case is why a prose stamp is not enough. It records that somebody lo
 **`check-reader-prose.mjs`** — in the five documents a preset author reads, a citation must be inside a link, never a bare number. The repository's convention elsewhere is the opposite and stays: a code comment must name the record that earned a claim, so a threshold can be traced to the measurement behind it. But **235 bare citations** across three reader documents addressed a session reconstructing why a number exists, and were being read by someone who wanted to know what a parameter does. The rule for those five is one line: _keep the fact, demote the provenance to the link._ A link is inert until clicked; a bare number interrupts a sentence.
 
 **`check-filter-figures.mjs`** — one subsystem's cost figures must live in exactly one document. And the design of this one is the most transferable idea here.
+
+### The one that publishes, and the two gates it needed
+
+Publishing the reader-facing subset turned out to have a constraint nobody anticipated, and it was not rendering.
+
+The reader-facing documents contain **1,059 relative markdown links, and 926 of them — 87% — point at documents outside the published set**: into the decision records, into the plans, into the design backlog. Any site publishing the subset has to resolve those 926 somewhere.
+
+And it may not resolve them by editing the source, because the link checker asserts that every relative link resolves _on disk_, and because the same relative form is what makes these documents navigable in an editor and on GitHub. Rewriting them to absolute URLs would trade a working gate and working local navigation for a working site.
+
+So the links are rewritten at build time, the source is read in place and never copied, and two further gates exist for the things only a built site can show: one asserting every rewritten link resolves on the built output, and one asserting every published route is reachable **from the menu** rather than only by search. That second one is unusual and worth stealing — a page that exists but that no navigation path reaches is functionally missing, and nothing else in a build would tell you.
+
+The publishing workflow itself splits on the same principle as everything else here: the build job runs on every push and every pull request and is the actual guard, while the deploy job runs only from the main branch. A documentation edit that cannot render fails before it is published rather than producing a site that is confidently wrong.
 
 ## Enforce the absence of copies, not the agreement of copies
 
@@ -81,6 +123,16 @@ Copies written in different words cannot be diffed, so they disagree silently by
 The obvious gate would compare the three copies for agreement. It would have reproduced the miss exactly, because **the copy that broke it was the one outside the list.** A same-value check across a known list can only ever be as good as the list, and the list is written by the same person who forgot the third file.
 
 So the gate asserts the _absence_ of copies instead. There is one canonical page, and a stray figure anywhere else is the failure. You cannot forget to add a new copy to the list, because there is no list.
+
+### Two more generated blocks, and the rule they share
+
+The parameter roster is the largest generated artifact, but it is not the only one, and the pattern is consistent enough to state as a rule.
+
+A long document carries a **generated contents block** — regenerated by a script, held to matching by a check, and never hand-edited. A published document past a size threshold **splits into routes by size** rather than by someone's judgement about where a natural break falls. The diffusion filter's cost figures live on exactly one page, held there by the gate described above.
+
+The shared rule is: _if a block of a document is derivable from something else in the repository, derive it, and make a hand edit fail._ The markers matter as much as the generation. A generated region bounded by explicit begin and end markers, with a test asserting the committed content matches what the generator would write, is safe to edit around — the essays above and below stay hand-written, and only the derived block is frozen.
+
+The failure mode this avoids is the one where a file is either fully generated (and therefore has nowhere for a human to add depth) or fully manual (and therefore drifts). Markers let one file be both.
 
 ## The stronger move is to generate it
 
@@ -102,11 +154,33 @@ I am not going to pretend it was free. The decision's own list of negatives is t
 
 That last bullet is the pattern in miniature. Generating a document from a declaration only helps if the declaration is the thing the program actually uses. Otherwise you have moved the lie one file to the left.
 
+### The arithmetic behind a cap
+
+One detail about the index-row gate, because "keep rows short" is a rule and _320 bytes_ is a gate, and the difference between them is a calculation somebody did.
+
+The index exists so a session can find the right document without opening a hundred of them. That is its entire job, and it implies a size: the index has to be cheap enough to read in full. At 188,820 bytes it was 16% of the corpus it indexed, which means a session reading the index to avoid reading documents was reading a sixth of the documents anyway.
+
+A row that is a pointer — a number, a title, a one-line hook — fits comfortably in a couple of hundred bytes. Rows 0001–0020 averaged 152. Rows 0101–0115 averaged 3,302, which is not a longer pointer; it is an abstract of the document, written by someone who had just finished it and had the summary in their head. Every one of those was individually reasonable.
+
+The cap is set where a pointer fits and an abstract does not, so the gate does not have to detect _summarising_ — an impossible thing to check mechanically. It checks length, and length is a proxy that happens to separate the two cleanly. Picking a checkable proxy that correlates with the property you actually want, rather than trying to check the property, is most of the craft in writing a gate at all.
+
 ## What this does not buy
 
 It does not make the documentation good. Every one of these gates is a check on a _mechanical_ property — a link resolves, a row is short, a figure appears once, a citation is wrapped, a claim carries a runnable probe. None of them can tell whether an explanation is clear, whether an example is well chosen, or whether the document answers the question a reader actually arrived with. That work is still done by reading, and it is still the harder half.
 
 And there is a cost I would name to anyone considering this. Every gate above was written _after_ the rot it prevents, which means each one cost a plan phase to build and each one is a thing that can fail on a Friday for reasons unrelated to what you were doing. The pre-push hook is deliberately kept to the fast subset for exactly this reason — a gate that hurts gets disabled, and then it is worth less than nothing, because its existence was the reason nobody was checking by hand.
+
+### Which of these to build first
+
+If any of this is worth copying, the order matters, because the gates are not equally valuable and the cheap one is also the best.
+
+**Start with the link checker.** It is fifty lines, it catches a whole class of rot that degrades invisibly, and it pays for itself the first time a file moves. Every project with more than thirty markdown files should have one, agent-written or not.
+
+**Then whatever your equivalent of the index is.** Any file whose job is to help you find other files will grow toward summarising them, because summarising is helpful in the moment and costly only in aggregate. It is the most reliable rot in the set.
+
+**Then the generated blocks**, wherever a document restates something the code declares. This is the only one that eliminates the problem rather than policing it, and it is also the most expensive — the parameter roster cost roughly two hundred one-line documentation strings written in Rust.
+
+**The prose gates last**, if at all. Citation form and comment hygiene are the ones most specific to how this project works; they were written against measured rot here and might catch nothing in a repository with different habits. Copying a gate that has never caught anything in your codebase is how you end up with a slow build and no benefit.
 
 What it buys is narrow and, I think, worth it: the documentation is allowed to be **large**. 315 files, 6.7 MB, 1,059 cross-references, written by sessions that never met. That corpus is only navigable because a fixed set of mechanical properties are true of all of it, always, and are true because a machine re-asserts them on every push rather than because someone remembered.
 

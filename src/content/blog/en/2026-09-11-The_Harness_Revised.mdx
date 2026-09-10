@@ -7,6 +7,8 @@ description: 'Five changes to the agent-coding harness since July: a gate with a
 
 In [July](/projects/2026/07/21/running_a_real_project_as_a_team_of_agents/) I described the harness against one project. It now runs against three, and five things about it have changed. This post assumes that one.
 
+The five are not a list of features. Each came out of a specific failure or friction, and I have tried to give the failure as much room as the fix, because the fix on its own is not transferable — plenty of projects would be actively worse off adopting any of these without the problem that produced them.
+
 ## 1. The gate got a tier
 
 The `dev` lane's per-phase rule was uniform: build, test, clippy and fmt-check, all four green before a phase is committed. Plans run between 2 and 11 phases — the last eighteen closed had a median of 6 — so that gate was paid five to nine times in a typical plan.
@@ -21,7 +23,35 @@ The part worth copying is not the scoping — it is what happened to the list. T
 
 Two numbers frame it. Excluding those suites took the hook from ~98 s to ~27 s warm. Then a later decision unioned a 24-preset sample of three of them back in, at +58.5 s — which reads like giving the win back, and is not: before that sample, the per-phase tier rendered none of the preset library at all. It bought coverage, and paid for it out of a budget the first change had created.
 
-The reasoning behind what stays _out_ is the same discipline. `cargo deny`, doctests, Miri and coverage are not in the hook by design, because they push it from tens of seconds into minutes, and **a gate that hurts gets disabled** — at which point it is worth less than the fast subset it replaced.
+### What the hook refuses to run, and the sentence that explains it
+
+The pre-push hook is the place this discipline is most visible, because it is the gate paid most often by a human rather than by CI.
+
+Four things are excluded from it **by design**: the supply-chain audit, doctests, Miri over the unsafe ring buffer, and the coverage job. All four are real checks and all four run in CI. None runs on push, because they take the hook from tens of seconds into minutes, and:
+
+> a gate that hurts gets disabled — at which point it is worth **less than the fast subset it replaced**.
+
+That last clause is the part people miss. A disabled gate is not neutral. It is worse than never having had one, because its existence was the reason nobody was checking by hand, and its absence is silent.
+
+The hook also carries an admission about its own installation that I would copy into any repository using tracked hooks: git will not run a hook from a tracked directory without an explicit `core.hooksPath` setting, **so an uninstalled clone silently has no gate at all.** Not a broken gate — no gate, with no signal that anything is missing. That fact is written in the hook's own header, where someone reading it to find out what it does will encounter it.
+
+### The list that moved, and why that is the real lesson
+
+I want to dwell on the profile file, because the scoping is the headline and the list is the thing worth stealing.
+
+Before: the nine excluded suites were named in the pre-push hook, byte-copied into CI's workflow, and absent from the lane instructions entirely. Three consumers, two copies, one omission. The omission is the interesting failure — nobody had _disagreed_ about which suites to skip; one of the three places that needed the list had simply never been given it, and there was no mechanism by which that could be noticed.
+
+After: the list lives once, in the test runner's own configuration, as a named profile. All three consumers cite the profile by name. The measured reasoning — the warm per-suite timings, why these nine and not others — stays in the hook's header and is deliberately _not_ copied into the configuration file, because reasoning and data have different lifetimes: the list will change, the reasoning about how it was chosen will not.
+
+That separation is the transferable bit. Copy the value once and you have a synchronisation problem forever. Move the value to one place and cite it, and adding or removing an entry becomes a one-file edit that none of the consumers can fall out of step on. It is the same argument as generating a documentation table from the declaration the code reads, arrived at from the direction of test configuration.
+
+### Three moments, three budgets
+
+Stepping back, the change is smaller than "we made the tests faster" and more useful.
+
+There are three moments at which tests can run, and they have genuinely different economics. **Per phase**, five to nine times a plan, paid by a human waiting: the budget is seconds, and the question is _did this phase break something it touches_. **Per push**, once or twice an hour, still paid by a human: the budget is tens of seconds, and the question is _is this branch fit to leave the machine_. **In CI**, paid by nobody's attention: the budget is minutes, and the question is _is everything still true_.
+
+The original tiering had sorted tests by _kind_ and then assigned them to only two of those three moments. The per-phase moment — by far the most frequent, and the one where the cost is a person sitting there — had never been given a tier at all, so it inherited the push tier by default. Naming the moment is the whole fix; the scoping follows from it mechanically.
 
 ## 2. A lane is added by decision record, never by widening `dev`
 
@@ -37,6 +67,14 @@ That is the whole case against convenience here. Widening `dev` costs nothing on
 
 The precedent is explicit and it matters more than the instance. When presets became a third artifact type, they got `preset-author` rather than a wider `dev`. A lane is added when the artifact is genuinely different, with its own boundary written down. Twice now, that has been a decision with a record, not a drift.
 
+### Five lanes, and what each one is not allowed to touch
+
+For concreteness, Ritmolux now runs five: `architect` designs and reviews, `dev` builds the Rust and C++, `preset-author` owns the preset library, `studio-builder` owns the new Electron studio, and `skill-creator` — the vendored one — exists to write the others.
+
+The boundaries are stated as exclusions rather than as territories, which reads oddly until you see why. `studio-builder` _never touches the engine_. `preset-author` writes presets and does not modify the systems those presets drive. `dev` implements plan phases and does not decide what the phases are. An exclusion is checkable in review — did this change touch a file outside the lane? — where a territory is a matter of interpretation.
+
+The cost is real and I would not pretend otherwise: five lanes means five sets of instructions to keep current, and a change to a shared convention has to be propagated to all of them. That is the tax. What it buys is that a session implementing the studio has no engine rules in its context to be confused by, and no ability to quietly "fix" the engine while it is there.
+
 ## 3. The lanes moved inside the repository, and almost nothing owed them anything
 
 Plan lanes run in git worktrees. The original decision put them at `WORK/rlx-plan-NNNN` — siblings of the repository, **outside** it — and every repository tool was written under that shape, where a walk from the repo root cannot reach another lane by construction.
@@ -50,6 +88,14 @@ What the repository owed a second checkout under its own root turned out to be a
 A nested lane is exactly that — present locally, absent from CI, untracked. The tracked-set enumeration excluded it for free.
 
 Exactly one gate had never adopted the convention. `check-index-rows.mjs` walks the filesystem unconditionally, so it read the **seeded red fixture** inside the nested checkout and failed. One gate out of step, found by the change rather than by a reader, which is the outcome you want.
+
+### Why a plan lives in a worktree at all
+
+Worth a paragraph for anyone who has not tried this, because the reason is not "isolation" in the abstract.
+
+A plan runs in phases, each shipping as its own commit, and the close ceremony `git mv`s the finished plan from `plans/` into `plans/done/`. That single move is what makes a worktree worth the trouble: several plans can be genuinely in flight at once, each with its own checkout, each able to run its own build and its own tests without the other's half-finished state in the tree. A session working on plan A is not one `git stash` away from a session working on plan B.
+
+The cost is that every repository tool now has to answer "which checkout am I in?" — which is precisely the question ADR-0182 turned out not to need answering, because the tools ask git rather than the filesystem. The discipline paid for itself in a place nobody had aimed it.
 
 ## 4. A vendored skill carries its hash
 
@@ -70,6 +116,10 @@ Small, but it closes a real gap. One of the skills in Ritmolux is not written in
 ```
 
 A vendored file with no provenance is indistinguishable from a file someone wrote and forgot. Source, path and a SHA-256 make the copy's origin a checkable fact rather than a memory — the same argument that applies to any other pinned dependency, applied to a prompt.
+
+There is a smaller point hiding in this one about what a lock file is _for_. A lock file's usual job is reproducibility — everyone gets the same version. Here the file is not pinning a version at all; there is no resolver, nothing installs from it, and nothing would break if it were deleted. What it pins is **provenance**: this text came from there, and here is the hash it had when we took it.
+
+That is a different and slightly unusual use, and it is the right one for a prompt. A vendored prompt cannot be diffed against upstream by any tool that exists, cannot be checked for a CVE, and looks exactly like something a colleague wrote. Recording where it came from is the only mechanism available, so it is worth the twelve lines.
 
 ## 5. It transplanted in a day
 
@@ -93,11 +143,25 @@ Two things about how that decision was reached are worth more than the feature.
 
 **It was framed as a third implementation of an existing seam, not as new architecture.** MIDI was already behind a `MidiSource` interface precisely so the transport is replaceable, and a `ReplaySource` already existed as a second implementation, on the principle that "replay is not a second code path". The ADR's line is the one I'll reuse: _a seam with three implementations is better evidence that the seam is right than a seam with one._
 
+There is a third thing, quieter than the other two, about what the virtual ports are _not_. They are not a mock. The generated passage goes through the identical parse, record and paint path a real instrument uses — the same `MidiSource` interface, the same message decoding, the same rendering. What is synthesised is the _source of the bytes_, and nothing else. A mock would have replaced the thing under test; a second implementation of the transport leaves the thing under test entirely intact and swaps only what feeds it.
+
 **The obvious route was rejected on a security argument, not a taste one.** A dev-only IPC channel that a test harness calls to push events would add a capability to `window.api` and a renderer-reachable channel into main, defended by nothing but a build-time flag — against a shell resting on `contextIsolation`, `sandbox`, `nodeIntegration: false`, double CSP and one narrow capability per need. The ADR's verdict: _"it is only there in development" is the argument that precedes most Electron CVEs._
 
 So the flag decides in both directions. `PT_HARNESS=1` shows the virtual ports in any build; `PT_HARNESS=0` hides them even when running from source — which is how the end-to-end suite proves the gate is real rather than proving the harness exists.
 
+The flag's two-way behaviour deserves one more sentence, because it is the part that makes the whole thing a gate rather than a convenience. If the virtual ports were merely _available in development_, nothing would prevent the end-to-end suite from quietly depending on them and reporting green on a build where the real port enumeration was broken. Because the flag also _forces them off_, the suite can run in a configuration where only hardware is listed — and that run is what proves the hardware path is still wired up. A switch that only turns something on cannot demonstrate the absence of what it turns on.
+
 And the honesty at the end of it: a green run of every automated check means the pipeline is intact. It does not mean the piano works. Exactly one phase, at the instrument, says that.
+
+### What the first day actually produced
+
+It is worth being concrete about what "a harness transplanted in a day" means, because the phrase invites both over- and under-estimation.
+
+By the end of it there were five decision records, three phased plans, two skill lanes, a pre-push gate, a commit hook enforcing explicit paths, and a walking skeleton landing. Seventeen commits. What there was _not_ was any application anyone would want to use: the skeleton shows a keyboard on screen and nothing more.
+
+That ratio is the point. The overwhelming majority of the first day went into deciding things and writing them down — Electron with a pure music core, the coach behind a provider interface, two notation engines rather than one, the app playing itself — and a comparatively small amount into code. Those five decisions are the ones that would have been expensive to reverse on day forty, which is exactly why they belong on day one, and why the harness front-loads them.
+
+The README's own table of interview answers is the artifact I find most useful. It records what was decided in a single sitting: platform, connection, first-month features, repertoire, how the coach reaches a model, stack, displays, data locality, coaching trigger, score sources, build order. Eleven questions with eleven answers, dated, sitting at the top of the repository. Anyone arriving later — including a fresh session an hour later — reads the constraints before reading the code.
 
 ## Where the three stand
 
@@ -109,6 +173,18 @@ And the honesty at the end of it: a green run of every automated check means the
 | Lanes            | 9               | 5                                                                 | 2                |
 | Language         | Python          | Rust + C++                                                        | TypeScript       |
 
+The counts are not a scoreboard — a plan can be one phase or eleven, and an ADR can be a paragraph or four pages — but the _shape_ is informative. Ritmolux has more decision records than completed plans, which is what a project still deciding things looks like. market-analyzer has slightly more plans than records, which is what a project mostly executing looks like. piano-tutor has five records against three plans and no completed work, which is what day two looks like.
+
 market-analyzer also went from v0.9.0 to v0.26.0 since July, and now exposes 59 MCP tools. Ritmolux carries four behavioural specs beside its plans, and has [its own post](/projects/2026/09/10/ritmolux_one_core_two_frontends/).
+
+### What has not changed
+
+Worth saying, since a post about changes implies more churn than there was.
+
+The core of what I described in July is untouched. Plans still state _what_ and are disposable; decision records still state _why_ and are append-only. A plan phase still ships as one commit with a checkable "done when". Skills still wait on a bare invocation rather than scanning the repository to guess intent. Review still happens in a fresh session at a plan's close, by something that did not write the code.
+
+None of the five changes above is a revision of that structure. Four are refinements _within_ it — a tier for a gate that lacked one, a rule for when a lane is added, a tooling shape the checks already tolerated, a hash on a file that came from elsewhere. The fifth is evidence that the structure moves.
+
+That is roughly what you would want after two months: the foundation held, and the changes were all at the edges. A harness that needed restructuring twice in eight weeks would be telling you something about the harness rather than about the projects.
 
 The direction all five changes point in is the same one, and it is not "more agents". It is removing the human from the loop at every point where the human was only present because something had not been written down or made runnable — a gate that hurt, a list kept in three places, a lane whose rules did not exist, a fixture that needed a piano.
