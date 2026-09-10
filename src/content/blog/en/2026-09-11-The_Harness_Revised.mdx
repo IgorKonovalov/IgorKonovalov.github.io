@@ -1,0 +1,114 @@
+---
+title: 'The harness, revised'
+date: 2026-09-11
+tags: ['projects']
+description: 'Five changes to the agent-coding harness since July: a gate with a tier, lanes added by decision record, worktrees moving inside the repository, a vendored skill with a hash, and a transplant that took a day.'
+---
+
+In [July](/projects/2026/07/21/running_a_real_project_as_a_team_of_agents/) I described the harness against one project. It now runs against three, and five things about it have changed. This post assumes that one.
+
+## 1. The gate got a tier
+
+The `dev` lane's per-phase rule was uniform: build, test, clippy and fmt-check, all four green before a phase is committed. Plans run between 2 and 11 phases — the last eighteen closed had a median of 6 — so that gate was paid five to nine times in a typical plan.
+
+Measured, the cost was concentrated almost entirely in tests that had no business running that often. `cargo nextest list --workspace` enumerated 1212 tests. **Twenty-seven of them** — the GPU sweeps, where one test iterates every shipped preset or every scene through a real adapter — held the majority of the wall time. The whole suite measured 341 seconds; `reactivity` alone was 126 of those. So 2.2% of the tests carried most of a gate paid nine times a plan, and they were the 2.2% least likely to be affected by any given phase.
+
+The exclusion already existed. It was written in `.githooks/pre-push`, byte-copied into CI's workflow, and absent from the one place that ran most often — the `dev` lane's instructions offered no narrowed form and no statement that narrowing was permitted. An earlier decision had sorted tests into five tiers by _kind_ and assigned a _when_ to exactly two moments, pre-push and CI. The per-phase moment, the one that recurs five to nine times per plan, had never been given a tier.
+
+[ADR-0156](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0156-the-per-phase-gate-is-scoped-and-the-suite-is-owed-once-per-plan.md) gave it one: **the per-phase gate is scoped, and the whole suite is owed once per plan.**
+
+The part worth copying is not the scoping — it is what happened to the list. The nine excluded suites are no longer named in the hook, or in CI, or in the lane's instructions. They are a `fast` profile in `.config/nextest.toml`, and all three consumers cite `-P fast`. The measured reasoning stays in the hook's header, deliberately not copied into the toml; only the list moved. Adding or removing a suite is now a one-file edit that none of the three consumers can fall out of step on.
+
+Two numbers frame it. Excluding those suites took the hook from ~98 s to ~27 s warm. Then a later decision unioned a 24-preset sample of three of them back in, at +58.5 s — which reads like giving the win back, and is not: before that sample, the per-phase tier rendered none of the preset library at all. It bought coverage, and paid for it out of a budget the first change had created.
+
+The reasoning behind what stays _out_ is the same discipline. `cargo deny`, doctests, Miri and coverage are not in the hook by design, because they push it from tens of seconds into minutes, and **a gate that hurts gets disabled** — at which point it is worth less than the fast subset it replaced.
+
+## 2. A lane is added by decision record, never by widening `dev`
+
+Ritmolux grew a second application: a studio for authoring presets live while music plays, which never draws a frame — the player stays the only renderer. It is Electron and TypeScript.
+
+The implementing lane, `dev`, is defined as _"all code — Rust (core + standalone) and C++ (foobar plugin)"_, and every rule it carries is shaped by that: the audio callback, the hot-path pragma, `cargo nextest -P fast`, the C ABI. None of it applies to a renderer process, a preload bridge, or a Content Security Policy. And the rules that _do_ apply there — the ones that stop an Electron app from acquiring a CVE — were not written down anywhere in the repository.
+
+So the studio got its own lane, `studio-builder`, under [ADR-0177](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0177-a-fourth-skill-lane-builds-the-studio.md). The argument given is the one I'd keep:
+
+> The value of the harness is the clean-context boundary between lanes, and a lane that owns both the engine and the editor that drives it would review its own protocol from both sides.
+
+That is the whole case against convenience here. Widening `dev` costs nothing on the day and quietly removes the reviewer.
+
+The precedent is explicit and it matters more than the instance. When presets became a third artifact type, they got `preset-author` rather than a wider `dev`. A lane is added when the artifact is genuinely different, with its own boundary written down. Twice now, that has been a decision with a record, not a drift.
+
+## 3. The lanes moved inside the repository, and almost nothing owed them anything
+
+Plan lanes run in git worktrees. The original decision put them at `WORK/rlx-plan-NNNN` — siblings of the repository, **outside** it — and every repository tool was written under that shape, where a walk from the repo root cannot reach another lane by construction.
+
+The tooling now opens lanes inside the repository. On 10 September three lanes were live in two shapes at once: two outside, and one at `.claude/worktrees/plan-0161-structural-hold`, locked to a session by pid. The framing in [ADR-0182](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0182-a-plan-lane-may-live-inside-the-repository.md) is the right one:
+
+> The inside shape is not a mistake to be corrected — it is how the tooling creates a lane, and **a convention the tooling violates by default is not a convention.**
+
+What the repository owed a second checkout under its own root turned out to be almost nothing, and for a reason decided years earlier for something else entirely. Three of the gates enumerate their inputs from `git ls-files` rather than walking the filesystem, falling back to a walk only when git cannot answer, and each says which source it used. The stated reason was CI parity: a filesystem walk cannot tell documents we own from a gitignored vendored README present locally and absent from CI's fresh clone.
+
+A nested lane is exactly that — present locally, absent from CI, untracked. The tracked-set enumeration excluded it for free.
+
+Exactly one gate had never adopted the convention. `check-index-rows.mjs` walks the filesystem unconditionally, so it read the **seeded red fixture** inside the nested checkout and failed. One gate out of step, found by the change rather than by a reader, which is the outcome you want.
+
+## 4. A vendored skill carries its hash
+
+Small, but it closes a real gap. One of the skills in Ritmolux is not written in-house — `skill-creator` comes from `anthropics/skills` upstream. The repository records it in `skills-lock.json`:
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-creator/SKILL.md",
+      "computedHash": "7e3c9cd74e9e2b4828527a857170e86310f2dab5ea8030a9043df2c7e6c88857"
+    }
+  }
+}
+```
+
+A vendored file with no provenance is indistinguishable from a file someone wrote and forgot. Source, path and a SHA-256 make the copy's origin a checkable fact rather than a memory — the same argument that applies to any other pinned dependency, applied to a prompt.
+
+## 5. It transplanted in a day
+
+The strongest evidence that a harness is a harness and not a set of habits is that it moves.
+
+On 9 September I started [piano-tutor](https://github.com/IgorKonovalov/piano-tutor): a Windows desktop piano tutor for a Yamaha CK88 over USB MIDI, showing what you play as you play it. Within roughly a day it had 5 decision records, 3 phased plans, two lanes, a pre-push gate, and a walking skeleton landing — 17 commits. Its README says where it came from without ceremony: _"a plan-driven harness adapted from the Ritmolux project."_
+
+The transplanted parts arrived intact — decisions as ADRs, work as phased plans, an `architect` lane that designs and a `dev` lane that builds, a fresh-session review at each plan's close, and one commit rule enforced by a hook: stage files by explicit path, never `git add -A`.
+
+What is interesting is the part that did not transplant, because the domain refused it.
+
+### The obstacle was hardware
+
+The brief was development that can run unattended — plan after plan, overnight, with a human in the loop only where a human is genuinely required. The obstacle was not the harness. It was that the pipeline this application exists to serve starts at a piece of hardware that is plugged in or it is not.
+
+And the dependency was load-bearing immediately. Plan 0001 Phase 2 claims the no-event-loss requirement against "a recorded dense take of at least 2 000 events." That fixture has to be recorded at the instrument before the phase that needs it can pass — which puts a human in the _middle_ of the walking skeleton rather than at the end of it. Phase 3's key-estimation fixtures have the same shape. Every plan after 0001 inherits the pattern: score alignment needs a take to align, the coach needs a take to summarise, the exercise generator needs a take to score.
+
+[ADR-0004](https://github.com/IgorKonovalov/piano-tutor/blob/main/docs/adrs/0004-the-app-plays-itself-virtual-ports-not-an-injection-channel.md) is the answer: **the app plays itself.** An unpackaged build lists a _Harness_ group of virtual ports beside the hardware ones — `virtual:c-major-scale`, `virtual:ii-V-I-in-F`, `virtual:a-minor-arpeggios`, `virtual:dense-2000`. Opening one runs a seeded generated passage through the identical parse, record and paint path a real instrument uses.
+
+Two things about how that decision was reached are worth more than the feature.
+
+**It was framed as a third implementation of an existing seam, not as new architecture.** MIDI was already behind a `MidiSource` interface precisely so the transport is replaceable, and a `ReplaySource` already existed as a second implementation, on the principle that "replay is not a second code path". The ADR's line is the one I'll reuse: _a seam with three implementations is better evidence that the seam is right than a seam with one._
+
+**The obvious route was rejected on a security argument, not a taste one.** A dev-only IPC channel that a test harness calls to push events would add a capability to `window.api` and a renderer-reachable channel into main, defended by nothing but a build-time flag — against a shell resting on `contextIsolation`, `sandbox`, `nodeIntegration: false`, double CSP and one narrow capability per need. The ADR's verdict: _"it is only there in development" is the argument that precedes most Electron CVEs._
+
+So the flag decides in both directions. `PT_HARNESS=1` shows the virtual ports in any build; `PT_HARNESS=0` hides them even when running from source — which is how the end-to-end suite proves the gate is real rather than proving the harness exists.
+
+And the honesty at the end of it: a green run of every automated check means the pipeline is intact. It does not mean the piano works. Exactly one phase, at the instrument, says that.
+
+## Where the three stand
+
+|                  | market-analyzer | [Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/) | piano-tutor      |
+| ---------------- | --------------- | ----------------------------------------------------------------- | ---------------- |
+| Age              | since May       | seven weeks                                                       | two days         |
+| Decision records | 109             | 183                                                               | 5                |
+| Completed plans  | 111             | 154 (+14 in flight)                                               | walking skeleton |
+| Lanes            | 9               | 5                                                                 | 2                |
+| Language         | Python          | Rust + C++                                                        | TypeScript       |
+
+market-analyzer also went from v0.9.0 to v0.26.0 since July, and now exposes 59 MCP tools. Ritmolux carries four behavioural specs beside its plans, and has [its own post](/projects/2026/09/10/ritmolux_one_core_two_frontends/).
+
+The direction all five changes point in is the same one, and it is not "more agents". It is removing the human from the loop at every point where the human was only present because something had not been written down or made runnable — a gate that hurt, a list kept in three places, a lane whose rules did not exist, a fixture that needed a piano.

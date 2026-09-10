@@ -1,0 +1,129 @@
+---
+title: 'Ritmolux: one core, two frontends'
+date: 2026-09-10
+tags: ['projects']
+description: 'A real-time music visualizer in Rust: one shared engine feeding a standalone app and a foobar2000 component, driven by editable text presets, with a documentation site that is the reference.'
+---
+
+The last post here went up on 21 July. [Ritmolux](https://github.com/IgorKonovalov/Ritmolux) was created that same day, and this is what it is now.
+
+![A neon kaleidoscopic mandala: a deep violet eight-lobed core ringed by cyan and magenta petals, with pale swept arcs opening outward into black](/images/Ritmolux/hero.webp)
+
+It is a real-time music visualizer for Windows and macOS. A **shared Rust core** turns a stream of PCM audio samples into GPU-rendered visuals, and two frontends consume that core: a standalone application in pure Rust (`winit` + `wgpu`), fed by OS loopback capture, and a **foobar2000 component** — a thin C++ shim over the core's C ABI, fed by foobar's own `visualisation_stream`. Both ship. The standalone renders live WASAPI loopback on Windows; the component has been attached to every `v*` tag since `v0.70.0`.
+
+The project is pre-1.0 and in active development. The preset format and the C ABI may still change between releases; stability begins at 1.0.0.
+
+## The core does not know where the audio came from
+
+That is the one architectural fact everything else follows from. The core takes interleaved or mono PCM frames and has no opinion about their origin — no WASAPI types, no ScreenCaptureKit types, no foobar types anywhere in `core/`. Loopback capture lives in the standalone binary; foobar hands its own samples to the C ABI. One visual codebase serves both because neither can reach into it.
+
+The seam between audio and picture is a **lock-free SPSC ring buffer**. Audio arrives at the device's cadence, frames render at the display's, and neither loop drives the other. The ring is its own crate, `rlx-ring`, split out with zero dependencies for a specific reason: Miri can check it in CI that way.
+
+The rule governing the capture side is stated as a prohibition rather than a goal. The audio callback never blocks, allocates, locks, or logs — it hands samples to the ring and returns.
+
+## Twelve systems, and every one of them is text
+
+Everything the app draws comes from a **preset**: a small TOML file naming one built-in rendering system and binding that system's parameters to short expressions over the live audio analysis. No Rust, no shaders, no rebuild.
+
+![A luminous sea-green rosette of fine particle filaments on black](/images/Ritmolux/attractor.webp)
+
+_`attractor`_
+
+![A radial spectrum readout: coloured spokes radiating from a dark centre](/images/Ritmolux/spectrum.webp)
+
+_`spectrum`_
+
+![A bold gold rose window of nested twelve-pointed stars](/images/Ritmolux/star_pattern.webp)
+
+_`star_pattern`_
+
+Those are three of the twelve. The others are `fragment_field`, `swarm`, `parametric_curve`, `lsystem`, `reaction_diffusion`, `emitter`, `shape_field`, `shape_collage` and `warp_mesh`.
+
+A complete, working preset is ten lines:
+
+```toml
+system = "parametric_curve"
+name = "Ten Lines"
+
+[curve]
+family = "maurer_rose"
+
+[params]
+n          = "6"
+scale      = "0.55 + clamp(bass * 0.35, 0, 0.30)"
+brightness = "0.80 + clamp(mid * 0.45, 0, 0.40)"
+hue        = "0.55 + time * 0.02"
+```
+
+Four things in that file are the whole model.
+
+`system` picks what gets drawn, and everything else is interpreted against that choice — `n` means something to a `parametric_curve` and nothing at all to a `swarm`. The `[params]` values are **expressions, not numbers**, re-evaluated every frame against the current analysis. `bass`, `mid` and `time` are three entries in a vocabulary that also holds beat, bar, onset, tempo, counters and a 64-band spectrum accessor. And `clamp(x, lo, hi)` is doing the real work: `bass * 0.35` is a _gain_, deciding how much of the music reaches the parameter, while the clamp is a _limit_, deciding how far the parameter is allowed to travel.
+
+Getting the gain wrong is the single most common way a preset ends up looking dead. Edit a line, save, and the running window picks it up in about 150 ms.
+
+Some systems also take a **structural table** — `[curve]` above, and `[generator]`, `[particles]`, `[spectrum]` elsewhere — read once at load rather than every frame. Those choose _which figure_; the params then animate it.
+
+Presets are seeded into a per-user directory that the standalone app and the foobar component **share**, so a file edited in either shows up in both.
+
+## Tuning is measured
+
+The temptation with a visualizer is to tune it by eye, which produces presets that look right on one track and dead on every other. The [tuning walkthrough](https://igorkonovalov.github.io/Ritmolux/guide/tuning-walkthrough/) takes one preset through five steps and shows, at each step, the picture _and_ the `--report` row that changed. The report is what makes the difference legible: it can show that a parameter never left the bottom of its range, which is not visible in the frame.
+
+There is a second way in. `milkconv` converts MilkDrop `.milk` presets into the format above. It is a development tool, and it sits deliberately outside the workspace's default members — a bare `cargo build` never emits it, and nothing that ships depends on it.
+
+## Rendering a track offline
+
+The engine renders a track to a video file without recording the window:
+
+```bash
+cargo run -p standalone --example shot -- \
+  --preset "Supernova" --render track.wav --fps 30 --size 1920x1080 \
+  --ffmpeg ffmpeg --out track.mp4
+```
+
+Because the render is offline it is decoupled from real time: every frame is drawn at an exact `1/fps` step regardless of how long it took, so the result is deterministic and never drops a frame the way a screen recorder does. It is also the mode where the expensive quality tier is most worth paying for, since there is no 60 Hz deadline for the frame-time governor to miss.
+
+No encoder ships with the project. A static `ffmpeg` is larger than the application's entire size budget, so `shot` streams Y4M frames to whichever `ffmpeg` you point it at and lets it own the container.
+
+## It started running the lights
+
+The most recent direction was not planned, and the record of it is unusually blunt about that.
+
+An earlier decision, ADR-0144, put Resolume Arena on a second machine in the middle of the path: Arena would own the fixture patch, the zoning and the dimming, Ritmolux would feed it a picture over NDI and telemetry over OSC, and Arena would emit the Art-Net. That decision considered emitting Art-Net directly from the app and rejected it in one line — _"it makes us a lighting console."_
+
+On 29 August a live set ran on the rejected path anyway: `--osc 127.0.0.1` into a small bridge on the same machine, emitting Art-Net straight to the fixtures. No Arena, no NDI, no second machine. It worked, and the reason the original rejection had been wrong turned out to be checkable. It rejected direct output because _"fixture profiles, patching, zoning, dimmer curves, channel layouts and DMX refresh timing are all real work, all already done by Arena"_ — and this rig has none of them. It is two Ethernet-to-SPI controllers speaking Art-Net on UDP 6454, plain RGB, universes 0–23 patched. There is no console to inherit work from and no profile to respect. What the controllers want is pixels.
+
+[ADR-0145](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0145-the-engine-drives-the-fixtures-directly-over-art-net.md) superseded ADR-0144 on that evidence, and the engine now drives the fixtures directly.
+
+That raises a second problem. Authoring presets live while the music plays, gathering presets into a project for one show, rendering clips from a track — every one of those is a screen with sliders, a code editor, a file list or a progress bar, and the player executable is already at 10,277,888 bytes against a 10,000,000-byte soft cap. So the studio is a **separate application that never draws a frame**, and the player stays the only renderer: one small executable that opens, captures and draws, with nothing installed beside it.
+
+## The documentation lives at igorkonovalov.github.io/Ritmolux
+
+**[igorkonovalov.github.io/Ritmolux](https://igorkonovalov.github.io/Ritmolux/)**
+
+The site publishes the same documents the repository holds — read in place, never copied — with search over them. It is the reference, not a summary of one. Four things on it are worth naming:
+
+- **[The gallery](https://igorkonovalov.github.io/Ritmolux/gallery/)** — one frame from every preset that ships, 82 cards, each captured under the same stimulus at the same moment in the clip so they are comparable.
+- **[The preset guide](https://igorkonovalov.github.io/Ritmolux/guide/preset-guide/)** — the illustrated entrance: what each system looks like, when to reach for it, and the loop you work in.
+- **[How it works](https://igorkonovalov.github.io/Ritmolux/engine/how-it-works/)** — the diagram, and what happens to a sample on its way to a shape on the screen.
+- **[Running](https://igorkonovalov.github.io/Ritmolux/use/running/)** and **[Configuration](https://igorkonovalov.github.io/Ritmolux/use/configuration/)** — the two menus, the operator console, quality tiers and displays; then every flag, environment variable and `config.toml` key, with its default and the precedence between them.
+
+The `README` keeps exactly one operator fact, the hotkey table, because a stranger should learn `Space` without leaving the page. Everything else it used to carry is on the site now.
+
+One detail about the pictures, including the four in this post. **Every image in that repository is a headless render of the engine**, captured by the `shot` CLI under a synthesized audio clip — not a screenshot of the application window. They are regenerated by a script whose manifest records the preset, stimulus, hop, size and tier behind each one. There is no picture anywhere of the preset browser, the settings menu or the diagnostics overlay.
+
+That was a deliberate choice and it has a cost: the documentation cannot show you the interface. What it buys is that no picture in it can drift from what the engine actually does, because every one is regenerated from the engine.
+
+## Getting it
+
+Prebuilt binaries are attached to each tag on the [releases page](https://github.com/IgorKonovalov/Ritmolux/releases) — three zips, each carrying a `READ-ME-FIRST.txt`:
+
+| Zip                          | What's in it                                                  |
+| ---------------------------- | ------------------------------------------------------------- |
+| `…-windows-x64.zip`          | `ritmolux.exe` — Windows x64                                  |
+| `…-macos-universal.zip`      | `Ritmolux.app` — universal (Apple Silicon + Intel), macOS 13+ |
+| `…-foobar2000-component.zip` | `foo_ritmolux.fb2k-component` — foobar2000 v2, x64 only       |
+
+All three are unsigned, so each host objects once. On Windows, SmartScreen says "Windows protected your PC" → More info → Run anyway. On macOS the app is ad-hoc signed only: right-click and choose **Open**, or run `xattr -dr com.apple.quarantine Ritmolux.app`. The macOS build then asks for the Screen Recording permission — that is the only first-party way to tap system audio — and needs a relaunch after you grant it.
+
+The foobar2000 path is the one with the fewest ways to go wrong. It reads what foobar is already decoding, so there is no audio capture to permit and no output device to route.
