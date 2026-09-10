@@ -1,19 +1,22 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { pageI18n } from '../../i18n/ui';
+import { personSchema } from '../../lib/seo';
 
 const { switchHref, alternates } = pageI18n(Astro.url.pathname);
+const schema = [personSchema('ru')];
 ---
 
 <BaseLayout
-  title="Обо мне"
+  fullTitle="Игорь Коновалов — fullstack-разработчик, Белград"
   description="Игорь Коновалов — fullstack-разработчик из Белграда: AI-агенты, Telegram-боты и эксперименты с творческим программированием."
   switchHref={switchHref}
   alternates={alternates}
+  schema={schema}
 >
   <article class="post">
     <header class="post-header">
-      <h1 class="post-title">Обо мне</h1>
+      <h1 class="post-title">Игорь Коновалов</h1>
     </header>
 
     <div class="post-content">

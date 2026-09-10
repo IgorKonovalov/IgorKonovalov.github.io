@@ -3,8 +3,9 @@ import { DEFAULT_LOCALE, type Locale } from '../lib/postUrl';
 export { DEFAULT_LOCALE, LOCALES, type Locale } from '../lib/postUrl';
 
 /**
- * UI string dictionary. `en` is the source of truth and must stay byte-for-byte
- * identical to the previously hardcoded copy so English output never changes.
+ * UI string dictionary. `en` is the source of truth; it started byte-for-byte
+ * identical to the previously hardcoded copy, and only `home.tagline` has been
+ * edited since (to name the author on the home page, for search).
  * `ru` values are author-facing chrome (nav, labels, tagline) — review for tone.
  */
 export const ui = {
@@ -13,7 +14,7 @@ export const ui = {
     'nav.archive': 'Archive',
     'home.title': 'Notes on programming',
     'home.tagline':
-      'A programming blog — experiments and notes on software, AI agents, and generative art.',
+      'Igor Konovalov — a fullstack developer in Belgrade. Experiments and notes on software, AI agents, and generative art.',
     'archive.title': 'Archive',
     'card.read': 'Read',
     'post.postedOn': 'Posted on',
@@ -28,7 +29,7 @@ export const ui = {
     'nav.archive': 'Архив',
     'home.title': 'Заметки о программировании',
     'home.tagline':
-      'Блог о программировании — эксперименты и заметки о разработке, AI-агентах и генеративном искусстве.',
+      'Игорь Коновалов — fullstack-разработчик из Белграда. Эксперименты и заметки о разработке, AI-агентах и генеративном искусстве.',
     'archive.title': 'Архив',
     'card.read': 'Читать',
     'post.postedOn': 'Опубликовано',
