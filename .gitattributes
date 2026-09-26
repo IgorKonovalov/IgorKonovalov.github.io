@@ -56,6 +56,6 @@ AGENTS.md text eol=lf
 public/assets/FULL/BangTao_house/** filter=lfs diff=lfs merge=lfs -text
 public/assets/FULL/vtour_A1/** filter=lfs diff=lfs merge=lfs -text
 public/assets/FULL/vtour_P1_fin/** filter=lfs diff=lfs merge=lfs -text
-public/assets/FULL/BangTao_house/** !text !filter !merge !diff
-public/assets/FULL/vtour_A1/** !text !filter !merge !diff
-public/assets/FULL/vtour_P1_fin/** !text !filter !merge !diff
+public/assets/FULL/BangTao_house/** !filter binary
+public/assets/FULL/vtour_A1/** !filter binary
+public/assets/FULL/vtour_P1_fin/** !filter binary
