@@ -1,0 +1,282 @@
+---
+title: 'Approval is the go'
+date: 2026-09-26
+tags: ['projects']
+description: 'A conductor that runs approved plans to a merged main with nobody watching: why the manual seams could go, a headless contract observed rather than read, a repository believed over a session, parking as the default answer, and what twelve days of runs cost.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+
+In [July](/projects/2026/07/21/running_a_real_project_as_a_team_of_agents/) I wrote that parallel agent sessions gave me less than I expected, and that the reason was not the agents: _"the constraint was never the agents' capacity; it was mine."_ I ran one well-managed loop far more often than several, and treated the parallel machinery as available rather than default.
+
+[Two weeks ago](/projects/2026/09/11/the_harness_revised/) I ended the harness update on the direction every change had pointed in: removing the human from the loop at each point where the human was only there because something had not been written down or made runnable.
+
+This post is about the largest single step in that direction. Ritmolux now has a **conductor**: a Node program that takes approved plans off a queue and runs each one to a merged `main` with no owner action in between. It opens a git worktree lane, starts fresh headless `claude -p` sessions to implement the plan's phases, checks every claim they make against `git`, runs its own gate, starts a separate reviewer and a separate closer, fast-forwards `main`, and removes the lane. Anything it cannot decide, it parks, and the lane moves on to the next plan.
+
+**It never pushes.** Everything it does stays on the machine until I read what happened and push.
+
+It is twelve days old. In that time it has taken 130 commits, about 5,700 lines of Node and prompt templates, and around twenty decision records, most of them amending the first one. That ratio is the story. The first design was mostly right, and almost every amendment came from a run that showed where it was not.
+
+## Four interventions that carried no judgement
+
+The decision record that started it, [ADR-0205](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0205-an-approved-plan-runs-under-a-conductor-and-every-judgement-it-cannot-make-parks-the-plan.md), opens with an inventory. Every plan the project ran cost me four interventions: open a worktree lane; type "go" to a `dev` session whose plan I had already approved; start a fresh `/architect` session when `dev` printed its pointer to the close; fast-forward `main` and remove the lane once the close finished.
+
+None of the four carried a decision. On 14 September I approved eleven plans in one sitting, and at that cadence the interventions set the pace, not the work. Eleven plans at four seams each is forty-four times I would have to be at the keyboard at the right moment, for acts whose content was already decided.
+
+But every one of those seams had been argued for, in writing, by an earlier decision. So the first job was not to build anything. It was to separate each argument from the mechanism that happened to carry it, and see whether the argument survived the mechanism going away.
+
+**"The go is an approval."** True, but the approval the "go" records had already happened: a plan only runs when its file reads `Status: approved`. The second confirmation guarded against a different risk, a session that works outside its scope. That risk is carried equally well by a session handed an exact phase range and told to stop at its end. So approval is the go, for a plan the conductor runs. Outside the conductor, a human-started `dev` session still restates the plan and waits.
+
+**"A close review is worthless from inside the session that wrote the code."** Also true, and the important word is _inside_. Freshness is a property of the reviewer's **context**, not of the person who opened the session. A reviewer started as a separate process, given only the plan path and the lane, holds no implementation reasoning — exactly what a fresh manual session holds. And it gains something the manual seam never had. When I started the reviewer by hand, it was only as fresh as my discipline about not pasting it a summary. The conductor cannot hand the reviewer a summary, because it has none to hand.
+
+**"A `human` phase has no one to hand to."** True, and unchanged. A phase that needs me at the reference machine, or at a monitor judging a picture, still needs me.
+
+Two out of three arguments survived with the mechanism removed. That is the whole case for the conductor, and it was worth writing down before a line of code, because it is also the list of things the conductor must not quietly erode.
+
+### The alternatives, and why each one moved the intervention rather than removing it
+
+Seven alternatives are in the record. Three are worth repeating, because each looks like the obvious move and each fails on a fact rather than a taste.
+
+**An in-session workflow script** is native and the quickest to write. It fails because a workflow ends when the Claude Code session that started it ends, and resumes only in the same session. A queue that spans days and parks for a human would need me to keep a session alive. The intervention moves; it does not go.
+
+**Subagents with worktree isolation** fail on two facts. A worktree-isolated agent is refused git operations on the main checkout, so it cannot merge. And a subagent lives inside the session that spawned it, which is the workflow's problem again.
+
+**The Agent SDK as the driver** gives a typed session API and a per-call permission callback. It was rejected for now because it adds a package to a repository that counts every dependency, and the same control is reachable through `claude -p`, a settings file and the hook mechanism the project already has. The record names the condition for revisiting it: if parsing the CLI's event stream becomes the conductor's main maintenance cost. That condition is specific enough that I will know when it arrives.
+
+What is left is a plain program that starts other programs. It is the least clever option, and it is the only one whose lifetime is not tied to a session I have to keep open.
+
+## The pipeline
+
+<Mermaid
+  code={`
+flowchart TB
+  q["queue.json<br/>approved plans, per lane"]
+  lane["open a worktree lane"]
+  ready["readiness check<br/>architect, read-only"]
+  impl["implement<br/>one dev session per same-owner run of phases"]
+  verify["check the claim against git"]
+  gate["merge main, run the gate"]
+  review["review<br/>architect, fresh process"]
+  fix["fix round<br/>at most two"]
+  close["close<br/>architect, under the close lock"]
+  ff["fast-forward main, remove the lane"]
+  park["park<br/>inbox entry, lane moves on"]
+
+q --> lane --> ready --> impl --> verify --> gate --> review
+review -- "blockers or majors" --> fix --> review
+review -- "clean" --> close --> ff
+ready -. "plan_wrong" .-> park
+verify -. "disagreement" .-> park
+gate -. "red after one repair" .-> park
+review -. "still failing" .-> park
+`}
+/>
+
+Each box that runs a model is its own `claude -p` process, started with an appended system prompt from a template, a tool allowlist, `--permission-mode dontAsk`, and a spend cap. Each ends by printing exactly one fenced block tagged `rlx-outcome` holding one JSON object: the phases it finished and the commits it made, or the phase it parked on and why. That block is the only thing the conductor reads from the model. Everything else it reads from the repository.
+
+Two locks serialise what two lanes must not do at once. The **close lock** is held from the start of a close until `main` has fast-forwarded, so a version bump and its tag always land on the `main` they were computed against. The **suite lock** wraps every full test-suite run, because two lanes running GPU suites concurrently is exactly the load under which some clock-reading tests had already failed while passing alone. A hook active only in conductor-run sessions refuses a `cargo nextest` call that does not go through the lock.
+
+And one hook applies to every session in the repository, conductor or not: it denies `git push`, `reset --hard`, `rebase` and `commit --amend`. "Never push" had been a sentence in `CLAUDE.md`. The conductor made it a mechanism, because a sentence is not something a headless session can be trusted to have read.
+
+## The headless contract is observed, not read
+
+Before the conductor had a state machine it had a **probe**. `spike/probe.mjs` runs a handful of short `claude -p` sessions against a disposable worktree and records what the CLI actually did. Does the project skill load in a headless session? Does a deny hook reach the session as a readable tool error, or does it stall? Is an allowed shell command run and a disallowed one refused without a hang? What does the final `result` event carry? What happens when a session hits its spend cap? Does `git worktree remove` leave a handle behind?
+
+Every answer is a row in `spike/README.md`, dated, with the CLI version it was taken on. The conductor refuses to run on a CLI version that table was not produced on. At the time that felt like belt-and-braces. It was needed on the second day.
+
+### The CLI updated itself overnight
+
+On the morning of the first real pilot, the CLI had moved from 2.1.270 to 2.1.272 on its own, and the preflight refused to open a lane. Clearing it took a probe run (fifteen cents, two small-model sessions), reading its JSON against the table by eye, an edit to the list of verified versions and a commit — none of which a lane can do.
+
+The guard behaved correctly, and it was obviously going to recur on no schedule. [ADR-0208](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0208-a-patch-cli-update-runs-with-a-warning-and-every-session-proves-the-hooks-ran.md) relaxed it: a version that shares major and minor with a verified one, at a higher patch, runs with a warning that stays on the status page until someone verifies it. It is honest about the price in a way I would copy: **this CLI numbers almost every release as a patch**, so the rule turns the guard into a warning for nearly every update. And the risk was already on record arriving exactly there — between those two patches, the usage reading had moved to a different field.
+
+So the useful question was not "is this version verified" but **which silent change would go unnoticed**. Most would not. A missing result event parks the plan, a missing outcome block parks, a malformed one parks: the stream reader already fails closed. The dangerous class is the change that fails open, and there is one: **the project's hooks not running**. Those hooks are the suite lock, the push deny, the broad-staging deny and the attribution deny. A session without them still ends with a well-formed outcome, and nothing the conductor read would show it.
+
+So every conductor-run session now has to prove its hooks ran. The suite-lock hook appends a line to a per-step log whose path the conductor passes in the environment. When a session ends, a transcript containing any shell call must have a hook log beside it, and the stream's init event must list the skill the prompt invoked. Either failure parks the plan as `cli_contract` before anything the session claims is looked at. A CLI that stopped loading hooks or skills is caught on its first session, whatever its version says.
+
+### What the probe found that nobody had guessed
+
+The probe earned its keep twice more.
+
+The first time was a directory. A close review kept leaving a finding open with the note _"this session may not edit `.claude/`"_. There was no rule saying so, and an earlier decision read it as a question of lane ownership and granted the close permission to edit skill files. The finding came back. [ADR-0210](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0210-a-claude-repair-is-the-owners-and-a-session-that-needs-one-parks-with-the-edit.md) settled it by asking the CLI instead of inferring again. Two probe sessions ran, one under the conductor's settings exactly, one with every spelling of a permission rule for `.claude/` added. In both, reading a file there was allowed, and editing or writing one was denied: _"Permission to use Edit has been denied because Claude Code is running in don't ask mode."_ A write outside `.claude/`, same worktree, same turn, went through.
+
+That is the CLI protecting a project's configuration directory, not a gap in the allowlist. By the time the probe showed it, the wrong reading had cost three times: an open finding nobody routed, a phase that did all its work and then parked on its own done-when, and a repair I committed by hand. The decision is now that a phase whose files include `.claude/` parks **before** it runs, with the exact edit as its detail. The conductor stopped promising something the tool beneath it refuses.
+
+The second finding was more uncomfortable. The session allowlist allows `rm` wholesale, bounded by deny rules for the four ways a written path leaves the worktree: `..`, `~`, a leading `/`, a drive letter. The conductor's README stated the guarantee as _"a path that leaves the lane is refused, whatever it is for."_ [ADR-0233](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0233-a-session-allowlist-safety-claim-is-asserted-against-a-transcript.md) is the record of noticing that this is not the bound the rules enforce. A glob over command text cannot bound a path that does not exist until the shell expands it. `rm -rf $HOME/.cargo` matches no deny rule.
+
+The test that asserted the guarantee could not see that either, and its own header said so: _"It is a model of the CLI, not the CLI."_ The model split compound commands at `&&` and `;` and asserted that `cd studio && npm run typecheck` is denied. A real session on the real CLI had run 26 shell calls carrying a `cd` under that exact settings file. **Twenty-two of them ran.**
+
+The decision that came out of that is the one I would carry to any project with an allowlist:
+
+> A claim that the allowlist refuses something is asserted against a recorded transcript of the real CLI; a claim that it permits something may stay a model.
+
+Being wrong about an allow case costs a session one turn and shows up in its log. Being wrong about a deny case is unbounded and silent. You pay for evidence where the cost of being wrong is unbounded, and nowhere else. That decision is still `proposed`, and the plan that implements it is not closed. Until it is, the README's sentence is a claim I know to be stronger than its evidence, and this paragraph is where I say so.
+
+## The conductor believes the repository, not the session
+
+The outcome block is a claim. The conductor checks the claim against `git`: that the commits exist and are on the branch, that the plan's `## Implementation log` rows name those commits, that the tree is clean, that a close moved the plan to `done/` and left an annotated tag on the branch tip. A claim `git` does not bear out parks the plan as `disagreement`.
+
+Three disagreements in the run record, and none of them is a model lying. Each is a model being loosely right in a way that matters.
+
+- A close reported a finding as fixed in a commit that **did not change the file the finding was about**. The fix was probably real and somewhere else; the record would have pointed at the wrong place for ever.
+- A close wrote the plan's `Status:` line as a paragraph: _"done. Phases 14ae5f69, 776b946f, e3184783, 1eb144fa, and close repairs 80bf58cb. The conductor-run review found no blockers…"_ Correct, informative, and not the one word every reader of that line parses.
+- An implement session's log row for Phase 1 named a commit **an earlier step had made**, not one this step made. Accurate history, wrong attribution; and attribution is what the next resume reads to decide where to start.
+
+None of those would have failed a test. Each would have left a record that reads correctly to a person skimming it and wrongly to the program that reads it next. That is the category a session's self-report cannot catch, because the session is the thing that produced it.
+
+### The gap in the first design
+
+The conductor's first close found a hole in exactly this principle, and it is instructive that it was there.
+
+As first built, the conductor's own gate ran before the review, and the fast-forward treated whatever tip the close session left as already gated. But the close session merges `main`, bumps the version and tags. So the tree that reached `main` — on two lanes, the first tree holding both lanes' code — had been verified only by the session's own claim. That is the one thing the decision says the conductor never takes. The fix was to compare the fast-forward against the tip the conductor's own gate last passed on, so every close tip is gated before `main` moves. It costs one more gate per close.
+
+The record is also plain about an awkward fact. The conductor's own close review was not run by the conductor. It was built in human-started sessions and closed by a human-started `architect` session, which also wrote that fix. So for a while the one fix nobody else had reviewed was the gate on everything after it.
+
+## Parking is the default answer
+
+The decision's most important sentence is its title: **every judgement the conductor cannot make parks the plan.** The list of park reasons is closed. A `human` phase. A stop condition the plan itself states. A session that finds the plan wrong or needs a question answered. A red gate. A review still failing after two fix rounds. A spend cap. A disagreement. A parked plan keeps its worktree and branch, writes an inbox entry naming the file to read and the command to resume it, and the lane moves on to the next queued plan whose dependencies have merged.
+
+The prompt every implement session receives says the same thing from the other side: _Stop and park, rather than work around it, on a human phase, a stop condition the plan states, a plan that is wrong, a question only a person can answer, or a check you cannot make green within the phase._ It also says, in the first paragraph: _No one will read this conversation or answer a question._ That sentence changes behaviour more than anything else in the template. A session that believes someone might answer asks. One that knows nobody will either parks or improvises, and the whole prompt is built to make parking the cheaper of the two.
+
+### The first run merged nothing
+
+The first live run, on the evening of 14 September, took 73 minutes, merged **zero** plans and parked three, for $25 of notional spend. On its face that is a failure. In the record it is the most useful run the conductor has had.
+
+**Two of the three parks were the design working.** Two implement sessions each found a real defect in their own plan, wrote it into the plan's log, and stopped. That was the first evidence against the risk I was most worried about: a session that improvises around a broken plan instead of parking. Two cases, not a rate, and the record says so.
+
+The other park, and one silent stop, were **conductor defects**, and each was confirmed against the code:
+
+1. The conductor wrote its pid file before anything created the state directory, so the first `run` on a clean checkout failed. The tests never hit it, because their fixture created the directory first.
+2. The pre-review gate ran a check that a plan's own fix was designed to break — the plan closed a backlog entry by making that entry's probe fail. The gate parked the plan before the review whose close would have archived the entry. A gate was making a call that belongs to the reviewer, before the reviewer could make it.
+3. The allowlist refused `git restore`. A session told to leave the tree clean had no way to undo files its own test run had rewritten, and parked with eight golden images re-encoded in its lane.
+4. The lane stopped without saying so when it hit the worktree cap. Three parks held three worktrees, so the fourth plan never started, and neither the output nor the digest said why.
+
+The next morning, after a plan fixing all four, the pilot ran for 3 h 38 min and **merged three plans with zero parks and zero fix rounds**, for $55 notional. Every step the first run had never reached — the review, the close, the close lock, the close-tip gate, the tag, the fast-forward, the removal — ran end to end.
+
+### What the parks say about the plans
+
+Since 22 September the run record holds 17 plans: 13 merged, 3 parked, 1 queued. The parks break down like this:
+
+| Reason           | Parks |
+| ---------------- | ----: |
+| `plan_wrong`     |     8 |
+| `human_phase`    |     8 |
+| `disagreement`   |     3 |
+| `check_red`      |     3 |
+| `gate_red`       |     2 |
+| `stop_condition` |     2 |
+| `merge_conflict` |     1 |
+| `claude_dir`     |     1 |
+| `api`            |     1 |
+
+The number I did not expect is the first one. **The largest single cause of parks is a plan that is wrong**, and the plans are mine, written with an `architect` session and approved by me. A phase whose _What_ and _Done when_ name different stages. A phase that needs a seam outside the files it declares. A done-when that requires a capture only a windowed app at a real display can produce, handed to a headless session that has neither. A phase requiring a document to be on a checker's list that the checker deliberately excludes.
+
+None of those is visible when you read a plan as a person. All of them are visible to something that tries to execute it literally. That is the most useful thing the conductor has taught me about my own plans. The plan format was designed for a human-supervised session, which smooths over exactly those gaps without noticing it has. A literal reader does not smooth.
+
+## Repair before you park
+
+Twelve days in, the record showed the opposite problem. [ADR-0248](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0248-the-pipeline-repairs-before-it-parks.md) opens with an audit of 22 to 24 September: ten parks across nine plans, and **the machine ran about 8 hours of the 42 that elapsed**. The rest was waiting for me. And two of the reasons on the closed list turned out not to be judgements at all.
+
+**A red gate** is usually a failure a session can repair, and the conductor already runs sessions that repair: the review's fix rounds. One plan went red on a single test after my own hand commit for its `human` phase, and waited an hour and a quarter for a fix a `dev` session could have written.
+
+**A merge conflict** is the same. A review came back clean — no blockers, no majors — and the close's `git merge main` conflicted in two documents and two source files. I resolved it by hand in 11 minutes. Then `resume` re-ran **the whole review from round 1**, which cost $15.29 and 29 minutes, because a review session that parks records no verdict. The clean verdict had been lost with the park.
+
+**A wrong plan** was the worst case: one parked `plan_wrong` after $55.94 of implementation, on a contradiction between two fields of one phase that was readable before a line was written.
+
+The decision made five changes, and each is small.
+
+- **A readiness check runs before the first implement session.** It is a fresh, read-only `architect` session that checks each phase's _What_, _Files touched_ and _Done when_ against each other and against the tree, and checks every done-when is runnable under the session allowlist. It grades consistency, not design. It ends `ready`, or parks `plan_wrong` naming the phase, before any implementation spend.
+- **The lane merges `main` itself before the pre-review gate**, so conflicts surface while the plan still belongs to an implementer.
+- **A conflict gets one merge session**, a fresh `dev` handed the conflicted paths. The close session never resolves a code conflict, because the close is `architect`, and the architect writes no code.
+- **A red gate gets one repair session per stage**, three per plan at most. The repair prompt forbids changing an assertion, a golden or a test's inputs to make it pass; a session that thinks the test is wrong parks `plan_wrong`.
+- **The review and the close are separate sessions**, and a clean verdict outlives a park. It is reused as long as every commit since the tip it graded is a merge of `main` or a commit a close, merge or repair session made. **Any other commit — my own hand fix included — starts a fresh review**, because nothing has reviewed it.
+
+That last clause is the one I like best. It would have been easy to exempt the owner's commits. But a commit I made by hand at eleven at night is exactly the commit that has had the least review, and the rule does not care who I am.
+
+The readiness check has since run fourteen times for **$9 in total**, and half of the eight `plan_wrong` parks in the table above came from it — before any implementer spent anything. There is a cost I am choosing not to hide: it is a model grading a model's plan for consistency, and a consistency error it does not see still reaches implementation. But at under a dollar a check, it is the best-value session in the pipeline by a distance.
+
+## Stopping is harder than starting
+
+The first version could be stopped one way: `abort`, which kills every session under the conductor, so a step in flight re-runs from scratch next time and its spend is gone. That is right for "stop now". It is almost never what I wanted. What I wanted was "finish what you are doing, then stop" — the machine is needed for something else, a `human` phase is ready and the GPU is busy, or the day is over.
+
+Done by hand, that means watching the record and timing an `abort`, and the two failure modes sit either side of one moment. Abort early and a review's spend is lost; abort late and the next plan's session has started. [ADR-0219](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0219-the-conductor-can-be-asked-to-finish-and-stop-and-the-ask-does-not-outlive-the-run.md) records doing it three times in one day — once by polling the state file in a loop until a plan read `merged` and aborting inside the gap.
+
+The fix is a `pause` command, and two details of it are worth more than the command.
+
+**The ask is state the running process polls, not a signal.** On Windows a signal cannot run the conductor's handler at all, which is why `abort` kills the process tree. So `pause` writes a file the lane loop already checks between plans.
+
+**The ask does not outlive the run.** A pause that persisted would turn the next morning's `run` into a process that starts, does nothing and exits — which reads exactly like a hang, and is a trap for the one operator this tool has. So a pause is cleared when its run ends, and a new run that finds one left behind by a dead conductor clears it and says so. There is therefore no way to say "start nothing tomorrow". The answer to that is not to start a run.
+
+`pause` also prints what it is now waiting for: which plan, which step, how long it has been there. The gap between asking and stopping is a test suite's ten minutes, and an operator who cannot see that gap will reach for `abort` anyway.
+
+### Then it stopped stopping
+
+The same audit that produced the repair decision found that between 22 and 24 September I had started **ten runs**. The longest lasted 2.4 hours; together they came to about 8 hours of 42. A run ended as soon as no lane could move, and every `human_phase` park needed me to do the phase, mark its row, and then **separately** type `resume` and `run`. That second step carried no judgement, because `resume` already refused when the row was not marked.
+
+[ADR-0250](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0250-the-conductor-stays-up-and-resumes-what-the-repository-shows-settled.md) made `run` resident. An idle lane sleeps a minute and looks again, so a plan approved and queued while the run is up starts within the minute. The worktree cap became a wait instead of a stop. And a **closed** list of park reasons now resumes itself when the tree shows them settled: a `human` phase once its log row reads `done`, a usage limit once its reset has passed, a dirty main checkout once it is clean. None of them ever resumes over a dirty worktree. Every other reason stays mine, because none of them can be read as settled from the tree.
+
+Being resident means spending while nobody is looking, so it came with a ceiling of its own. Reaching `run_budget_usd` pauses the run: the plans in flight finish and nothing new starts. And because a resident run can outlive a CLI update, the version is now checked before every session, not once per run.
+
+One more detail I like: the conductor hashes its own source files when it starts and compares them on every look. When a conductor change merges while it is running — and it does merge its own changes, since plans that change the conductor are run by the conductor — it prints one line naming the changed files and pauses. It never restarts itself and never stops a session. A program that can merge changes to itself should at least notice that it has.
+
+## What twelve days cost
+
+The run record covers 22 to 26 September: 21 runs, 78 headless sessions, 5,082 turns, **$383**. The dollars are what the CLI reports as the cost of each session, and the conductor runs on a subscription, so they are notional. They are a useful relative measure and not a bill. The constraint that actually binds is the account's five-hour and seven-day usage windows, which is why the live output prints every change in those windows and the digest records them at the start and end of every run. On the first day the seven-day window was at 0.85 while the conductor ran. The dollars had said nothing about that.
+
+Where the $383 went:
+
+| Step      | Sessions | Notional spend |
+| --------- | -------: | -------------: |
+| implement |       30 |           $261 |
+| review    |       18 |            $96 |
+| close     |        7 |            $11 |
+| readiness |       14 |             $9 |
+| merge     |        5 |             $3 |
+| fix       |        3 |             $2 |
+| repair    |        1 |       under $1 |
+
+Implementation is two-thirds of it, which is as it should be. Review is a quarter, which is the price of a reviewer that re-reads everything with no summary. Everything the later decisions added — readiness, merge, repair — is under 4% together.
+
+### A third of the wall clock was proving a green tree again
+
+The pilot's other finding was about time, not money. Of its 218 minutes, 72 were the conductor's own gate, and most of that was the full test suite: **a full `cargo nextest run --workspace` holds the suite lock for 10.4 to 11 minutes**, and thirteen ran across three plans.
+
+A plan with no fix round ran it up to five times — at the last implementer run, at the pre-review gate, inside the review, in the close, and at the post-close gate — and two of those pairs ran on byte-identical trees. Each repetition existed for the same good reason: **a session's claim that the suite passed is not evidence.** The review re-ran it because the implementer's "suite passed" was prose. The conductor re-ran it because the review's was prose too.
+
+But once the suite runs through the conductor's lock wrapper, the process that saw the exit code is conductor code, not a model. The evidence already existed, and nothing kept it. [ADR-0207](https://github.com/IgorKonovalov/Ritmolux/blob/main/docs/adrs/0207-a-suite-run-the-conductor-observed-green-is-not-run-again-on-the-same-tree.md) keeps it: a ledger with one line per full-suite run that conductor code observed, holding the tree hash, the exit code and the summary line. A run is recorded only if the worktree was clean when it started **and** when it finished, so the hash names exactly what was tested. A later gate on the same tree finds the record, prints it, and skips.
+
+The part worth copying is what it refused. The obvious narrower rule is "skip when only docs changed", and it is wrong for this repository: Rust tests read five different things under `docs/`. A path classifier would need a guard holding it to every test's reads, and would stay a heuristic. So **the match is tree identity, never a judgement about what changed.** The saving comes from reordering the work so that identical trees happen — the implementer stops running the full suite at the end because the pre-review gate runs it next on the same code; the close runs its gate last, on the tip it will tag — rather than from deciding that some difference does not matter. A plan with no fix round now runs the full suite twice.
+
+The same pilot contained a smaller lesson about instruments. The digest reported fifteen minutes of suite-lock wait, which looked like two lanes contending. There was one lane. All fourteen minutes were **three `cargo nextest list` calls** — metadata queries that run no tests — queued behind full runs. The lock did not distinguish listing from running, and the number meant something other than what it said.
+
+## The page I read in the morning
+
+Everything the conductor does while I am away ends up on one page, `digest.md`, rewritten from state and `git` after every step. After a few iterations it has two sections and nothing else.
+
+**Needs you** comes first, and is the whole worklist: each standing park with its age, the worktree it holds and its resume command; each lane stopped at the worktree cap; each repair commit that reached `main` without a review, by SHA, until `origin` holds it; each merged plan's open review findings, with `file:line`. It opens with a count, so a page whose first section is empty means nothing is waiting on me.
+
+**Now** is per lane: the plan, the step, how long it has been there, what it has spent.
+
+What happened overnight is deliberately **not** on that page. It is a separate history page generated on demand, or the closed plan's own committed `## Close review`. The first design mixed the two, and the current-state page slowly became a log that had to be read from the bottom.
+
+Review findings get the same treatment. A close's `minor` and `nit` findings that it did not repair are mine, and they stay on the page until I say what became of each one: `--done`, `--wontfix` or `--filed`, and **the reason is required**. An empty reason is refused. Nothing can verify a disposition — unlike a `fixed_in`, which is a commit the conductor checks against the branch, it is a judgement checked against nothing — so the sentence I type is the whole record of it. No session, close or gate may write one. That is a small rule, and it is the one that keeps the page from becoming a list I have learned to ignore.
+
+## What I gave up
+
+The decision record lists its negatives, and they have not gone away.
+
+**I no longer read a verdict before it is acted on.** A clean review closes and merges unread. The mitigation is structural: only a verdict with no blockers and no majors acts, the review is committed with the plan, and nothing leaves the machine until I push. But a close I would have challenged can reach `main` first. Reverting it is a new commit, never a rewrite.
+
+**A fix loop is a model grading a model, twice.** Two rounds is a cap, not a guarantee. A reviewer that is wrong the same way twice lands its error. That was already true of the manual close. The conductor just runs it without my glance at the verdict line.
+
+**Two lanes are not twice one lane.** On the pilot's numbers a second lane could overlap only the part of a plan that is not holding the suite lock, and would queue behind the first for the rest. The record at that point was explicit: a decision against parallelism on measured grounds, revisited only once the suite stopped being re-run on green trees. The second lane was switched on after the ledger landed, and both lanes run now. But the honest summary of July's claim still holds in a new form: the parallelism the machine offers is smaller than it looks, and it is bounded by the most serialised resource. That resource used to be me. Now it is a GPU test suite.
+
+**It is a third kind of tool.** The conductor is not a gate and not a renderer. It is a program that starts other programs and spends money, and it drifts with a CLI that updates itself. It has its own tests, against a fake CLI that replays recorded event streams, and those tests are a model of the CLI in exactly the sense the allowlist test was. The probe is the only thing that checks them against the real one.
+
+## Where the human is now
+
+The design list of what stays manual is short enough to quote: approving a plan, every `human` phase, every park the tree cannot settle, and every push.
+
+That is not "the human is out of the loop". It is the human at four points, each of which is a judgement, instead of eight points of which four were typing. The approval is where I decide what should exist. A `human` phase is where only the physical machine and my eyes will do. A park is where the plan and the world disagree, and someone has to decide which is wrong. The push is where the work leaves the machine and becomes public. The conductor handles everything between those points, and — this is the part that took twelve days — it handles it by refusing to decide anything it cannot check.
+
+In July the constraint was my attention, and I said so. It still is. What has changed is where it goes. It no longer goes on opening worktrees and typing "go". It goes on reading plans the conductor found wrong, which turn out to be the most informative thing it produces.
