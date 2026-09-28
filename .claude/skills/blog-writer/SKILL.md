@@ -6,6 +6,8 @@ description: >
   Optionally wrap result into MDX blog post format. Use when: the user pastes raw Russian text for
   a blog post, asks to polish/translate dictated text, wants to convert Russian draft to English
   blog post, or says something like "here's my draft" or "I dictated this" followed by Russian text.
+  ALSO use when translating an English post into Russian (the `src/content/blog/ru/` twin) or
+  reviewing a Russian translation for naturalness.
 ---
 
 # Blog Writer
@@ -77,3 +79,15 @@ If the author requests a blog post, read [mdx-format.md](references/mdx-format.m
 - Generate the complete MDX file with frontmatter
 - Use the file naming convention: `YYYY-MM-DD-Title_With_Underscores.mdx`
 - Write the file to `src/content/blog/`
+
+## Translating an English Post to Russian
+
+Most posts are now written in English first and get a Russian twin in `src/content/blog/ru/` with
+the same filename. Before writing or reviewing one, read
+[russian-translation.md](references/russian-translation.md) — it lists the calque patterns that
+made earlier translations sound unnatural, the fixed terminology, and the self-review pass.
+
+- Write from the meaning, not from the English sentence structure
+- Always do the Russian-only read-through before presenting the result
+- Quote earlier posts from their Russian versions, never re-translate the quote
+- When the author corrects a phrasing, add the pattern to `russian-translation.md`
