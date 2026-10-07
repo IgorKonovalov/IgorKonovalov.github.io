@@ -1,0 +1,182 @@
+---
+title: 'What 207 commits are made of'
+date: 2026-10-07
+tags: ['projects']
+description: 'One day, two conductors, two repositories: sixteen plans merged, fourteen releases and eight production deploys. What the commits actually were, who made them, what capped the speed, and what it cost.'
+---
+
+At 19:17 yesterday I started drafting a plan for the expenses bot: fold long lists in the chat and show receipt items by category. I approved it at 19:20 and put it in the queue. At 21:19 it was merged to `main`, with tests, a review by a session that had never seen the code, and a version bump. At 21:24 it was on its way to production. I did not write a line of it, and I did not watch it being written.
+
+That was one of sixteen plans that reached `main` on 6 October. My GitHub contribution graph got a square it never had before: **207 commits in one day**, 113 in [personal_expenses_bot](https://github.com/IgorKonovalov/personal_expenses_bot), 93 in [Ritmolux](https://github.com/IgorKonovalov/Ritmolux), and one in my profile README.
+
+I want to write about this day because it is the clearest picture I have of what speed agents give now. But "207 commits" is a bad unit, and people who see a number like that usually think one of two things: padding, or a model spraying code very fast. It is neither, and taking the day apart surprised me. More than a third of those commits are paperwork. And the real speed limit was not the model, and not really the machines either.
+
+One more thing up front, because otherwise the number reads wrong: nothing ran overnight. The laptop went to sleep at 22:29 the evening before and woke up at 08:05. Everything in this post happened between eight in the morning and ten at night. A long working day, not a 24-hour one.
+
+## A few words from the last post
+
+This is a follow-up to [Approval is the go](/projects/2026/09/26/approval_is_the_go/), about the **conductor**. Short version: it is a Node program that takes plans I approved off a queue and runs each one to a merged `main` through fresh headless `claude -p` sessions. Nobody watches those sessions. On 6 October two conductors were running at once, one per project, and I was mostly standing between them.
+
+A handful of words from that post come back here a lot, so in plain terms:
+
+- A **lane** is a git worktree where one plan runs. Each project had two.
+- A **phase** is one step of a plan, usually one commit. A plan goes through a readiness check (does the plan contradict itself?), implementation phase by phase, the **gate** (the conductor runs the full test suite itself), a review by a separate session, and a close, which bumps the version and merges.
+- To **park** is to stop and wait for me. The conductor parks anything it cannot decide on its own.
+- An **owed phase** is a step that needs a person, like checking the live bot, and that I allowed to happen after the merge instead of before.
+- **Golden images** are reference frames that Ritmolux's render tests compare against. To **bless** one is to accept a new image as the reference.
+
+## The day, in units that mean something
+
+A commit is the wrong thing to count, so first the things that are not commits:
+
+| Measure                              | Ritmolux | Expenses bot | Together |
+| ------------------------------------ | -------: | -----------: | -------: |
+| Plans merged to `main`               |        5 |           11 |       16 |
+| Versions released                    |        3 |           11 |       14 |
+| Production deploys                   |        — |            8 |        8 |
+| Headless sessions started            |       38 |           56 |       94 |
+| Notional session spend               |      $76 |         $135 |     $211 |
+| Lines inserted / deleted (non-merge) | +12k/−4k |     +26k/−2k | +38k/−6k |
+
+The expenses bot went from v0.14.0 to **v0.24.0 in one day**, and every one of those versions reached production through CI. Its test count went from 1,052 in the morning to 1,675 at night. Ritmolux, my music visualizer, shipped three versions and moved its whole set of golden images from WARP, the Windows software rasterizer, to lavapipe, a CPU-only Vulkan renderer on Linux.
+
+What users of the bot got that day, in order: donations through Telegram Stars; export to CSV and XLSX; joining by invite link instead of a hard-coded allowlist, with a privacy page and `/delete_account`; recurring expenses and reminders; importing a bank statement PDF; debts and bill splitting; tags with a report per tag; a full command menu; onboarding with tips; folded lists with receipt items by category; and a monthly summary sent at 09:00 on the 1st.
+
+Eleven features, each one a plan with its own phases, tests and review.
+
+The dollars are what the CLI reports per session. I am on a subscription, so they are notional, a relative measure and not a bill. And money was not the limit anyway.
+
+## What the commits actually were
+
+I grouped the commits in the two project repositories by their prefix:
+
+| Kind                                                     |  Commits |
+| -------------------------------------------------------- | -------: |
+| `docs(plans)`                                            |       79 |
+| `feat`                                                   |       51 |
+| `fix`                                                    |       22 |
+| merges                                                   |       17 |
+| everything else (`docs`, `test`, `chore`, `ci`, `style`) | about 35 |
+
+The biggest group is bookkeeping. Seventy-nine commits, more than a third of the day, touch nothing but a plan file: a row in the implementation log, a close block, a line saying a phase is owed, a status changing to `done`.
+
+It looks like padding, but the conductor needs it. It only believes what is committed. When a session says "I finished Phase 3 in commit `a1b2c3`", the conductor checks that the commit exists, is on the branch, and that the plan's log row names it. So every claim has to end up in the repository as a commit, and then something reads it later: the conductor when it resumes a plan, the reviewer, the close. If I had done the same work by hand in one interactive session, I would have maybe sixty commits and a much worse record of what happened.
+
+Seventeen more are merges: `Merge branch 'main' into plan-…`. With two lanes per project and a `main` that kept moving all day, each lane had to pull in everyone else's work first, otherwise its test run proved nothing about the code that would actually land. Some of those merges the conductor's merge session made, some I made.
+
+So the real unit is the plan. Each of the sixteen was written beforehand and approved by me, checked for contradictions by a read-only session before any code, implemented phase by phase, run through the full test suite, reviewed by a separate process, closed with a version bump and merged. Commits are what that loop leaves behind.
+
+## The ceiling was the account
+
+At 10:40 the account's five-hour usage limit hit 100%.
+
+Both conductors share one account. They do not know about each other, and they do not need to. The CLI just refuses the next request, the conductor reads the rate-limit event, prints `limit reached; waiting 141 min` and sleeps until 13:02 my time. In Ritmolux one small repair session shows 2 hours 12 minutes for 14 turns and $0.42, almost all of it waiting. On the bot, the bank-statement plan was active for 3 hours 11 minutes, and 2 hours 21 of that was the same wait.
+
+On the hourly commit count it looks like a hole: 46 commits between 08:00 and 10:00, 15 between 10:00 and 11:00, and then nothing until 13:00.
+
+At 16:34 the limit was at 98% again. This time nothing was waiting on it, because the Ritmolux lanes were busy waiting on me instead.
+
+So twice that day the five-hour window ran out, and that was the hardest limit I hit. Not the model, not the laptop, not the test suites. The dollar numbers said nothing about it: $211 notional would have bought more, but a subscription does not meter dollars.
+
+The weekly limit gives the other half. It had reset at 08:00 that morning and stood at 21% at 21:01. One day like this is about a fifth of a week. So this is not a pace for every day of the week, and I would not want it to be anyway.
+
+Inside Ritmolux there was a second, smaller ceiling, the suite lock. Full GPU test runs go through it one at a time, because two of them in parallel is exactly the load where some timing-sensitive tests used to fail. From 08:08 to 10:24 both Ritmolux lanes were implementing at once and queued on the lock, sometimes for nine minutes. What saved time here was the conductor's record of which exact code trees already passed the suite (it is in the last post). Of 33 suite runs requested, 12 were skipped because that exact tree had already passed, and 5 reused a run another gate had just finished. Only 16 really ran.
+
+## The second project got the conductor on day two
+
+The expenses bot repository was seven days old on 6 October. The first commit is from the evening of 29 September. By the end of 6 October it had 412 commits, 34 finished plans and 41 decision records, and 120 of those commits are from that one day.
+
+This is not because the bot is simple. It is because I copied the conductor from Ritmolux on the bot's second day, as an experiment. The copy was one commit of about 5,300 lines, and its decision record says what came with it: _"147 commits and about 20 follow-up ADRs of hardening"_. Every failure from the conductor post had already happened, been written down and fixed in the other repository. The pid file written before its directory existed. The session that reported a fix in a commit that did not touch the file. The CLI that refuses edits under `.claude/`. The review that restarted from scratch after a park.
+
+What I left out of the copy is just as telling: the suite lock, the record of green test runs, the annotated-tag check. The bot's whole test suite runs in 15 to 40 seconds, so there is nothing to lock. In Ritmolux one full run holds the lock for 8 to 12 minutes. What matters in one project is dead weight in another, and copying was the moment to decide that.
+
+I think this is the part people miss when they talk about agent speed. From the outside the day looks like agents typing fast. Most of it was two weeks of making the process in Ritmolux boring, then copying the boring process into a second project. The bot never had a slow phase.
+
+## What the reviewers caught
+
+Fast is useless if it is wrong, so I went through the review records for the day.
+
+In Ritmolux, no review round found a blocker. The only major finding of the day was in the plan that moved the golden images to Linux: _"The golden roster asserts in no CI job"_. A test that checks every golden image has a reference existed, but nothing ran it. One fix round, and the second round was clean except for two minor notes.
+
+In the bot, three plans needed a fix round and the others needed none. And the findings in those rounds have a pattern that is more interesting to me than any single bug.
+
+### The same mistake, again and again
+
+Every new feature in the bot adds a table. Every new table holds some user's data. And `/delete_account` has to remove all of a user's data, including tables that did not exist yet when `/delete_account` was written.
+
+- The invite plan added donation records. Review, major: donations survive `/delete_account`. Fixed.
+- The recurring-expenses plan added rules. Review, blocker: with foreign keys on, `/delete_account` simply failed for any user who had a recurring rule. Fixed.
+- The debts plan added people, loans and repayments. Review, major: debt tables were never deleted. Fixed.
+- The tags plan added a sticky trip tag. Review, minor, still open: it stays behind after deletion.
+
+Four plans, four implementation sessions, all of them competent, and each one forgot the same rule that cuts across the whole bot. Every time, a fresh reviewer caught it. So the review did its job. But it was also being used as a memory, and that is not what a review is for.
+
+The same happened with sealed ledgers. That is the bot's optional end-to-end encryption mode, where even the server cannot read your expenses. Every feature had to decide what it does when a ledger is sealed. A recurring rule copies a template onto a new expense, and in a sealed ledger that copy could not be decrypted: the readiness check caught it before any code was written. Turning encryption on did not encrypt debts that already existed: a review major. Statement import works only while the ledger is unlocked. The monthly summary for a locked ledger has no numbers in it at all. Every one of those decisions is right. None of them knew about the others, and each was made in its own session, sometimes only after a reviewer asked.
+
+At human speed a rule like that lives in somebody's head and gets forgotten here and there over months. At this speed it got forgotten four times in one afternoon, and all of it is right there in the review log. A rule a reviewer has to repeat three times in a day should be a test: go through every table with a user column and check that `/delete_account` empties it. That test would have made most of those findings impossible.
+
+## What I actually did all day
+
+None of the 207 commits has a co-author trailer, and author and committer are the same everywhere, so git cannot tell me which ones I made. The conductors can. Every session ends with a block listing the commits it made, and the conductor checks that list against `git`. By that record, about two-thirds of the day was headless sessions nobody watched:
+
+| Repository   | Conductor sessions | The conductor itself | Sessions I drove |
+| ------------ | -----------------: | -------------------: | ---------------: |
+| Ritmolux     |                 59 |                    6 |               28 |
+| Expenses bot |           about 80 |                    — |         about 40 |
+
+The "conductor itself" commits are merges and owed-phase rows that the program writes without any model. The bot numbers are approximate, reconstructed from each plan's lane branch, and my local repositories count by local time, so they add up to 213 rather than GitHub's 207.
+
+My third surprised me: there is almost no code in it. Going through my Ritmolux commits one by one: two new 3D presets, Ridgeline and Tidepool, in the morning; edits to the `preset-author` skill; four times merging `main` into a lane by hand; a new fog phase for a plan that was out of date after someone else's camera change; drafting and approving a plan with its decision record; judging three swarm presets by eye (two kept, one re-tuned to zoom 0.85 so a seam stays off-screen); fixing a `cargo doc` failure that had parked a plan; judging 53 re-rendered golden images; blessing two sets of them; drafting and queueing the next cleanup plan. On the bot, two plans I ran in interactive sessions instead of the conductor, the command menu and onboarding. Everything else there was the same kind of thing: merges, plan edits, decision records, approvals, the queue.
+
+So I barely wrote code that day. I approved plans, looked at pictures, and got stuck plans moving again.
+
+### Where the machines waited for me
+
+The parks are the best record of that. Ritmolux parked eleven times:
+
+- Three times on `claude_dir`: a phase needs to edit a skill file under `.claude/`, and the CLI refuses that to any headless session, whatever the allowlist says. At 09:22 I turned those edits into owed phases, to do by hand after the merge.
+- Three times `plan_wrong`. Once after a merge brought in a shared camera change the plan had not expected, and I answered by adding a phase. Twice when golden tests went red because one lane's swarm change met the other lane's freshly moved images, and a repair session is not allowed to change a golden. Both times I blessed the new images.
+- Twice `human_phase`: judging presets, and judging those 53 images.
+- Once `gate_red`: `cargo doc`, still red after one repair session.
+- Once `disagreement`: a session made a commit and did not report it. I resumed it four minutes later.
+- Once by me: the last plan of the day, after its implementation session died.
+
+The bot parked four times. Twice because of a budget I set too low: implementation was capped at $15 per session, two plans hit it in the middle of a phase, and I raised it to $50. Once because a plan did not list a file it needed to change, which the readiness check caught before any money was spent. And once over a version number, because the day before two plans had both claimed v0.13.0.
+
+From 16:45 to 18:04 both Ritmolux lanes were parked and waiting for me, and I was away for personal stuff. That hour and twenty minutes is what the speed looks like from the other side. The conductor is only as fast as my slowest decision.
+
+### The 23-minute bridge
+
+One story from the afternoon shows how this speed changes the way I decide things.
+
+Ritmolux's golden images had been rendered with WARP on Windows. Every 3D plan that week changed some of them, and the CI job that should catch such changes had been red since an earlier release. A plan to move the images to lavapipe on Linux was already in the queue, but its decision record expected the judging step, looking at 44 re-rendered images and deciding which changes are real, to take _"days of the owner's attention"_.
+
+So at 15:17 I drafted a bridge: a small plan for a CI job I could trigger by hand to bless named WARP images, so merges could continue until the move. I approved it at 15:30. The conductor merged it at 16:22, after 53 minutes and $7.97.
+
+At 16:45, twenty-three minutes later, the other plan's Phase 2 made it useless, because that plan had started and was going much faster than its own decision record expected. That evening I judged 53 images, not 44, and all 53 were tiny rendering differences, not real changes. It took one evening, not days.
+
+Normally a bridge that lives 23 minutes is a stupid mistake. Here it cost $8 and 53 minutes of a machine I was not using for anything else, and with what I knew at 15:17 it was the right call. Being wrong about how long something will take became very cheap, and that changes which mistakes are worth avoiding. I spent less time estimating and more time deciding.
+
+## What the speed cost
+
+Not everything merged on 6 October was finished on 6 October. Part of the speed came from pushing things later on purpose.
+
+**Owed phases.** At the end of the day the Ritmolux digest said: _"1 park, 9 owed phases, 11 merges with open findings."_ On the bot, the "deploy and open" phase of the invite plan is still owed. I chose this on purpose and would do it again. A plan that waits for my five-minute live check holds a worktree and blocks every plan that depends on it, for as long as it takes me to get to it. But it is a debt, and the digest is where I see how much I owe. Nine owed phases means part of that day's output is really a promise to spend my attention on it later this week.
+
+**A red `main`.** Ritmolux's own CI on `main` was red that day, on a link check. The closes went ahead anyway under an earlier decision that a close does not wait for an unrelated red check, and each close said so in its output: _"closing anyway (ADR-0251)"_. The decision is right. A broken link checker should not stop five plans. But it means that on 6 October the conductor was merging into a branch whose CI badge was not green.
+
+**Production.** About two hours after the push that shipped the invite plan, I opened the bot to try the new feature myself, and it was not answering. It was in a crash loop. The cause was the `.env` on the server: it still had `ALLOWED_TELEGRAM_IDS`, the exact variable the plan had just replaced with invite links. I removed it, recreated the container, and the bot came back. Nothing in the pipeline could have caught it. The gate, the review and the close all work with the repository, and the broken thing was a file on a server that the repository does not have. Eight deploys in one day means eight chances for the server to be different from what the repository thinks it is, and the conductor cannot see the server. I can, but only if I go and look, and that day I found it because I was trying the bot myself, not because anything told me.
+
+**A plan that died.** The last Ritmolux plan of the day opened its lane at 21:00, passed its readiness check for $0.56, and two minutes later its implementation session died. I parked it at 21:06 and finished it by hand the next morning.
+
+## So what speed is possible
+
+For this day and these two projects: sixteen reviewed, tested, versioned plans in about fourteen hours, from one person. The work is not toy work: a bank statement PDF parser, debts and bill splitting across currencies, a 3D camera shared by three generator families, moving a whole set of golden images to another renderer. Every plan went through a reviewer that had never seen how it was implemented.
+
+The speed was not made on 6 October. It was made in the two weeks before, by turning every manual step where there was nothing to decide into a step the conductor runs, and every claim a session makes into something `git` can check.
+
+How did it feel? By the end of the day I was quite tired. But I was happy, with the amount of work and also with its quality, and the second part matters more to me. And I think this speed is about the limit for a human who wants to stay in the loop. The parks, the 53 images, two new plans written in the evening, a server I had to go and look at myself: all of that is me, and there was not much room left for more. With more lanes or a bigger usage limit the machines would go faster, but I would stop really reading what they do. Then I would just be approving, not judging.
+
+In July I wrote that _"the constraint was never the agents' capacity; it was mine."_ After 6 October I would say it a bit more precisely. Three things limit the speed, in this order: the account's usage limit, then my attention, then, far behind, the machines. The second one is the one that keeps the quality.
+
+So the next plan for the bot is not more features. It is performance hardening: child processes, worker threads, and moving the heavy jobs out of the bot's main loop.
