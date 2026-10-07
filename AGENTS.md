@@ -116,6 +116,10 @@ tags: [javascript, generative-art]
 
 Optional: `draft`, `demo` (related demo slug), `image` (featured image)
 
+A post Claude drafts from research goes through the **write → critique → questions → fix** loop
+(`.claude/skills/blog-writer/references/review-loop.md`): parallel EN/RU critic agents, then
+questions to the author for anything only the author knows, then fixes to both versions.
+
 ### Post Length
 
 **Floor: 3,500 body words (English) / 3,100 (Russian)** for a long-form technical post.

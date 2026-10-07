@@ -8,6 +8,8 @@ description: >
   blog post, or says something like "here's my draft" or "I dictated this" followed by Russian text.
   ALSO use when translating an English post into Russian (the `src/content/blog/ru/` twin) or
   reviewing a Russian translation for naturalness.
+  ALSO use when drafting a long-form post from research (git history, run records) — follow the
+  write → critique → questions → fix loop in references/review-loop.md.
 ---
 
 # Blog Writer
@@ -79,6 +81,14 @@ If the author requests a blog post, read [mdx-format.md](references/mdx-format.m
 - Generate the complete MDX file with frontmatter
 - Use the file naming convention: `YYYY-MM-DD-Title_With_Underscores.mdx`
 - Write the file to `src/content/blog/`
+
+## Drafting a Post From Research: Write → Critique → Questions → Fix
+
+When Claude writes a long-form post itself (from git history, run records, repositories) rather
+than polishing the author's dictation, follow the loop in
+[review-loop.md](references/review-loop.md): research with agents, draft EN and RU, then two
+parallel critic agents (one per language), then numbered questions to the author for anything
+only the author knows, then apply. Never fill a gap with an invented feeling, memory or plan.
 
 ## Translating an English Post to Russian
 
