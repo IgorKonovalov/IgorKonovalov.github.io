@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .seed { fill: #e07a4f; }
+    .dot { fill: #111; }
+    @media (prefers-color-scheme: dark) {
+      .seed { fill: #f0916f; }
+      .dot { fill: #f2f2f2; }
+    }
+  </style>
+  <circle class="seed" cx="26.81" cy="36.76" r="3.02"/>
+  <circle class="dot" cx="32.87" cy="22.08" r="3.23"/>
+  <circle class="dot" cx="39.42" cy="41.68" r="3.45"/>
+  <circle class="dot" cx="18.13" cy="29.55" r="3.66"/>
+  <circle class="dot" cx="45.29" cy="23.55" r="3.88"/>
+  <circle class="dot" cx="27.52" cy="48.66" r="4.09"/>
+  <circle class="dot" cx="23.41" cy="15.46" r="4.31"/>
+  <circle class="dot" cx="50.72" cy="38.84" r="4.52"/>
+  <circle class="dot" cx="12.46" cy="40.06" r="4.74"/>
+  <circle class="dot" cx="41.44" cy="11.82" r="4.95"/>
+  <circle class="dot" cx="38.99" cy="54.29" r="5.17"/>
+  <circle class="dot" cx="10.89" cy="19.76" r="5.38"/>
+  <circle class="dot" cx="56.81" cy="26.55" r="5.60"/>
+</svg>
