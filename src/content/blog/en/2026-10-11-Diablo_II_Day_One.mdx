@@ -1,0 +1,230 @@
+---
+title: 'Diablo II, day one'
+date: 2026-10-11
+tags: ['projects']
+description: 'The first day of a preservation project: documenting Diablo II 1.14d precisely enough to rebuild it. A random number generator with 666 in it, a seed tree checked against 5,954 values from the running game, three million rendered sprites, and a file format an agent remembered from somewhere it could not name.'
+---
+
+At 10:21 on 11 October I made the first commit in a new repository, [diablo-2-recompilation](https://github.com/IgorKonovalov/diablo-2-recompilation). At 20:39 I made the 134th. In between, the repository learned what Diablo II's random number generator is, how one number typed on the command line turns into every map, every room and every monster of a game, and how a dying monster decides what to drop. It also learned how to read almost every file format the game ships with, and it rendered three million images from them, far more than I asked for.
+
+This is a developer diary for that day. Day one of something that will take a lot more days.
+
+First, why this game. Diablo II is a game I have spent hundreds of hours in, and one of my favourite games ever. My sister was the director of a local radio station, and every day after school I went there to play Diablo alone till late in the evening. I still think its itemisation, its monster level difficulty, its replayability, its variety and, most of all, its balance have not been matched to this day. So it is really interesting to finally understand how exactly it works.
+
+## What the project is
+
+Diablo II: Lord of Destruction, version 1.14d, the last classic PC release. The goal is to describe how the game works precisely enough that someone could rebuild it and get the same game out: the same item from the same monster, the same dungeon from the same seed. The community documented roughly how drops work years ago. This project wants the exact order of random number calls, the exact integer arithmetic and the exact table lookups.
+
+Three areas come first, because they are the parts of the game that are made of chance:
+
+1. **Item creation.** Treasure classes, quality rolls, which prefix or suffix, uniques and sets, sockets.
+2. **Monster spawning.** Which monsters a level can have, packs and minions, champions and uniques.
+3. **Level generation.** The game builds its maps from preset pieces, mazes and outdoor generators, and every one of those draws random numbers.
+
+The important decision is in the README, in bold: **the output is documentation, not code.** No game files go into git, no decompiled source goes into git. The repository holds Markdown specs, the tools that read the game files, and a list of named addresses in the game's executable. If you want the game data, you need your own legally owned copy.
+
+And the specs are written for agents to read. I want a future session to be able to take `docs/specs/rng/` and implement the generator from it without opening the binary at all. That changes how they are written: every sentence that says the game does something has to say how we know.
+
+## How we know things
+
+That rule was in the first commit, before any reverse engineering, and everything else in the day is built on it.
+
+There is exactly one binary. `Game.exe` 1.14d, with its SHA-256 in the README. In 1.14d Blizzard merged all the old DLLs into the executable, so one file holds the whole game, and every address in every document refers to that file at image base `0x400000`.
+
+The first real work was proving that this is the original file. Here there was luck: the executable has an Authenticode signature. A small Python script with no dependencies walks all five steps of the check, recomputes the hash over the file, verifies the signature chain up to DigiCert, and checks the PE checksum. Verdict from the log: _"VERDICT: UNMODIFIED since signing"_. One line from the inventory explains why that is enough: _"Any byte change outside the certificate table would break step 1, so nothing in the install patched this binary."_
+
+The game's data archives, the MPQs, have no signature at all. So there the proof had to be a comparison: every file was compared with version 1.14b. 10,811 files of `d2data` identical, 9,767 of `d2exp`, 156 of `patch_d2`. One file differs, `data/local/use`.
+
+Then the tags. Every claim about how the game behaves carries an **anchor**, an address in the binary, a column of a data table, or the id of an experiment, and one of three confidence tags:
+
+| Tag   | Meaning                                                                                                                                          |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `[C]` | confirmed: we read the code **and** something independent agrees, a second code path, the data, a run of the real game, or an exact reproduction |
+| `[I]` | inferred: we read the code, nothing independent agrees yet                                                                                       |
+| `[L]` | lead: community documentation or a guess with no anchor. Allowed in a spec only under _Open questions_                                           |
+
+So reading the code is not enough for `[C]`. Something outside the decompiler has to agree with it. By the end of the day the findings had 48 `[C]` against 175 `[I]`, which is the honest ratio for day one: most of what was read had not been checked yet.
+
+The last rule is the one with legal weight. Community _documentation_ can be used as a lead, and every lead is registered in `docs/sources.md`. Third-party decompiled or reconstructed game code is never read, copied or paraphrased. There are projects out there that rebuilt the game's source; this one does not look at them. That rule comes back later in this post.
+
+## The morning
+
+The morning was slow, and that is visible in git: two commits at 10, nothing at 11, two at 12. That was extracting the install, hashing every one of its 2,114 files into an inventory, the signature check, and installing the toolchain: Ghidra, a debugger, a library for the MPQ archives, and wine.
+
+The commit-hygiene hooks came over from Ritmolux, my music visualizer, at 10:32, almost unchanged. They block `git add -A` and its relatives, anything under `workspace/` or with a game file extension, any push or history rewrite. Here the game-data hook matters more than it ever did in Ritmolux. One careless `git add .` would publish the game, and the hook makes that mistake impossible to make by accident.
+
+By 13:00 the twelve reference MPQs were dumped and merged into one tree: 30,488 files, 968 MB. MPQs have a priority order, and a file in a patch archive overrides the same file in the base game. 394 files are overridden that way, 317 of them with different content and 77 byte-identical re-ships.
+
+One small thing from that step. The tool for extracting files from an MPQ by a list of names only understands backslashes, and with forward slashes it _"silently resolve[s] 0 entries"_. No error, just nothing extracted. That kind of thing is why every step in this project has to print a count, and why the counts get compared.
+
+At 13:25 there was a reproducible Ghidra project: a script builds it from the pinned binary, and another one replays all the names we gave to functions from a CSV file. The Ghidra project itself is disposable. The CSV, `re/symbols.csv`, is the single source of truth for every named address. At the end of the day it had 278 rows.
+
+## The random number generator
+
+Ten minutes later, at 13:35, the first finding: the random number generator. Everything else in this project sits on top of it, so it came first.
+
+Diablo II's seed is 64 bits, two 32-bit words, `low` and `high`. One step is:
+
+```c
+uint64_t t = (uint64_t)low * 0x6AC690C5 + high;
+low  = (uint32_t)t;
+high = (uint32_t)(t >> 32);
+```
+
+That much was known before. It was in our own lead notes as a hypothesis, and it held for 1.14d. Two things were not in the notes. Both came from reading the code.
+
+The first: when the game initialises a seed from a number `v`, it sets `low = v` and `high = 666`. Always 666. There is a second initialiser that sets `low = 1` and `high = 666`. So 666 is the starting high word of every seed in the game. Very interesting, and right in the theme of the game.
+
+The second: the range function, "give me a number below `n`", returns 0 **without stepping the seed** if `n` is less than one. If a reimplementation steps the seed anyway, every random number after that point is different, and the whole game goes off in another direction from there.
+
+Then the surprising part. There are only six RNG functions in the binary: a step, two byte-for-byte different compilations of the same range function, a power-of-two range, and the two initialisers. But the compiler inlined the generator almost everywhere. The multiplier `0x6AC690C5` appears in the code **852 times**, and every one of them is a place where the game draws a random number.
+
+Ghidra's scalar search first found 841. The other eleven were in code Ghidra had not disassembled at all: nine callbacks that pick links between levels, reached only through pointers in a data table, so nothing in the code calls them directly. A raw byte search found all 852, and with those functions defined, every match is an instruction inside a function. So the number is 852, not 841, and the spec now says that an inlined draw may drop the `n < 1` guard when `n` is a constant, and that each call site has to say which form it uses.
+
+How to confirm a random number generator without running the game? Run the game's own code. One of the Ghidra scripts runs a function from the binary in Ghidra's p-code emulator, so the real machine code of `RNG_Range` runs on chosen inputs. The reference model in Python, 305 lines of standard library, ran against it on 5,000 cases per function, 112 of them edge cases. All six functions matched 5,000 out of 5,000. That is the `[C]`: code we read, plus the code itself agreeing with our model on inputs we chose.
+
+When you start the game without `-seed`, the seed comes from three rounds of a different, much older generator, `x * 0x19660D + 0x3C6EF35F`, over `GetTickCount()` plus `time()`, cut to 31 bits. One consequence is written in the spec: _"seed 0 cannot be forced: a `-seed 0` run takes the clock path."_
+
+## The seed tree
+
+A generator is only half of it. The other half is which seed each random number is drawn from. A game of Diablo II does not have one seed, it has hundreds: the game, every act, every level, every room, every monster. And they come from each other.
+
+The rule turned out to be simple. A child seed is created as `init(step(parent).low)`: step the parent once, take the low word, initialise a new seed from it. So creating a child costs its parent exactly one draw. From the top down:
+
+```
+-seed N
+ ├─ map seed = N, game seed = {N, 666}
+ ├─ act seed = init(map seed), stepped once → stored, the same for every act
+ │   └─ level seed = init(stored act value + level id)
+ │       └─ room seed = step(level seed)
+ │           └─ active room seed: re-init, then k draws, then one more
+ └─ server units (monsters, items, NPCs) draw from the game seed
+```
+
+Two details from there.
+
+The level seed is a **sum**, not a draw: the act value plus the level's id. So it does not matter in which order levels are created, level 17 always gets the same seed. And because it is a 32-bit sum, it wraps: with seed 34844169 the act value is `0xFFFFFF87`, and level 134 gets seed `0xD`. That seed is in the experiment list on purpose.
+
+Every act exists twice, a server copy and a client copy, built from the same seed. The client's copy is built from a map seed the server sends to it in a message. Diablo II is a client-server game even in single player.
+
+The Act II seed then gives two more draws that pick two different Tal Rasha tombs out of the seven (levels 66 to 72). With seed 12345 they are Tomb 7 and Tomb 6. Which of them is the real tomb, and what the second pick is for, is still an open question.
+
+### Running the real game
+
+Reading code gives you `[I]`. To get `[C]` for the seed tree we needed the actual game running, with a debugger watching the seeds.
+
+That took the afternoon. The game runs under wine. On my machine `ptrace_scope` is 1, which means a process can only debug its own descendants. So `winedbg` attach failed with error 5 and `winedbg` launch hung. Lowering `ptrace_scope` was rejected, because it weakens a security setting for the whole machine. A logging DLL injected into the game was kept for later. What worked is in ADR-0003 (an ADR is a decision record, a short document saying what was decided and why): a small launcher starts `wine game.exe -seed N` on a hidden Xwayland display and then _turns into_ `gdb` itself, keeping its process. So for the kernel the debugger is the game's ancestor, and it is allowed to attach. Another script clicks through the menus with XTEST, so nobody has to touch the game.
+
+The ADR also has this sentence: _"A character was created by accident in the first test."_ The first version did not use the hidden display, and the game window took stray input on my workspace. I saw it happen, and it felt like magic.
+
+At 16:00 the seed tree was confirmed at runtime, and by 16:33 the spec was rewritten from the runs. Eight runs: seed 12345 twice, 777, 12345 started in each of Acts II to V, and 34844169 in Act V for the wraparound. Every seed the debugger saw was compared with what the model predicted: 3,353 out of 3,353. A second set of runs added the server and client unit seeds and the clock path, and the combined check matched **5,954 out of 5,954**. The two runs with seed 12345 were identical line for line.
+
+The runs also corrected a mistake. The first assumption was that units draw from the game seed. The second, after reading more code, was that they draw from their room's seed. The finding now says: _"Both were half right."_ Server units draw from the game seed, client units from the room. You only see that if you look at both sides, and only a run shows both sides at once.
+
+There is one honest gap here. Between creating a room and activating it, the room seed is stepped some number of times, the `k` in the tree above. In the runs it was anywhere from 50 to 376. The evening found what it consists of (substitutions in outdoor rooms plus rarity draws per tile), but that is still static reading, all `[I]`. Reproducing `k` exactly is the next big piece of level generation.
+
+## The data tables
+
+The game's rules live in tables: 97 of them, with names like `TreasureClassEx`, `MonStats`, `Levels`, `UniqueItems`. Modders know them as `.txt` files, tab-separated spreadsheets. For most of them the game ships both the `.txt` and a compiled `.bin`.
+
+So the first question was which one the game actually loads. The answer is the `.bin`. There is a global flag in the binary that says "load binary tables", it is initialised to 1, and nothing ever writes to it: thirty references, all of them `cmp`. So the `.txt` files in the archives are there for modders, and the game never reads them.
+
+That decided the work. By 15:05 there was a decoder for the `.bin` format and 24 record layouts, three of them partial. Every decoded cell is compared to the `.txt`: 25,093 cells of `LvlPrest` with zero mismatches, 7,236 of `UniqueItems`, also zero. Across all tables there is one explained mismatch and none unexplained.
+
+The format notes from this part read like a list of traps for anyone who works from the `.txt` files. _"A misspelled header is silently ignored."_ _"A cell holding a single space therefore compiles to −16, stored as `0xF0` in a u8."_ In 30 tables a marker row called "Expansion" is in the `.txt` and is dropped from the `.bin`. And from the save format: _"The Steel runeword is stored as id 159, but it is Runes.txt row 18."_ If you build from the text files, you get a slightly different game, and you would not know.
+
+## The formats rush
+
+At 14:19 four new plans were committed, and I approved all of them in one prompt: _"approve all plans"_. The afternoon went to them. One of them was the file formats the level generator and the item code need: DS1 (preset maps), DT1 (tiles), the `.tbl` string tables, and D2S, the save file.
+
+Later I asked for a plain-language status instead of plans: what percentage is done, and also, will we be able to extract image assets and tiles. The answer to the second question became ADR-0005 at 18:12. The presentation formats, sprites and animations, are out of scope for the spec, which is about game logic. But they are allowed as **tools only**: parsers and renderers, with the images going to the gitignored workspace. The key sentence of the ADR: _"a rendered image that looks right … is not evidence."_ A tile that looks correct proves nothing about whether the bytes were understood.
+
+What counts instead is byte accounting: every byte of every file explained, nothing left over. The results by 20:00:
+
+| Format         | Files          | Result                                                     |
+| -------------- | -------------- | ---------------------------------------------------------- |
+| DS1 preset map | 2,273 of 2,276 | parsed to the last byte; the other 3 are broken and unused |
+| DT1 tiles      | 257 of 263     | 16,456 tiles, every byte accounted; 6 old v4.1, unused     |
+| DC6 sprites    | 1,681          | 24,532 frames, 0 errors, 0 leftover bytes                  |
+| DCC animations | 21,717         | 3,305,132 frames, 0 leftover bits                          |
+| D2S saves      | 23 saves       | 228 items, 0 leftover bits, checksum matches 23 of 23      |
+
+And then everything was rendered: 3,348,445 PNG files, 15 GB, in the workspace. The PNG writer is 44 lines of standard library Python. That is the "three million images that nobody asked for" from the first paragraph. I asked about tiles, and I got every animation in every direction.
+
+Byte accounting caught real mistakes. The first DC6 parser trusted a "next block" field in the header and failed on 281 files. A doc said a tile is 256 pixels, and the sum was actually 512. Blue bands on the rendered river maps turned out to be hidden collision cells, marked by bit 31. One finding said "classic characters can't be composed" from their parts, and that was wrong too: their art was in an archive that had not been merged yet.
+
+The DCC decoder got one more check. A tool deliberately breaks one rule of the decoder at a time and runs the whole corpus again. Seven of the ten broken rules fail between 78,456 and 119,437 of the 119,448 directions in the test set, so the data really pins those seven. The other three fail in zero directions: a wrong version decodes just as cleanly. The bytes cannot choose between them, so those three stay `[L]`, and the document says so.
+
+### Checking a save file in the game
+
+The save format got its proof from the game itself. Strength 30 changed to 45 in a save, with the checksum recomputed, loads in the game. A one-byte change without the checksum, and the game refuses the file. So the checksum algorithm (rotate left by one and add) is right.
+
+Then the waypoints. A save was edited with waypoint bits 0, 2, 6 and 8 set, the harness loaded it and opened the waypoint menu at the camp. The menu showed exactly Stony Field, Jail Level 1 and Catacombs Level 2 as available. After the travel, the automap read "Catacombs Level 2". That is now how the level generator can be tested in places deeper than the first town: edit a save to give the character the waypoint, start the game, travel there.
+
+## An agent that remembered
+
+The best story of the day happened at 19:11, and it is the reason for ADR-0007.
+
+DCC is the animation format, a bitstream with several compressed streams inside. The decoder came back working: every file, every frame, zero leftover bits. But the report had one line about where the knowledge of the format came from: the agent had worked from its _memory_ of a write-up by a well-known community author. That write-up was registered in `docs/sources.md` as the source.
+
+The review opened the source. The registered PDF is a user tutorial with no description of the DCC bitstream at all. The registered URL was a download page for C source code. The second document, credited inside that PDF, did not turn up in three searches and two fetches, and one search summary said it came with a sample decoder, which is exactly what this project must not read. The architect's verdict was "suspicious provenance". The agent's own correction starts with: _"Both are wrong."_
+
+So the agent built a correct decoder from knowledge it could not trace to any document. It "remembered" the format. The memory was right, the corpus proves that. Where it came from is unknown. It might have been a prose description, which is allowed, or one of the C decoders that exist for this format, which is not. Nobody can tell, the model included. The decoder stayed, because the bytes back up most of it. What went was its claim to have a source.
+
+ADR-0007 says it directly: _"Our lanes are language models, and they can 'remember' a format from training data without knowing where the memory comes from."_ And: _"That has now happened twice."_ The other case was a citation of a level editor's documentation that nobody had fetched either.
+
+The rule now is that a lead counts only if it was fetched during the session and the record says so. A lead recalled from memory is not a lead. Then came the recheck. For the DS1 format, 11 of 14 citations of community documentation turned out to be recalled, not read, and were downgraded to "no lead; derived from data". The DCC document now cites no community source at all. Most of its rules are pinned by the bytes and the mutation test. Four are not: there is no document for them and the data cannot tell, so they stay `[L]`, the lowest tag.
+
+In my other projects an agent that remembers how something works is just useful. Here it is a contamination risk that does not show in the output. The decoder was correct. Only the source record was false, and only a review that actually opened the source caught it.
+
+## Treasure classes and a disputed rule
+
+The item side reached the core of drops: how the game resolves a treasure class when a monster dies. A treasure class is a weighted list in `TreasureClassEx`, where each entry is an item or another treasure class, and resolution walks down that tree drawing random numbers. Every draw steps the dying monster's own seed, interleaved with the quality rolls.
+
+One real example from the runs below. A unique monster died in the Cold Plains, and its treasure class was `Act 1 Unique A`. That class has `Picks = -3`, and a negative number means "no random pick, just go through the entries in order", so the game took its three rolls without drawing anything. The rolls went down through `Act 1 Uitem A`, which carries the ratios that make a unique monster's items more likely to be magic or better, then `Act 1 Equip A`, then `weap3`, a group of weapons by level, and also into a potion class. Five items came out of that one death. One such walk, from a dead monster to its list of items, is what I call a resolver call below.
+
+Then there is `NoDrop`, the weight of "nothing drops", which goes down when there are more players. The community formula has been known for a long time. The interesting part is the count of players. Both community sources registered for this say that party members count only if they are within "two screens" of the monster. The code in 1.14d has no distance test. It compares level ids: a party member counts if they are in the same level as the killer. If the code means what it says, somebody in the same level but on the other side of the map counts, and somebody standing right next to you on the other side of a level boundary does not.
+
+The community claim is now marked **contradicted** in the finding, and it is a required case for the runtime phase. Reading the code is still only `[I]`, and the plan wants to see it happen in the game before the spec says it.
+
+ADR-0004, from 18:05, is about the boundary of all this. In the middle of its draws, the drop code calls the quality roll (normal, magic, rare, set, unique), and that is a separate subsystem we have not documented yet. Both draw from the same seed, so the drops cannot be reproduced without knowing how many numbers the quality roll took. So the logger records the seed just before the quality roll and just after it. Our model must predict the "before" exactly, and then it continues from the logged "after". The important part is the check: _"A model that only resynchronises from logged states, without asserting, proves nothing."_
+
+### How an agent learned to play Diablo II
+
+To check the drop model against the game, somebody has to kill monsters. Here an agent learned to do that itself. This runtime phase started in the evening on its own branch, and that branch is not merged yet, so this part is not in `main`.
+
+It started from what the harness already had. The menus are a steps file: clicks in coordinates of the 800×600 game window, with comments like _"empty background: the first click only activates the window"_, then SINGLE PLAYER, then OK on the character screen. Walking to the camp waypoint is another steps file that goes around Warriv and the camp fire, with a warning in the header: _"NPCs wander, so if the last screenshot shows no menu, take a shot, find the stone pad and click it by hand."_ "By hand" here means the agent looking at a screenshot and sending one click.
+
+The first session went the most literal way. A script walked a level 1 Barbarian north-east out of the Rogue Encampment into the Blood Moor. Then the agent took screenshots, found monsters on them, and attacked each one with a single click at its position. Even before that, a first attempt stopped at the very first drop, because the debugger script read a 32-bit game pointer as a 64-bit one. The second attempt worked: 4 resolver calls, every one reproduced. Three of them were Fallen that dropped nothing.
+
+Four kills is far too few. So the second session changed two things.
+
+First, the character. The harness kills the game with `wineserver -k`, so the game never saved, and the character's file was a 335-byte stub. The agent entered the game once without the debugger and left through _Save and Exit Game_ to get a full save. Then it used the save tool from the formats work to set strength, dexterity and vitality to 1,000 and life to 8,000, recomputed the checksum, and backed up the original. And in town it typed `/players 8`, so the game counts eight players for `NoDrop`.
+
+Second, the hunting. The agent wrote itself a hover-scan loop. It moves the pointer over a grid of points on the hidden display, and after each move it reads a few pixels from the top centre of the screen, where Diablo II shows the dark-red name bar of the monster under the cursor. If the bar is there, it holds the left button for 1.2 seconds. If not, it holds a walk click and moves on. No human input, no fixed script for the fighting. The kills cannot be replayed click for click, but that does not matter: every resolver call carries its own inputs in the log.
+
+That gave 10 more calls. For the third and fourth sessions the agent used the save tool again: every Act I waypoint switched on, walk to the pad (twice the NPCs were in the way and it clicked the pad by hand), and travel. The third session hunted around the Cold Plains waypoint for about 18 minutes and got 31 calls, including a unique monster. The loop sometimes got stuck on walls. The fourth went to the Black Marsh for about 17 minutes and got 52.
+
+Four sessions together: **97 resolver calls recorded, 97 reproduced** by the Python model, including three unique monsters. No champion was found in either area, and the party case needs two clients in the harness, so both are still open.
+
+I watched it play, and it was crazy that it worked. The same harness that confirmed the seed tree in the afternoon could, by the evening, enter a game, make itself a character that does not die, travel through waypoints and hunt. All of it was assembled from pieces the day had already built, the save format, the waypoint check, the click driver.
+
+## How the work was organised
+
+The work is split into four roles: an architect that plans and reviews, an archivist for files and tables, a reverser for Ghidra and the debugger, and a spec-writer that is told to _"never fill a gap with plausible behaviour."_ Every piece of work is reviewed by a fresh agent that did not do it. Every recorded verdict of the day was "accept with fixes", and 21 of the 111 non-merge commits on `main` are review fixes. The 256 pixels that were 512 and the recalled source were both caught that way.
+
+Until 18:00 this ran mostly one role at a time, with me handing over between them. Then I asked whether a conductor, the program that runs my plans unattended in Ritmolux and the expenses bot ([the last post](/projects/2026/10/07/what_207_commits_are_made_of/) is about a day of it), makes sense here. The answer was: not yet. A conductor is only as safe as the mechanical gate between its sessions, and here _"a wrong `[C]` merged into `docs/specs/` without anyone reading it ends up in the reimplementation spec."_ Tests cannot catch a false claim in a Markdown file.
+
+So the gate was built first, ADR-0006 and plan 0007. It is a Python script that checks every anchor: every function address exists in `symbols.csv` with the same name and kind, every source is registered, every experiment id has a record, every table and format link resolves, no `[L]` in a spec outside open questions, and the tag counts in each document's header match the body. It runs on every commit that touches `docs/` or `re/`, in 0.64 seconds. When the prototype first ran, 322 anchors resolved and nothing was broken, so it started strict, with nothing grandfathered. It cannot judge whether a claim is true, only whether its evidence exists, and it says so.
+
+Then, at 18:32, I wrote: _"create worktrees and orchestrate, we have a lot of tokens and window resets in 28 min, lets do as much as we can."_ The commit graph shows it. 37 commits at 18, 47 at 19, and 15 branches merged between 18:53 and 20:39. Before that, the busiest hour had 10. What limited how much could run at once was the things there is only one of: one game harness, one Ghidra project, the shared files. The commit gate reads the whole working tree, so one agent's unfinished link once blocked another agent's commit. The fix is in the memory notes: one writer per worktree.
+
+## What is actually done
+
+The research map has 28 rows. At the end of day one, three of them are reviewed specs: the RNG core, the seed tree and the data tables. One more has findings in progress (treasure classes), level generation has an approved plan, and 24 are not started. Item quality, affixes, uniques, monster pools, packs, the maze generator: all of that is still ahead.
+
+The repository's own README is already stale. Its status list has four unchecked items, and all four were done by 13:54. Its tool table lists 5 tools, and the folder has 26 Python scripts.
+
+The next things are already written down. The drop phase gets merged and gets its champion and party cases. Then the `k` of the room seed, which means reproducing a level's rooms from the seed, and that is the first time this project would build a piece of a Diablo II map from nothing but the spec and a number.
+
+I am excited about what we find next.
