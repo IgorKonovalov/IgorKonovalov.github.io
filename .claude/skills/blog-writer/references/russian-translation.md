@@ -61,6 +61,25 @@ stack of participles. Split into two sentences or use «тот самый … ч
 the emphasis. «Рецензия… бесполезна, если её делает та же сессия» → «ключевое слово здесь — _та
 же_». Do not italicise a Russian word that is not the pivot of the sentence.
 
+### 6. Verbs that mean something else in Russian, and tautologies
+
+From the first draft of `2026-10-13-Diablo_II_Days_Two_And_Three` (RU), which the author called
+"a bit unnatural".
+
+| Calque                                      | Natural                                       |
+| ------------------------------------------- | --------------------------------------------- |
+| складывает 1 в 2 (folds 1 into 2)           | превращает 1 в 2 («складывает» = adds)        |
+| с одного к четырём до одного к трём (share) | с четверти до трети («к» reads as a ratio)    |
+| Здесь умерло несколько предположений        | Тут не подтвердилось несколько предположений  |
+| репозиторий может сказать                   | по репозиторию можно понять                   |
+| играть в игру; по чтению … не читается      | играть; сначала мы решили, что игра не читает |
+| уйдёт с сида (goes off the seed)            | собьётся с последовательности сида            |
+| сыграл запуск                               | сам прошёл (уровень)                          |
+| Получается, что … / Дальше …                | Выходит, … / А теперь …                       |
+
+Also: «в Nightmare» → «на Nightmare» (difficulty), and "draw" is «взять число», never «шаг»,
+which collides with "step" of the generator.
+
 ## Terminology
 
 Pick one Russian term per concept, use it everywhere, including Mermaid labels and table rows.
@@ -70,6 +89,9 @@ Pick one Russian term per concept, use it everywhere, including Mermaid labels a
 | merge (verb)         | влить, слить         | смёржить (only in casual speech) |
 | merged plans         | влитые планы         | смёрженные                       |
 | lock                 | блокировка           | замок                            |
+| preset (DS1)         | пресет               | готовая карта, готовый файл      |
+| superior (quality)   | превосходный         | высокого качества                |
+| spawn (monsters)     | спавн, расстановка   | заселение                        |
 | repair (session)     | починка              | ремонт                           |
 | decision record, ADR | ADR (masc.), решение | «запись о решении»               |
 | claim (by a session) | заявление            | утверждение (when ambiguous)     |
