@@ -1,0 +1,281 @@
+---
+title: 'Diablo II, days two and three'
+date: 2026-10-13
+tags: ['projects']
+description: 'The d2-recon preservation project, days two and three: the room-seed draws reproduced exactly, monster pools from one number, a party rule settled with two copies of the game, magic find that is linear below 11, and a champion branch that is dead code. And the agent stopped being the only player.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+
+[Day one](/projects/2026/10/11/diablo_ii_day_one/) ended at 20:39 on 11 October with the 134th commit. Since then the repository has got 206 more: 13 that same evening, 149 on 12 October, and 44 on the 13th, the last one at 19:46, while I was writing this. The 13th is not finished yet, so this post stops at that commit.
+
+Day one was about foundations: the random number generator, the seed tree, the data tables and the file formats. Days two and three used them. The repository can now say how a level's rooms take their random numbers, which monsters a level can have and why, whether your friend on the other side of the map counts for the drop, and how magic find really works. Several community rules turned out to be wrong for 1.14d, and in one case our own reading was wrong and the community was right.
+
+And one thing changed that I did not expect. On day one an agent learned to play the game. On days two and three a lot of the play was mine, because where it mattered the agent was failing.
+
+## The evening of day one
+
+The drop branch from the end of the last post was still open at 20:39. It got one more session before it was merged at 22:12.
+
+Four sessions had given 97 resolver calls, all reproduced. A resolver call is one pass of the game deciding what a dead monster drops, and "reproduced" means our Python model, given the same inputs, made the same draws and got the same items. The fifth went further. The agent took the strong Barbarian from day one, raised him to level 70 with the save tool, put War Cry on the right mouse button and set the save's progression byte so the game starts him in Nightmare, with the title "Slayer". Then it hunted with the same hover-scan loop, now with War Cry, and with an automatic relaunch after deaths. It found the camp waypoint in Nightmare _"by its two blue flames"_.
+
+Run 19 of that session was not the agent. The experiment record says: _"the owner played the harness display while gdb logged"_. That is me. 113 calls came from my hunting, and they reproduced the same way as the agent's. The total for the branch was **328 resolver calls, 328 reproduced**.
+
+One small result from that run. The drop rules have a `noRatio` branch, and nothing could reach it. The session explained why: all 31 monster classes with `noRatio` are player summons, and none of them has a treasure class. With stock tables that branch never runs.
+
+At 22:13 four new plans were drafted, at 22:21 they were approved, and at 23:17 came the last commits of the day: the model and the logger for the room-seed `k`.
+
+## The k of the room seed
+
+This was the open gap from day one. Between creating a room and activating it, the room's seed is stepped some number of times. In the day one runs it was anywhere from 50 to 376, and we knew roughly what the draws were, but only from reading code.
+
+Now it is reproduced. The experiment had six game entries: seeds 12345 and 777 in the Act I town, the Blood Moor on seed 12345, the Act II town, and two maze runs on seed 1, the Den of Evil and Catacombs Levels 2 to 4, reached by waypoint. Those last two were played by hand, partly by me. The result: **all 520 room activations predicted, 8,776 checks, 0 mismatches**, for both server and client copies. After the review asked for one more piece to be modelled instead of taken from the log, the count went to 11,208, still with zero mismatches.
+
+The observed range of `k` is wider than on day one, 0 to 388. A room in the Act II town draws from 0 to 93 times. A room in the Blood Moor draws 144 to 376 times.
+
+What `k` is made of turned out to be two things. In outdoor rooms the game first picks substitutions, small preset patches from the `LvlSub` table that it stamps over the terrain. Then, for every tile it has to pick, if there is more than one candidate and their rarities sum above zero, it draws once to choose by rarity. Tiles with a rarity sum of zero make no draw at all. Across the experiment there were 39,652 picks with a draw and 14,154 picks with candidates and no draw. A static walk over 657 functions found that only four of them draw, and all four draw from the room seed.
+
+Several assumptions died here. One is about room borders. The code has a special path for tiles flagged with bit 2, the flag for a border tile, and from reading it looked like a rare case. In the runs, every room border carries bit 2, so the "rare" path is the common case. And on that path the game re-picks a merged tile by drawing from the **neighbour's** seed, not the room's own. 354 such re-picks were logged. So a room's seed keeps moving even after the room itself is activated, because its neighbours draw from it.
+
+<Mermaid
+  code={`
+flowchart TB
+  create["room created"] --> sub["roll which LvlSub patches apply"]
+  sub --> reseed["room seed re-initialised"]
+  reseed --> ksub["patch draws (outdoor rooms only)"]
+  ksub --> pick{"next tile pick: rarity sum above 0?"}
+  pick -->|yes| draw["one rarity draw on this room's seed"]
+  pick -->|no| nodraw["no draw"]
+  draw --> pick
+  nodraw --> pick
+  pick -->|all tiles picked| act["room activated: k draws so far"]
+  act -.->|later| nb["a neighbour re-picks a shared border tile: draws on this room's seed"]
+`}
+/>
+
+### A read past the end of a file
+
+Then a finding of a different kind. The preset file `Act1/Outdoors/Trees.ds1` is the substitution record 11. When the game reads it, it reads 12 bytes past the end of the file. Those bytes come from whatever is on the heap. In 26 of 27 loads that memory held zeros. Once it held garbage.
+
+The plan's log puts it directly: _"so k can depend on uninitialized memory"_. In the one garbage load, nothing drew on the bad bytes, so every observed `k` still reproduced. But the spec has to say something, and it says this: zero fill is the rule for a reimplementation, tagged `[C]` (confirmed by runs), because zeros reproduce every draw we saw. The original reading uninitialised heap is `[I]` (inferred from code only).
+
+So with different heap contents, the same seed could in principle give a different `k`.
+
+## How a level gets built
+
+With `k` done, the level generator overview came next. One experiment covered 149 level creations, 32 builds (4 mazes, 12 presets, 16 outdoor), 1,858 room creations and 960 preset instances: **14,545 checks, 0 mismatches**.
+
+The main surprise: the level seed is initialised twice. `DRLG_LevelCreate` initialises it from `base + level id`, then `LevelInit` initialises it again from the same value. So whatever the first one drew is thrown away. The spec has a warning about it: _"a model that continues from PresetLevelCreate's draw is off by one draw for every preset level."_
+
+Then which preset file a level loads. A preset record has a `Files` field, and the game draws `Range(level seed, Files)` to pick one. But `Files` is just the range operand. It does not equal the number of file names in the record, and in 81 records they disagree. And `Range(1)` still takes a draw, even though it can only return 0. All 960 preset instances loaded the file we predicted.
+
+<Mermaid
+  code={`
+flowchart LR
+  base["base + level id"] --> c1["DRLG_LevelCreate: Init(base + id)"]
+  c1 --> lost["draws here are thrown away"]
+  base --> c2["LevelInit: Init(base + id) again"]
+  c2 --> files["Range(level seed, Files): Files is the range, not the file count"]
+  files --> ds1["the DS1 file the level loads"]
+  ds1 --> rooms["rooms, each with its own k"]
+`}
+/>
+
+In the `k` runs the room seeds came from the log. Here, for the first time, everything comes from the map seed alone. Den of Evil is level 8. With map seed 12345 its level seed is `Init(015B2E7F)`. The maze uses three preset definitions. For the first, `Range(1)` picks `CaveNSpec.ds1`. For the second, `Range(2)` returns 1 and picks `CaveWPre2.ds1`. Then one room of that level takes exactly 15 draws, all floor picks. The generator model names the file, and the room model reproduces that file's tiles and no other file's.
+
+Day one ended with the hope of building a piece of a Diablo II map from nothing but the spec and a number. This is that piece, as numbers. A rendered map from a seed has not happened yet.
+
+I played one confirmation run for this, into the Catacombs on a level 50 Sorceress, 6,608 checks with zero mismatches. It needed one fix in the checker first: the game rebuilds a level that was unloaded and repeats the same draws, so the maze rotation counters reset at every `LevelInit`.
+
+### Preset units and "inverse to the names"
+
+On the third day the preset maps got their units. The DS1 files place monsters, NPCs and objects: 16,372 units in total, 2,102 monsters, 165 NPCs and 14,105 objects, no items.
+
+Most of them are always placed. Ten unit ids roll whether to keep the unit. Four monster classes are kept one time in three. Then there are three objects named `place_group25`, `place_group50` and `place_group75`, and the finding says they are kept 3/4, 1/2 and 1/4 of the time, _"inverse to the names"_. The "25" one is the most common.
+
+The run for it used 27 logs over five acts and three difficulties, plus one game per act played by me. 2,210 preset-room unit lists reproduced, **123,714 checks, 0 mismatches**. Nightmare and Hell: _"nothing differs"_.
+
+There was a community cross-check too. On day one, units drawing from the seed was the case where _"both were half right"_. This time three community rules were checked against the code, and each side got something wrong. On `Populate` the sources say that rooms with value 0 are not populated. In 1.14d those rooms still spawn preset monsters, and the finding says _"the sources are wrong for 1.14d"_. On `Logicals` and `PopPad` it went the other way. Our first reading said `PopPad` is never read. It is read, and the model now reproduces 6,443 player positions from it. The finding records that too: _"the finding was wrong"_.
+
+## Monsters
+
+Monster spawning was not started on day one. It now has a reviewed spec for the level pool, and findings for how rooms get populated.
+
+The pool is which monster classes a level can have. The pools for **all 136 levels** are built once, at game creation, from the **first draw of the game seed** (in a game started with `-seed`, as all of ours were). Neither the map seed nor any level seed is involved. You know the Blood Moor's monsters before a single room exists.
+
+The game picks `min(NumMon, 13, candidates)` classes without replacement. If the level is marked `rangedspawn`, the first pick is redrawn up to 20 times until it finds a ranged class. In 200 such first picks, 42 used all 20 redraws and still did not find one. Classes with `isSpawn` 0 are dropped after the pick, but the pick still counts. Normal difficulty reads the `mon` columns, Nightmare and Hell read `nmon`.
+
+Ten games over seeds 1 to 5 and all five acts: **1,557 of 1,557** matched. Nightmare and Hell were first reached by forcing the difficulty byte in memory, because the save tooling's permissions would not let the agent swap in a Nightmare save. The review made every claim that rests on the forced runs say so. Then seven natural games, with real Nightmare and Hell saves, gave **1,483 of 1,483**, and the natural seed 1 regions were identical to the forced ones.
+
+Monster level got its answer too. It is `Level` from `MonStats`, except in Nightmare and Hell of the expansion, where it comes from `Levels.MonLvlEx`. The classic columns `MonLvl1..3` are not read at all. 61 creations separate the two, for example in Jail Level 1 two classes come out at levels 41 and 71 in the expansion, against 40 and 70 in classic.
+
+### Room population and a dead branch
+
+How monsters get into rooms is still only read from code, all `[I]`. But even read code had surprises.
+
+Each spawn area gets a number of attempts based on its size, and each attempt passes if a draw from the game seed, modulo 100,000, is at most `min(MonDen, 10000)`. Then a type roll decides whether the attempt makes a normal monster or a special one.
+
+Here the code has a branch for champions, and the branch can never run. The type roll returns 0 for a special monster, or 1 or 2. The population pass then turns every 1 into a 2, so the branch for 1, the one that would make a champion group, never runs. The finding says: _"dead code in 1.14d. The last draw of the roll still happens, and its value is irrelevant."_ Champions still exist in the game, of course. Whether a special monster becomes a champion or a unique is decided later, from the boss's own unit seed: `Range(100) < 20`, the 20 coming from the first row of `MonUMod`.
+
+<Mermaid
+  code={`
+flowchart TB
+  att["spawn attempt"] --> den{"game seed mod 100000 at most min(MonDen, 10000)?"}
+  den -->|no| skip["no monster"]
+  den -->|yes| type["type roll: MonUMin / MonUMax"]
+  type -->|returns 0| special["special monster"]
+  type -->|"returns 2, or 1 turned into 2"| normal["normal group"]
+  type -.->|"return 1: never reached"| dead["champion branch: dead code"]
+  special --> boss{"boss unit seed: Range(100) below 20?"}
+  boss -->|yes| champ["champion pack"]
+  boss -->|no| uniq["unique with minions"]
+`}
+/>
+
+The community cross-check for this was committed at 19:28 today and reviewed at 19:43, accepted with fixes. Two sources were checked: Blizzard's own Data File Guide and the Arreat Summit. On `MonUMax`, the rule about special monsters, the code disagrees on three counts. The roll happens for every attempt that passes density, not once per room. The chance is **6 in 100**, not 5, because the instruction is `cmp ecx,5; jle`, less than or equal. And the cap compares a live count of special monsters, which includes champion pack members and goes down when they die, not the number of successful rolls.
+
+On `sparsePopulate` the code does the opposite of the documentation: a group spawns with probability `(v+1)/100`, where the documentation says the value is the chance to skip. It does not matter in practice: the only monster with that value, `evilhut`, is in no level pool.
+
+Where the sources and the code agree, nothing gets promoted. Both cross-check sections say it the same way: _"Agreement promotes nothing."_ A matching community rule still waits for runs.
+
+## Two copies of the game
+
+Day one left the party rule open. Both community sources say party members count for the drop only within "two screens" of the monster. The code compares level ids, with no distance at all. To see it in the game we needed two players in one game.
+
+The first problem: a second copy of the game refuses to start. The function at `0x004F5610` calls `FindWindowA`, finds the first window and stops with _"Only one copy of Diablo II may run at a time"_. The answer is in ADR-0008: a second, separate wine prefix on its own hidden display. The host runs on display `:7` with gdb attached, the joiner on `:8` with no debugger, and they play a TCP/IP game over 127.0.0.1. The menus and the party invite are clicked by step files, like everything else in the harness. Because the server side of a TCP/IP game runs inside the host's process, every resolver call is logged there, whoever made the kill.
+
+<Mermaid
+  code={`
+flowchart LR
+  subgraph host["display :7, wineprefix"]
+    gdb["gdb logger"] --- h["Game.exe host: runs the server side"]
+  end
+  subgraph join["display :8, wineprefix2"]
+    j["Game.exe joiner, no debugger"]
+  end
+  j -->|"TCP/IP game, 127.0.0.1, port 4000"| h
+  h --> log["every resolver call logged, whoever killed"]
+`}
+/>
+
+The ADR has a risk note in bold: _"An untrusted binary listens on the network."_ While hosting, the game accepts connections on TCP port 4000 on every interface. The ADR is still "proposed", until I accept that exposure.
+
+Then the runs. The agent drove the joiner, and I played the host in the second session. The cases, from the experiment record:
+
+| Case                              | Calls | Party count |
+| --------------------------------- | ----- | ----------- |
+| partied, joiner in the same level | 44    | 2           |
+| partied, joiner in another level  | 84    | 1           |
+| not partied, same level           | 4     | 1           |
+
+In the first case the joiner was between 26 and 375 subtiles away, and 30 calls were at 311 or more. A screen is about 37 subtiles across, so the largest gap was 9.6 screens across and 3 down. The finding says: _"a partied player alive in the killer's level counts fully (`party = 2`) at 311–375 subtiles, far beyond 'two screens'"_. The level-id rule became `[C]`, and the community rule stays contradicted, now with runs behind it.
+
+The first logger had a bug: it read the player's level at `room+0x58` _"without the `+0x10` hop"_, so every position in the first session was −1. The checker showed it, and it was fixed before the cases that needed positions.
+
+### The champion
+
+The other open case from day one was a champion monster: none had been killed in any session. A scripted Nightmare Sorceress tried and died after 9 calls, with no champion in 175.
+
+The agent was failing, so I played it. A Lightning Sorceress, built by the save tool and raised to level 80, alone in Nightmare. 124 resolver calls, all reproduced, and two of them were champions: both `fallenshaman4`, class 61. A champion takes the champion column of the treasure classes. Here that was 698, `Act 1 (N) Champ C`, and the drop was then upgraded by monster level 44 through 699 to 700, `Act 2 (N) Champ B`. A unique of the same class took 783 instead. Andariel took her quest class 834 with no upgrade.
+
+The champion rule is `[C]` now, but only as far as the runs went: Nightmare, expansion, single player, class 61.
+
+The treasure class spec itself was closed and reviewed on the morning of the 12th. Its review caught one error: the spec said the quality roll returns codes 2 to 7, and the run's own logs had code 1 eight times.
+
+## The quality roll and magic find
+
+That code 1 is low quality. The quality roll is the moment an item becomes normal, magic, rare, set or unique, and day one had it only as an oracle: the logger recorded the seed before and after, and our model just copied the logged result. Plan 0010 read it.
+
+The roll goes in a fixed order: unique, then set, then rare (skipped if the item type cannot be rare), then magic, superior and normal or low. For each test the game computes a chance from the item level (`ilvl`) and the quality's level (`qlvl`):
+
+```c
+c = (base - (ilvl - qlvl) / divisor) * 128;
+// then divided by the magic find factor, clamped, and reduced by c * ratio / 1024
+if (c < 1) win();                       // no draw at all
+else if (RNG_RangeB(seed, c) < 128) win();
+```
+
+So one roll draws anywhere from zero to six times, and a chance below 1 wins without any draw. A reimplementation that draws anyway goes off the seed, like the `n < 1` case of the generator on day one.
+
+<Mermaid
+  code={`
+flowchart LR
+  start["each test: chance below 1 wins with no draw"] --> u["unique?"]
+  u -->|no| s["set?"]
+  s -->|no| r["rare? (skipped if the type cannot be rare)"]
+  r -->|no| m["magic?"]
+  m -->|no| sup["superior?"]
+  sup -->|no| nl["normal or low"]
+  u -->|yes| out["quality decided"]
+  s -->|yes| out
+  r -->|yes| out
+  m -->|yes| out
+  sup -->|yes| out
+`}
+/>
+
+Magic find for unique, set and rare has diminishing returns, `F = 100 + mf·C/(mf+C)`, where `C` is 250 for uniques, 500 for sets and 600 for rares, which gives 171, 183 and 185 at MF 100. That much matches the community. What does not match:
+
+- **MF up to 10 is linear.** The code checks `mf + 100 > 110` before applying the curve. At MF 10 the community formula gives 9 for uniques, and 1.14d uses 10.
+- **Classic games use the expansion rows.** A community source says classic games use the `Version 0` rows of `ItemRatio`. The drop code pushes a constant 100, so classic drops use the expansion rows.
+
+Again all of it from my play. Two sessions on the Lightning Sorceress with MF 100, from Harlequin Crest and War Traveler, with no gear changes and no mercenary, on my instruction, so nothing else killed: 782 of 782 and 65 of 65 rolls. Without the logged value, a scan of every magic find from −150 to 400 fits **only 100**. A linear model changes 34 rolls. In one of them, an item the game rolled unique comes out low quality.
+
+Then two more characters, built from recipe files for exactly this. A Necromancer with MF 10 from one ring, a Wisp Projector, 954 kills in Nightmare, which I played with skeletons and Corpse Explosion: 574 of 574 rolls, and only MF 10 fits. 85 of the rolls came from his skeletons' kills, and removing his MF breaks 27 of them, so a summon uses its owner's magic find. And a classic Sorceress, 459 kills in Normal: all 52 rolls that reach a test used the expansion rows. The `Version 0` rows break 29 of them, including both classic uniques.
+
+**1,916 rolls reproduced** in total.
+
+### The Expansion row again
+
+Day one had a line about a marker row called "Expansion" that sits in 30 `.txt` tables and is dropped from the compiled `.bin`. It came back today.
+
+The first Act V superunique kills in these sessions, Siege Boss, Megaflow Rectifier, Threash Socket and Sharp Tooth Sayer, failed: 18 resolver calls did not reproduce. The cause was in our own tool. `superuniques.txt` has an Expansion marker row that takes no record, and `tc.py` counted it, so _"every superunique id >= 42 was read one row late."_ The format notes already said the row takes no record. `tc.py` just had not followed them.
+
+## Saves, art and the smaller things
+
+The save format got its code. The writer, the reader and the checksum (`rotl32(sum, 1) + byte`) are anchored in the binary, and seven harness runs gave 1,625 comparisons with zero mismatches. Save and Exit writes the file twice, byte-identical. A bad checksum and a bad size give different reader codes that end in the same error. The new save builder re-encodes 21 sample saves byte for byte, and it is what built the Lightning Sorceress, the Necromancer and the classic Sorceress.
+
+The quest words got their meaning too. The `Woo!` block has one section per difficulty. Bit 0 of four words records travel to Acts II to V. The server checks only the waypoint bit. That made `d2s build acts_open` possible: a save that opens every act.
+
+The item art from day one became a tool: an index of 1,188 item graphics, 1,175 rendered sheets, 13 items with no art at all. The colour shift files came out as 8 files of 21 maps each. Three of the maps, `brown`, `gold` and `grey`, are byte-identical. And from the code: _"`gold` and `brown` are never served."_ Only grey ever reaches a pixel.
+
+The excel `.txt` compiler is documented down to every cell converter: 28 tables, 555,659 cells, 0 unexplained. Column names match case-insensitively, and if a header is duplicated the first one wins. And there is no validation at all: the Khalim parts have a single space in `TMogMin`, and that space is stored as −16.
+
+## Diagrams
+
+At 14:06 on the 12th I asked for more diagrams in the specs. I understand these things better when I can see them. The rule went into the conventions as _"Draw whenever a section has a shape"_, and one pass added 76 Mermaid diagrams with no change in tags. The treasure class spec went from 1 diagram to 13, the save spec from 1 to 14. In total the docs went from 14 diagrams on day one to 100.
+
+The gate got a new rule for them, E9. It parses every Mermaid block with the Mermaid build that VS Code already ships, patched to run without a browser. When it was added it parsed 89 blocks in about 0.9 seconds, with nothing to download.
+
+## How the work went
+
+There is still no conductor. ADR-0006 says handing plans to one is _"under consideration"_, and that decision has not been made. The handoffs are manual, as CLAUDE.md says: _"the user invokes the next lane."_ The four roles are the same as on day one.
+
+What the git history shows is the shape of the days. On the 12th the commits start at 08:04 and stop at 15:58, with between 8 and 24 commits every hour in between. On the 13th they start at 08:04 again, and from 10:22 to 13:42 there are none.
+
+35 branches were merged over the two days. Every review verdict recorded in a commit is "accept" or "accept with fixes": 14 with fixes, 5 plain. 17 commits are review fixes. Reviews keep catching the same kind of thing, a claim one step wider than its evidence. One `[C]` on a merge branch that no log ever reached. One quoted flag value that did not match the raw log line. After that one there is a new habit: _"compare quoted log values with the raw log line, not only the checker's totals."_
+
+The gate learned to check only what is being committed. On day one one agent's unfinished link blocked another agent's commit. Now the hook runs the gate on the staged index, _"so it sees what the commit will contain and not another lane's uncommitted edits."_
+
+The backlog shows how much each piece of work leaves behind. On day one it had 49 entries, 33 of them done. Now it has 143, 123 done, 20 open.
+
+## Where it is now
+
+The numbers, against day one:
+
+|                        | Day one  | Now       |
+| ---------------------- | -------- | --------- |
+| Reviewed specs         | 3        | 7         |
+| Not started (of 28)    | 24       | 17        |
+| `[C]` / `[I]` findings | 48 / 175 | 240 / 455 |
+| Named addresses        | 278      | 626       |
+| Python tools           | 26       | 38        |
+| Closed plans           | 5        | 14        |
+
+The seven reviewed specs are the RNG, the seed tree, the data tables, treasure classes, the monster pool, the level generator overview and preset units. The save format is a draft until item properties are done. Item quality, monster spawning and the string tables are at the findings stage.
+
+In the findings, confirmed claims went from about one in five to about one in three. In the specs, more than half are now confirmed.
+
+What is open in the repository right now: the population finding has its review fixes to apply and then its runs, which means the first reproduction of a monster spawn from the seed. The quality roll was reviewed three minutes before my cut-off, accepted with fixes, and 183 of the 485 classic calls stop at _"classic selection not modelled"_. And the map from a seed is still to be drawn.
+
+It is work in progress, but the picture becomes clearer.
