@@ -1,0 +1,355 @@
+---
+title: 'Diablo II, day four'
+date: 2026-10-14
+tags: ['projects']
+description: 'Day four of the d2-recon preservation project, this time with pictures: the research map as a grid, special monsters with only 256 possible names, a unique and set target that would have taken about 450 sessions to reach, a map of the Blood Moor built from one number, and a harness that can now run several copies of the game at once.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+import ResearchMap from '../../../components/charts/ResearchMap.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+import BloodMoorMaps from '../../../components/charts/BloodMoorMaps.astro';
+import ProgressMultiples from '../../../components/charts/ProgressMultiples.astro';
+import TagTimeline from '../../../components/charts/TagTimeline.astro';
+import MagicFindCurve from '../../../components/charts/MagicFindCurve.astro';
+
+[Days two and three](/projects/2026/10/13/diablo_ii_days_two_and_three/) stopped at 19:46 on 13 October. This post covers what came after: a bit of that evening and all of 14 October, up to 20:50. In that time five specs passed their reviews, the runs reproduced every monster the game put into the visited rooms, special ones included, the item path got as far as unique and set items, and the outdoor levels can now be rebuilt from their seeds.
+
+The last two posts were text and tables, with some Mermaid diagrams, and it was difficult to understand what was going on from the text alone. So this time there are charts: a grid of what is done and what is not, what each run reproduced, the confirmed claims over time, and a map. The grid is also in the [day one](/projects/2026/10/11/diablo_ii_day_one/) and [days two and three](/projects/2026/10/13/diablo_ii_days_two_and_three/) posts now, at the state of their own cut-offs.
+
+## The map of the work
+
+The project has a research map: 28 rows, one per subsystem of the game that has to be specified. Each row moves through the same stages. First a plan, then findings (what we read in the code, with addresses and confidence tags), then a draft spec, then a spec that passed a review by an agent that did not write it. Here it is, at the cut-off of each post. Switch between the days to see what moved.
+
+<ResearchMap
+  snapshots={['d1', 'd3', 'd4']}
+  title="The research map at each cut-off"
+  note="The arrow marks a row that moved since the previous snapshot. Source: docs/specs/README.md at commits 8faba4f2, c8753c82 and 2c8eb42."
+/>
+
+The **core** band is the original goal: item creation, monster spawning and level generation. On day one, three rows of it had anything at all. Now every core row is at least planned, and nine of the fifteen are reviewed specs. The **enablers** are systems the core cannot be reproduced without, like the collision grid that decides where a monster can stand. The **creation paths** are other ways the game makes items and monsters: vendors, the Horadric Cube, runewords, hirelings. That band is almost untouched, and it should be. It waits for the core.
+
+Since day three twelve rows have moved. Five became reviewed specs: `items/quality`, `items/uniques-sets`, `monsters/spawn`, `monsters/special` and `drlg/collision`. Five more got their first findings in the evening: affixes, item properties, the maze generator, warps and the outdoor generator. And two, objects and monster stats, got approved plans.
+
+Everything that moved was checked against the game itself. These are the runs and replays of the day, each one comparing a model written from the spec against what the real game did with the same seed:
+
+| Run                      | What the model reproduced                                            | Mismatches |
+| ------------------------ | -------------------------------------------------------------------- | ---------- |
+| Room population          | 516 rooms of random monsters, 110,302 checks                         | 0          |
+| Collision grid           | 1,439 room grids, 2,343,400 cells, five position tests               | 0          |
+| Special monsters         | 20 champion packs, 54 unique groups, 11 superuniques, 390,144 checks | 0          |
+| Uniques and sets, stock  | 304 item creations, from the treasure class to the builder           | 0          |
+| Uniques and sets, forced | 1,519 item creations, 115 unique and 72 set builds                   | 0          |
+| Outdoor levels (replay)  | 370 logged level builds over all five acts                           | 0          |
+| Mazes (replay)           | 12 logged maze builds                                                | 0          |
+
+A check is one value the model predicted and the game logged. A draw is one number taken from a seed, and "reproduced" means the model, given the same inputs, made the same draws and got the same result.
+
+## The evening of day three
+
+The day three post ended with the room population findings waiting for their runs: _"the first reproduction of a monster spawn from the seed"_. That run came at 21:15 the same evening.
+
+I played it. Three sessions, in a visible window on my desktop, with the logger attached. The first on a character from the earlier monster pool runs, through the waypoint to the Stony Field. For the second and third I asked for a Nova Sorceress, so the save builder made `NovaSorc`: level 80, every waypoint open in all difficulties, Nova on the right mouse button, a belt of full rejuvenation potions. Then Far Oasis, Spider Forest, City of the Damned and Frigid Highlands in Normal, and the Stony Field, Dark Wood and Jail in Hell.
+
+The result: **516 rooms, 110,302 checks, 0 mismatches**. Every room's seed was predicted from the `-seed` number up to the population pass. In 176 rooms it was predicted all the way through; in the rest, one step in between, the presets and objects of the room, still came from the log. The model made 916 monsters, 257 normal groups, 4 champion packs and 20 unique groups, and every draw matched.
+
+Two numbers from the day three post were settled here. Day three read the special monster roll as 6 in 100, not 5, because it compares with "less than or equal" to 5. The run caught the boundary: of 252 rolls, one came out at exactly 5 and made a special monster. And the champion chance, `Range(100) < 20`, really does take its 20 from the first row of `MonUMod`: 24 rolls, champion exactly when the roll was below 20.
+
+Two monsters did not fit. After a monster is created its unit seed is normally two steps past where it started. A Goatman boss was six steps past, and a Fallen minion fifteen. Which function makes the extra steps is not read yet. The record lists them by log line and passes them on as a case for `monsters/stats`.
+
+On the 14th the work ran in parallel lanes again: an architect, an archivist, a reverser and a spec-writer, each an agent with its own copy of the repository. By 09:12 the review fixes of the quality roll were in and the `items/quality` spec was closed as reviewed. The code reading ran in parallel all day. The runs could not: until 20:38 there was one harness, one game under the debugger.
+
+## Where a monster can stand
+
+The first big piece of the day was the collision grid. Every room has a grid of cells, and every cell holds a 16-bit value. The bits say what is there: a wall, water, a monster's body, a missile, a corpse. When the population pass wants to put a monster somewhere, it asks the grid. "Can a monster of size 3 stand here?" is a test of a mask against a few cells.
+
+<Mermaid
+  code={`
+flowchart LR
+  dt1["DT1 tiles of the room and its active neighbours: 25 sub-tile bytes each"] --> grid["room collision grid, one 16-bit value per cell"]
+  units["monsters, objects, missiles, corpses"] -->|"mark and unmark patterns"| grid
+  grid --> test{"CollisionTest: mask against a 2x2 or 3x3 square"}
+  test -->|free| place["monster placed"]
+  test -->|blocked| next["next position"]
+`}
+/>
+
+The run was all scripted, by my choice: the agent drove the game from screenshots, with no human play, seven sessions on map seed 2026 in Normal. In session 4 I told it that Fire Wall kills poorly and needs aiming, and Nova needs none. So sessions 5 to 7 switched to a character with Nova, and the teleport hops got shorter, so fewer of them landed on ground where the character cannot stand.
+
+**1,439 room grids were compared cell for cell, 2,343,400 cells, 0 differences.** On top of that, the five position tests of the population pass were predicted from the grid as it stood when the pass began: 20,537 checks, 0 mismatches.
+
+<BarChart
+  title="Room grids compared cell for cell, by level type"
+  series={[{ name: 'rooms' }]}
+  rows={[
+    { label: 'Jungle (Act III)', values: [453] },
+    { label: 'Wilderness (Act I)', values: [286] },
+    { label: 'Desert (Act II)', values: [266] },
+    { label: 'Mesa (Act IV)', values: [191] },
+    { label: 'Act IV town', values: [147] },
+    { label: 'Act III town', values: [57] },
+    { label: 'Jail', values: [22] },
+    { label: 'Dungeon', values: [10] },
+    { label: 'Lava, Cave, Barracks, Tristram', values: [7] },
+  ]}
+  note="Level types as the run record lists them, run:2026-10-14-collision."
+/>
+
+The findings had two errors, and the cross-check against Blizzard's Data File Guide found both. Our first reading said every dead monster's body is re-marked in the grid. Blizzard's data guide says that with `deadCol` set to 1 _"the monster's corpse will have collision with other units"_. The guide was right: the code tests that bit and leaves those corpses marked. The run then saw it 12 times, on gargoyle traps and trapped souls. Our reading also said missiles mark nothing, and the same guide says some do. They do, if their `Collision` column is set: Fire Wall marked bit `0x40` 5,702 times in the run. Both corrections are marked in the finding as _"finding wrong; corrected"_.
+
+One surprise from the run itself. A wraith is created with its own collision pattern, and right after creation a function that sets its alignment unmarks it and marks it again with the default pattern, because the function that maps a size to a pattern has no case for wraiths. The run had four wraiths, in Jail Level 1, and all four ended with a plus-shaped mark. The unmark and re-mark happens on every creation, all 410 of the run; only for a wraith does it change anything.
+
+## Special monsters, and 256 names
+
+With the grid done, the special monster run came next. A special monster is a champion pack or a unique boss with minions. The population pass decides that a monster is special. Then a separate path decides what kind and with which modifiers.
+
+<Mermaid
+  code={`
+flowchart TB
+  roll{"special monster: unit seed Range(100) below 20?"}
+  roll -->|yes| champ["champion: one champion mod, weighted pick"]
+  roll -->|no| uniq["unique: Range(1), then 1 + difficulty mods; minions copy the transferable ones"]
+  champ --> apply["mod handlers run; only rndname draws: one step, low 16 bits = name seed"]
+  uniq --> apply
+  apply --> name["client keeps the low byte, rolls suffix, prefix, and in half the cases an appellation"]
+`}
+/>
+
+The collision grid had a second use here: the agent drove this run with a new pilot, `d2pilot.py`, which moves by the grid. Every teleport hop targets a cell whose value has none of the player's blocking bits in a 3×3 square around it, on a path over such cells, towards the nearest room that has not activated yet. The harness guide puts it simply: _"Never hop to a wall, water, a cliff edge or void…"_ It also says that _"the pilot only decides where to click: nothing it computes feeds a model."_
+
+This run was scripted too, by my choice: twelve sessions over classic and expansion and all three difficulties. Teleport, Nova every second hop, Energy Shield every two minutes or so from session 4, a potion when life fell below 70%. Two of the Hell sessions ended with the character dead, both before Energy Shield was added to the build.
+
+<BarChart
+  title="Special monsters in the twelve sessions, by game"
+  series={[
+    { name: 'champion packs' },
+    { name: 'unique groups' },
+    { name: 'superuniques' },
+  ]}
+  stacked
+  rows={[
+    { label: 'Expansion, Hell', values: [11, 38, 3] },
+    { label: 'Expansion, Nightmare', values: [5, 4, 3] },
+    { label: 'Expansion, Normal', values: [1, 3, 2] },
+    { label: 'Classic, Hell', values: [2, 1, 1] },
+    { label: 'Classic, Nightmare', values: [0, 6, 0] },
+    { label: 'Classic, Normal', values: [1, 2, 2] },
+  ]}
+  note="run:2026-10-14-mon-special. All 13 unique mods appeared in both Nightmare and Hell."
+/>
+
+**390,144 checks, 0 mismatches.** All 169 mod picks matched: the list of candidates, the total weight and the draw. The 606 calls of the mod handlers on bosses and pack members kept every seed unchanged, except the one step of `rndname`. Eleven superuniques, among them Rakanishu, Griswold, Bishibosh and Beetleburst, were built as the model said, with their minion counts. Rakanishu had 8 minions in Normal, 9 in Nightmare and 10 in Hell, inside the range `MinGrp + difficulty` to `MaxGrp + difficulty`.
+
+The community had this one half right. The Arreat Summit says unique monsters gain one bonus ability in Nightmare and two in Hell, and that holds: a unique gets `1 + difficulty` mods. A fandom wiki page says the same about superuniques, with "3-6 minions". For superuniques it is wrong. They get the fixed mods from their own record plus `difficulty` extra picks, and the run had 3 to 10 minions. The finding thinks the numbers were meant for random uniques: _"The numbers fit random uniques … which is likely what was meant."_
+
+Another surprise was in the names. A random unique monster's name is a prefix and a suffix from two string tables, sometimes with a title after them, and it is built on the client from a name seed. The server sends 16 bits of it. The first reading, from code, covered only the server side, so the finding said the name roll uses 16 bits. The first client roll in the development session disagreed with that and agreed with the low byte. The client reads all 16 bits and then keeps only the low byte. The finding now says: _"only 256 random-unique names are possible."_ All 94 client name rolls of the run followed the low byte.
+
+## Uniques and sets: a target 450 sessions away
+
+The second half of the item path was the unique and set builders. When the quality roll says "unique", the game has to pick which unique. It filters `UniqueItems` by the base item, the version, the level, the ladder flag, then makes one weighted draw. If nothing fits, the item falls back.
+
+<Mermaid
+  code={`
+flowchart TD
+  q["quality roll: unique (7) or set (5)"] --> seed["item seed set to a fixed start, {S, 666}"]
+  seed --> u["unique builder: filter rows, one weighted draw"]
+  seed --> st["set builder: filter rows, one weighted draw"]
+  u -->|"no candidate, or made already this game"| du["durability x3"]
+  st -->|no candidate| ds["durability x2"]
+  du --> r["reset the seed to {S, 666}, build a rare"]
+  ds --> m["reset the seed to {S, 666}, build a magic item"]
+  r -->|fail| m
+  m -->|fail| sup["superior"]
+  sup -->|fail| n["normal"]
+`}
+/>
+
+The plan needed at least 30 unique builds and 30 set builds in the runs, for every filter and fallback to show up. The agent built `UniqNova`, a level 80 Sorceress with magic find from stock uniques and charms, and farmed Eldritch the Rectifier, a superunique who stands near the Frigid Highlands waypoint in every expansion game. Waypoint, a few teleports, Nova, loot, new game, next seed.
+
+Thirty sessions in Hell gave 304 items. One was a unique and three were sets, and all three sets failed and fell back to magic. At that rate the target needed about 450 sessions. ADR-0010 has the arithmetic, and adds that magic find was not the limit: with diminishing returns, the 458 the character had for most of the stock run gives about 161% to the unique chance, and 608 would give only about 177%.
+
+<MagicFindCurve
+  marks={[458, 608]}
+  title="Magic find against its bonus"
+  sub="The same curves as in the days two and three post. The dots are MF 458 and 608."
+/>
+
+So the architect wrote a new rule, ADR-0010, and I approved it: a **forced-path run**. The quality roll reads one table, `ItemRatio`, to decide whether an item becomes unique. The builders never read it. They read `UniqueItems`, `SetItems`, the item bases and the item seed. So the run replaces only `ItemRatio`, as one loose file in a copy of the game directory, and keeps every other table stock. In the main variant the base chances are zeroed and the minimum columns lowered, so the chance sits at that edited minimum and magic find stops mattering. In a second one every item that reaches the unique test passes it. The record lists every changed cell. Replaying the same logs with the stock `ItemRatio` fails 177 rolls, so the game did load the edited table.
+
+The ADR is strict about what such a run may prove. It confirms the forced path: filters, draws, fallbacks. It proves nothing about how often the path runs: _"Frequencies, ratios and 'how often' claims can never come from it."_ And a forced run never stands alone: the stock run has to reproduce too.
+
+<BarChart
+  title="Unique and set builds: stock run against forced run"
+  series={[
+    { name: 'stock tables, 30 sessions' },
+    { name: 'edited ItemRatio, 54 sessions' },
+  ]}
+  rows={[
+    { label: 'Unique builds', values: [1, 115] },
+    { label: 'Set builds', values: [3, 72] },
+  ]}
+  note="run:2026-10-14-uniques and run:2026-10-14-uniques-forced."
+/>
+
+<BarChart
+  title="What the forced builds became"
+  series={[
+    { name: 'unique row picked' },
+    { name: 'unique failed, became rare' },
+    { name: 'set row picked' },
+    { name: 'set failed, became magic' },
+  ]}
+  stacked
+  rows={[
+    { label: 'Expansion, Hell', values: [17, 7, 12, 15] },
+    { label: 'Expansion, Nightmare', values: [28, 12, 9, 13] },
+    { label: 'Expansion, Normal', values: [5, 9, 3, 6] },
+    { label: 'Classic, Nightmare', values: [26, 11, 4, 10] },
+  ]}
+/>
+
+**1,519 creations reproduced, 0 failed**, with 115 unique builds and 72 set builds over three difficulties and classic. Some of what came out:
+
+- **Once per game.** A unique built in a game sets a bit in a 4,096-bit set, and a later pick of the same row fails with no re-pick. In one classic Nightmare game the pick landed on a breastplate unique already built in that game. The build failed, the durability tripled, 34 of 50 became 102 of 150, and the item came out rare. A failed unique comes out as a rare, and if the base has durability, it is tripled.
+- **Ladder uniques in single player.** Djinnslayer and Leviathan, ladder-only rows, were picked in single player Hell. The ladder bit is ignored when a byte of the game structure is non-zero, and in single player it is 3.
+- **The reset seed.** Each fallback step resets the item seed to the same fixed start, `{S, 666}`, that the failed builder began from, so the draws of a failed builder are simply thrown away.
+- **Sets have no once-per-game test.** No `enabled`, no ladder test either.
+
+### The afternoon of farming
+
+Most of the afternoon was this farming, and while it ran the harness play guide grew one rule at a time. I was watching the agent play, and the guide says where its rules come from: _"These rules come from the owner watching runs."_ Some of them:
+
+- _"Kill with Nova."_ Nova needs no aiming: stand near the pack and cast. _"Do not use Fire Wall, Blizzard or anything placed on a target cell; scripted aiming misses and wastes the session."_
+- _"Skip what Nova can't kill."_ Before a fight, compute the target's lightning resistance for the difficulty, including what its mods add, and teleport past an immune pack.
+- _"Select skills with skill hotkeys (F-keys), never by toggling the weapon set."_ Energy Shield was cast through the weapon swap at first. I saw the swap stick, with Energy Shield in place of Nova, and the rule now says: _"a toggle the game drops leaves the character on the wrong set, and every 'Nova' after it casts Energy Shield."_
+- _"Don't farm Mephisto: the Durance route proved too long and fragile for scripted play."_ Three Durance of Hate sessions were stopped by me and are not in the record.
+- _"Don't leave a live session idle."_ _"The commonest 'stall' is no stall at all: the game is healthy but nothing drives it while the agent edits code between hops."_
+
+And one rule that is about me: _"An owner session of ten minutes once covered more superuniques, upgrades and chests than an hour of scripted hunting; ask for one when coverage stalls, don't grind."_
+
+## Affixes, properties, and Arreat Summit's 2 to 6
+
+In the evening the reverser read the rest of item creation: affixes and item properties. These are findings only, from reading code, all `[I]`: inferred, not yet confirmed by a run. Their runs come next. But a few of the readings disagree with what the community says, and the runs will have to settle them.
+
+The affix level, `alvl`, decides which prefixes and suffixes an item can get:
+
+```c
+i = max(ilvl, qlvl);
+if (magic_lvl) alvl = i + magic_lvl;
+else if (i < 99 - qlvl / 2) alvl = i - qlvl / 2;
+else alvl = 2 * i - 99;
+alvl = clamp(alvl, 1, 99);
+```
+
+The Arreat Summit says the game picks randomly from all affixes with `qlvl <= ilvl + 2`, for magic and rare items alike. In 1.14d that rule exists only in a version-0 code path that no created item reaches. The live code compares with `alvl` and picks by `frequency` weight.
+
+Then the number of affixes on a rare. The Arreat Summit says rare items have 2 to 6 magical properties. The code takes one step of the item seed and indexes a table of eight entries with its low three bits:
+
+<BarChart
+  title="Affix slots on a rare item, by the table in the code"
+  sub="{3, 4, 4, 5, 5, 5, 6, 6}[low & 7]; jewels get 3 or 4 instead."
+  series={[{ name: 'chance' }]}
+  unit=" of 8"
+  rows={[
+    { label: '2 affixes', values: [0] },
+    { label: '3 affixes', values: [1] },
+    { label: '4 affixes', values: [2] },
+    { label: '5 affixes', values: [3] },
+    { label: '6 affixes', values: [2] },
+  ]}
+  note="items/0005, read from code [I]."
+/>
+
+So 3 to 6 slots, and five is the most common count. Fewer than three happen only when prefixes or suffixes run out of candidates. The runs have to show the distribution, and a rare with fewer than three affixes if one ever drops.
+
+From the properties finding:
+
+- **Ethereal** is one draw of `Range(100)` after the quality builder, ethereal when below 5. Expansion only, weapons and armour with durability, not low quality, not set items.
+- **Sockets** on normal and superior items are one `Range(100)`, socketed when below 33. But the socket **count is not drawn**: it is the item's start seed modulo the cap, plus one.
+- **Superior items roll too.** Blizzard's guide says the basic property function _"sets the stat value to its max value if the item is High Quality (Superior)"_. The code rolls it in every mode, and the Arreat Summit's "+1 to +3" to-hit range on superior weapons agrees with the code.
+- **No property uses the formula language.** The game has a small bytecode language for some formulas. Every property handler was read, and none of them evaluates it, so item properties do not wait for that row of the map.
+
+## A map from one number
+
+On day one I wrote that reproducing the room seed would be the first time this project builds a piece of a Diablo II map from nothing but the spec and a number. On day three it was a room and a file name, as numbers. Tonight, at 20:48, the outdoor generator finding came in with a reading check: not a new run, but a script that replays logs we already had, rebuilding the whole outdoor build of a level from its level seed. It models the act layout, the border, the cliffs and rivers, the roads, the preset areas, the waypoint and the shrines, then compares every preset it places and every room rectangle with what the game logged.
+
+**370 logged outdoor builds over all five acts (server and client copies counted separately), 0 mismatches.** The maze generator got the same kind of check, 12 logged maze builds, 0 mismatches.
+
+The project has not drawn a map from this yet. For this post the replay script was run on four logged games, and what it builds for the Blood Moor is drawn below: level 2, the first area outside the Rogue Encampment. For each of them, every preset and every room rectangle the model placed matched the game's log of that seed.
+
+<BloodMoorMaps
+  title="The Blood Moor, four map seeds"
+  sub="Each square is one 8×8-tile cell of the level. Built by tools/outdoor_replay.py from the level seed, which comes from the map seed."
+  note="Map seeds 12345 and 777 give a wide level, 1 and 2026 a tall one: the act layout picks the direction. The Den of Evil entrance, the cottages and the pond are placed in all four, each somewhere else. Seed 777 got a bridge over the river."
+/>
+
+The squares only say which kind of piece is in each cell, not what its tiles look like. The level seed follows from the map seed typed on the command line: map seed 12345 gives level seed `015b2e79`, and from it the river runs down the east edge, the Den of Evil entrance sits right of the middle, and the ways into the neighbouring levels open on the west edge and at the bottom.
+
+The order of the build, from the finding:
+
+<Mermaid
+  code={`
+flowchart TB
+  ms["map seed"] --> act["act seed: level rectangles and links"]
+  ms --> ls["level seed"]
+  act --> ring["level outline and border pieces"]
+  ring --> place["cliffs, river, bridge, caves"]
+  ls --> place
+  place --> roads["roads between the openings"]
+  roads --> fill["waypoint, shrines, preset areas: shuffle the inner cells, first fit"]
+  fill --> rooms["one 8x8 room per free cell"]
+`}
+/>
+
+The commonest draw in the whole build is a file pick. The first time a preset type is used, the game draws which of its files to use, even when there is only one file. A placement on random ground shuffles all the inner cells with two draws per cell, then takes the first cell where the piece fits. If nothing fits, nothing is placed, and unless the caller checks, nothing notices.
+
+## Slots
+
+At 20:38 one more change landed, and it is about how much can run at once: harness slots, ADR-0011. Until today runs had one harness, on display `:7`, and every run of every plan waited for it. The second copy from day three could only join that same game.
+
+<Mermaid
+  code={`
+flowchart TB
+  game["one shared game directory: pinned Game.exe, stock archives"]
+  game --> g0["slot 0: display :7, wineprefix"]
+  game --> g1["slot 1: display :8, wineprefix-1"]
+  game --> g2["slot 2: display :9, wineprefix-2"]
+  g0 --> l0["game + gdb + logger, own saves"]
+  g1 --> l1["game + gdb + logger, own saves"]
+  g2 --> l2["game + gdb + logger, own saves"]
+`}
+/>
+
+Now each slot is its own display and its own wine prefix, a copy of the base prefix with an empty saves directory. Every harness tool takes `--slot N`, and a `--display` or `--prefix` that contradicts it is refused. A lane gets its slots in its prompt and never touches another one. The budget is three or four slots at once on this machine, about 770 MB of prefix each.
+
+The cleanup rule changed. With one game, killing every process that matches a pattern with `pkill -f` was a fine cleanup. With several, _"it kills other lanes' sessions."_
+
+## The numbers
+
+<ProgressMultiples
+  title="Where it is now, against the last two posts"
+  note="Each measure has its own scale. Sources: the research map, docs/findings, re/symbols.csv, tools/ and docs/plans/done at each cut-off."
+/>
+
+The named addresses in `Game.exe` almost doubled in a day, from 626 to 1,143: most of them are functions the affix, maze, warp and outdoor readings named this evening.
+
+And the tags over time:
+
+<TagTimeline
+  title="Confirmed and inferred claims in the findings"
+  sub="[C]: read in the code and confirmed by something independent, usually a run. [I]: read in the code only. Nights are cut out."
+  note="The dips in [I] are mostly claims promoted to [C]."
+/>
+
+On day one the confirmed share was about one in five. At the end of day three it was about one in three. Now it is 446 against 721, about 38%. The specs, which are the deliverable, are at 999 confirmed against 801 inferred. In the chart, mornings move readings to `[C]`, and evenings add new `[I]` for the next morning's runs. From 17:35 to 20:50 the `[I]` count went from 560 to 721, almost all from the affix, maze, warp, property and outdoor findings.
+
+## What is open
+
+Every core row has started, so what is open now is mostly the second half of each one:
+
+- **Runs for this evening's findings.** Affixes, properties, maze, warps and outdoor are all read and replay-checked where logs existed, and all need their runs, now on separate slots.
+- **Objects.** Shrines, chests and barrels, with their tables documented today and no findings yet.
+- **Monster stats.** HP, damage and experience per difficulty and player count. One open question from today goes there: in classic Nightmare two aura uniques drew their aura with level 50, where expansion uniques use their own level plus 3.
+- **The creation paths.** Vendors, the Cube, runewords, hirelings: still not started, and still waiting for the core.
+
+And the map. Tonight it is a grid of squares for one level, drawn outside the project from its own model. A map with real tiles from a seed is still to be drawn.
