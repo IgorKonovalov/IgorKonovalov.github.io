@@ -76,6 +76,25 @@
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
 
+  /* === Data visualisation (validated: dataviz palette, light surface) ===
+     --viz-1..4: categorical, fixed order. --viz-step-1..4: one-hue ordinal ramp,
+     least to most. --viz-on-step-N: text that sits on a ramp step. */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --viz-step-1: #86b6ef;
+  --viz-step-2: #5598e7;
+  --viz-step-3: #2a78d6;
+  --viz-step-4: #184f95;
+  --viz-on-step-1: #1a1a2e;
+  --viz-on-step-2: #1a1a2e;
+  --viz-on-step-3: #ffffff;
+  --viz-on-step-4: #ffffff;
+  --viz-grid: #e5e4e1;
+  --viz-axis: #c3c2b7;
+  --viz-empty: #f2f0ed;
+
   /* === Syntax Highlighting (light) === */
   --syntax-comment: #6a737d;
   --syntax-keyword: #d73a49;
@@ -121,6 +140,22 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.25);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35), 0 14px 30px rgba(0, 0, 0, 0.3);
 
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+    --viz-3: #199e70;
+    --viz-4: #c98500;
+    --viz-step-1: #184f95;
+    --viz-step-2: #256abf;
+    --viz-step-3: #3987e5;
+    --viz-step-4: #86b6ef;
+    --viz-on-step-1: #ffffff;
+    --viz-on-step-2: #ffffff;
+    --viz-on-step-3: #ffffff;
+    --viz-on-step-4: #141418;
+    --viz-grid: #2a2a34;
+    --viz-axis: #3a3a48;
+    --viz-empty: #1e1e24;
+
     /* Syntax highlighting (dark) */
     --syntax-comment: #8b949e;
     --syntax-keyword: #ff7b72;
@@ -165,6 +200,22 @@
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35), 0 14px 30px rgba(0, 0, 0, 0.3);
+
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-step-1: #184f95;
+  --viz-step-2: #256abf;
+  --viz-step-3: #3987e5;
+  --viz-step-4: #86b6ef;
+  --viz-on-step-1: #ffffff;
+  --viz-on-step-2: #ffffff;
+  --viz-on-step-3: #ffffff;
+  --viz-on-step-4: #141418;
+  --viz-grid: #2a2a34;
+  --viz-axis: #3a3a48;
+  --viz-empty: #1e1e24;
 
   --syntax-comment: #8b949e;
   --syntax-keyword: #ff7b72;

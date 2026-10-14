@@ -1,0 +1,211 @@
+---
+// The d2-recon research map as a grid of boxes: one box per row of
+// docs/specs/README.md, filled by how far that subsystem has got.
+// With several snapshots the reader switches between them with radio tabs
+// (CSS only, no script); the last snapshot is shown first.
+// A box that moved since the previous snapshot carries an arrow.
+import '../../styles/viz.css';
+import './research-map.css';
+import {
+  researchMap,
+  type Band,
+  type MapState,
+  type SnapshotId,
+} from '../../data/d2recon';
+
+interface Props {
+  lang?: 'en' | 'ru';
+  snapshots: SnapshotId[];
+  title: string;
+  note?: string;
+}
+
+const { lang = 'en', snapshots, title, note } = Astro.props;
+
+const t = {
+  en: {
+    states: [
+      'not started',
+      'planned',
+      'findings',
+      'draft spec',
+      'reviewed spec',
+    ],
+    bands: {
+      core: 'Core',
+      enablers: 'Enablers',
+      paths: 'Creation paths',
+    } as Record<Band, string>,
+    snaps: { d1: 'Day 1', d3: 'Day 3', d4: 'Day 4' } as Record<
+      SnapshotId,
+      string
+    >,
+    moved: 'moved since the previous snapshot',
+    of: 'of 28',
+    show: 'Show as a table',
+    row: 'Subsystem',
+  },
+  ru: {
+    states: [
+      'не начато',
+      'в плане',
+      'находки',
+      'черновик спецификации',
+      'спецификация после ревью',
+    ],
+    bands: {
+      core: 'Ядро',
+      enablers: 'Опоры',
+      paths: 'Пути создания',
+    } as Record<Band, string>,
+    snaps: { d1: 'День 1', d3: 'День 3', d4: 'День 4' } as Record<
+      SnapshotId,
+      string
+    >,
+    moved: 'сдвинулось с прошлого снимка',
+    of: 'из 28',
+    show: 'Показать таблицей',
+    row: 'Подсистема',
+  },
+}[lang];
+
+const bands: Band[] = ['core', 'enablers', 'paths'];
+const uid = `rm-${Math.random().toString(36).slice(2, 8)}`;
+const states: MapState[] = [4, 3, 2, 1, 0];
+
+const counts = (snap: SnapshotId) =>
+  states
+    .map((st) => ({
+      st,
+      n: researchMap.filter((r) => r.state[snap] === st).length,
+    }))
+    .filter((c) => c.n > 0);
+
+const prevOf = (snap: SnapshotId): SnapshotId | null => {
+  const i = snapshots.indexOf(snap);
+  return i > 0 ? snapshots[i - 1] : null;
+};
+const lastIndex = snapshots.length - 1;
+---
+
+<figure class="viz research-map" aria-labelledby={`${uid}-title`}>
+  <p class="viz-title" id={`${uid}-title`}>{title}</p>
+
+  <ul class="viz-legend">
+    {
+      states
+        .slice()
+        .reverse()
+        .map((st) => (
+          <li>
+            <span class={`viz-swatch rm-fill-${st}`} />
+            {t.states[st]}
+          </li>
+        ))
+    }
+  </ul>
+
+  {
+    snapshots.length > 1 &&
+      snapshots.map((snap, i) => (
+        <input
+          type="radio"
+          class="rm-radio"
+          name={uid}
+          id={`${uid}-${snap}`}
+          checked={i === lastIndex}
+        />
+      ))
+  }
+  {
+    snapshots.length > 1 && (
+      <div class="rm-tabs" role="presentation">
+        {snapshots.map((snap) => (
+          <label for={`${uid}-${snap}`} class={`rm-tab rm-tab-${snap}`}>
+            {t.snaps[snap]}
+          </label>
+        ))}
+      </div>
+    )
+  }
+
+  <div class="rm-panels">
+    {
+      snapshots.map((snap) => {
+        const prev = prevOf(snap);
+        return (
+          <div class={`rm-panel rm-panel-${snap}`}>
+            <p class="rm-counts">
+              {counts(snap).map((c) => (
+                <span>
+                  <strong>{c.n}</strong> {t.states[c.st]}
+                </span>
+              ))}
+              <span class="rm-of">{t.of}</span>
+            </p>
+            {bands.map((band) => (
+              <section class="rm-band">
+                <p class="rm-band-name">{t.bands[band]}</p>
+                <ul class="rm-grid">
+                  {researchMap
+                    .filter((r) => r.band === band)
+                    .map((r) => {
+                      const st = r.state[snap];
+                      const moved = prev !== null && st > r.state[prev];
+                      return (
+                        <li
+                          class={`rm-box rm-fill-${st}`}
+                          title={`${r.id}: ${t.states[st]}${moved ? ` (${t.moved})` : ''}`}
+                        >
+                          <span class="rm-name">{r.id}</span>
+                          <span class="rm-pips" aria-hidden="true">
+                            {[1, 2, 3, 4].map((p) => (
+                              <span class={p <= st ? 'on' : ''} />
+                            ))}
+                          </span>
+                          <span class="rm-sr-only">{t.states[st]}</span>
+                          {moved && (
+                            <span class="rm-moved" aria-label={t.moved}>
+                              ↑
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        );
+      })
+    }
+  </div>
+
+  {note && <p class="viz-note">{note}</p>}
+
+  <details class="viz-data">
+    <summary>{t.show}</summary>
+    <table>
+      <thead>
+        <tr>
+          <th>{t.row}</th>
+          {snapshots.map((snap) => <th>{t.snaps[snap]}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          researchMap.map((r) => (
+            <tr>
+              <td>
+                <code>{r.id}</code>
+              </td>
+              {snapshots.map((snap) => (
+                <td>{t.states[r.state[snap]]}</td>
+              ))}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </details>
+</figure>

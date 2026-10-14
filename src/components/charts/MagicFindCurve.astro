@@ -1,0 +1,224 @@
+---
+// Effective magic find for unique, set and rare items in Diablo II 1.14d
+// (items/quality): above MF 10 the bonus is mf·C/(mf + C), with C = 250, 500
+// and 600; up to 10 it is linear. A thin muted line shows the bonus with no
+// diminishing returns, for scale. Values are printed at the line ends and
+// listed in the table under the chart.
+import '../../styles/viz.css';
+
+interface Props {
+  title: string;
+  sub?: string;
+  note?: string;
+  lang?: 'en' | 'ru';
+  /** Magic find values to mark with a dot on every curve. */
+  marks?: number[];
+}
+
+const { title, sub, note, lang = 'en', marks = [] } = Astro.props;
+
+const curves = [
+  { c: 250, en: 'unique', ru: 'уникальные' },
+  { c: 500, en: 'set', ru: 'сетовые' },
+  { c: 600, en: 'rare', ru: 'редкие' },
+];
+const bonus = (mf: number, c: number) =>
+  mf <= 10 ? mf : Math.floor((mf * c) / (mf + c));
+
+const W = 640;
+const H = 300;
+const pad = { l: 48, r: 96, t: 12, b: 40 };
+const MAX = 700;
+const sx = (x: number) => pad.l + (x / MAX) * (W - pad.l - pad.r);
+const sy = (y: number) => H - pad.b - (y / MAX) * (H - pad.t - pad.b);
+const path = (f: (x: number) => number) =>
+  Array.from({ length: MAX / 5 + 1 }, (_, i) => i * 5)
+    .map((x, i) => `${i ? 'L' : 'M'}${sx(x).toFixed(1)},${sy(f(x)).toFixed(1)}`)
+    .join('');
+const ticks = [0, 100, 200, 300, 400, 500, 600, 700];
+
+const t = {
+  en: {
+    x: 'magic find on the character',
+    y: 'bonus to the chance, %',
+    linear: 'no diminishing returns',
+    show: 'Show the numbers',
+    mf: 'MF',
+  },
+  ru: {
+    x: 'magic find персонажа',
+    y: 'прибавка к шансу, %',
+    linear: 'без убывающей отдачи',
+    show: 'Показать числа',
+    mf: 'MF',
+  },
+}[lang];
+const tableRows = [10, 50, 100, 200, 300, 458, 608];
+
+// End labels sit at the curve ends, nudged apart so they never overlap:
+// the top one stays, each next one is pushed down to at least 15px below.
+const labelY: number[] = [];
+curves
+  .map((c, i) => ({ i, y: sy(bonus(MAX, c.c)) + 4 }))
+  .sort((a, b) => a.y - b.y)
+  .reduce((prev, cur) => {
+    labelY[cur.i] = Math.max(cur.y, prev + 15);
+    return labelY[cur.i];
+  }, -Infinity);
+---
+
+<figure class="viz mf-curve">
+  <p class="viz-title">{title}</p>
+  {sub && <p class="viz-sub">{sub}</p>}
+  <ul class="viz-legend">
+    {
+      curves.map((c, i) => (
+        <li>
+          <span class="viz-swatch" style={`background: var(--viz-${i + 1})`} />
+          {`${lang === 'ru' ? c.ru : c.en}, C = ${c.c}`}
+        </li>
+      ))
+    }
+  </ul>
+  <svg
+    viewBox={`0 0 ${W} ${H}`}
+    role="img"
+    aria-label={`${title}. ${curves.map((c) => `${c.en}: MF 100 gives ${bonus(100, c.c)}`).join('; ')}.`}
+  >
+    {
+      ticks.map((v) => (
+        <g>
+          <line
+            x1={pad.l}
+            x2={W - pad.r}
+            y1={sy(v)}
+            y2={sy(v)}
+            class="mf-grid"
+          />
+          <text x={pad.l - 8} y={sy(v) + 4} text-anchor="end" class="mf-tick">
+            {v}
+          </text>
+          <text
+            x={sx(v)}
+            y={H - pad.b + 18}
+            text-anchor="middle"
+            class="mf-tick"
+          >
+            {v}
+          </text>
+        </g>
+      ))
+    }
+    <text
+      x={(pad.l + W - pad.r) / 2}
+      y={H - 4}
+      text-anchor="middle"
+      class="mf-axis-label">{t.x}</text
+    >
+    <path d={path((x) => x)} class="mf-linear"></path>
+    <text
+      x={sx(MAX) - 4}
+      y={sy(MAX) - 2}
+      text-anchor="end"
+      class="mf-end mf-muted">{t.linear}</text
+    >
+    <text
+      x={12}
+      y={(pad.t + H - pad.b) / 2}
+      text-anchor="middle"
+      transform={`rotate(-90 12 ${(pad.t + H - pad.b) / 2})`}
+      class="mf-axis-label">{t.y}</text
+    >
+    {
+      curves.map((c, i) => (
+        <g>
+          <path
+            d={path((x) => bonus(x, c.c))}
+            class="mf-line"
+            style={`stroke: var(--viz-${i + 1})`}
+          />
+          <text x={sx(MAX) + 6} y={labelY[i]} class="mf-end">
+            {`${lang === 'ru' ? c.ru : c.en} ${bonus(MAX, c.c)}`}
+          </text>
+          {marks.map((m) => (
+            <circle
+              cx={sx(m)}
+              cy={sy(bonus(m, c.c))}
+              r="4"
+              class="mf-dot"
+              style={`fill: var(--viz-${i + 1})`}
+            >
+              <title>{`${t.mf} ${m}: +${bonus(m, c.c)}%`}</title>
+            </circle>
+          ))}
+        </g>
+      ))
+    }
+  </svg>
+  {note && <p class="viz-note">{note}</p>}
+  <details class="viz-data">
+    <summary>{t.show}</summary>
+    <table>
+      <thead>
+        <tr>
+          <th>{t.mf}</th>
+          {curves.map((c) => <th>{lang === 'ru' ? c.ru : c.en}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          tableRows.map((m) => (
+            <tr>
+              <td>{m}</td>
+              {curves.map((c) => (
+                <td>{`+${bonus(m, c.c)}%`}</td>
+              ))}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </details>
+</figure>
+
+<style>
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .mf-grid {
+    stroke: var(--viz-grid);
+    stroke-width: 1;
+  }
+  .mf-tick,
+  .mf-axis-label {
+    font-size: 12px;
+    fill: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .mf-line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+  .mf-linear {
+    fill: none;
+    stroke: var(--viz-axis);
+    stroke-width: 1;
+  }
+  .mf-end {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--color-text-primary);
+  }
+  .mf-muted {
+    font-weight: 400;
+    fill: var(--color-text-muted);
+  }
+  .mf-dot {
+    stroke: var(--color-bg-primary);
+    stroke-width: 2;
+  }
+</style>

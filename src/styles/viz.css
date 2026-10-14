@@ -1,0 +1,86 @@
+/* ==========================================================================
+   Shared chrome for the static charts in src/components/charts/.
+   Imported by each chart component; Astro bundles it once per page.
+   Colours come from the --viz-* tokens in tokens.css.
+   ========================================================================== */
+
+.viz {
+  margin: var(--space-8) 0;
+  font-family: var(--font-body);
+}
+
+/* Wider than the reading column, like the Mermaid figures. */
+.viz-wide {
+  width: min(1000px, 94vw);
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.viz-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.viz-sub {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.viz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.viz-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.viz-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.viz-note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* "Show the numbers": every chart carries its data as a table. */
+.viz-data {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.viz-data summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.viz-data table {
+  margin-top: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Native SVG tooltips need a hit area; marks lighten on hover. */
+.viz-hit:hover,
+.viz-hit:focus-visible {
+  opacity: 0.8;
+  outline: none;
+}

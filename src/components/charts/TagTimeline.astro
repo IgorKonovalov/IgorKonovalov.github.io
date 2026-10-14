@@ -1,0 +1,270 @@
+---
+// Confirmed [C] and inferred [I] tags in the d2-recon findings over time, as
+// two step lines (a count only changes at a commit). Nights are cut out: each
+// day is drawn from 08:00 to midnight, and a hairline marks where a day starts.
+// Hovering (or tapping) shows the counts at that moment.
+import '../../styles/viz.css';
+import { tagSeries } from '../../data/d2recon';
+
+interface Props {
+  title: string;
+  sub?: string;
+  note?: string;
+  lang?: 'en' | 'ru';
+  /** Only show points up to this "DD HH:MM" (inclusive), for the older posts. */
+  until?: string;
+}
+
+const { title, sub, note, lang = 'en', until } = Astro.props;
+
+const points = until ? tagSeries.filter(([time]) => time <= until) : tagSeries;
+const days = [...new Set(points.map(([time]) => time.slice(0, 2)))];
+
+const W = 720;
+const H = 260;
+const pad = { l: 44, r: 92, t: 12, b: 30 };
+const DAY_START = 8;
+const DAY_HOURS = 16;
+
+const xOf = (time: string) => {
+  const d = days.indexOf(time.slice(0, 2));
+  const h = Number(time.slice(3, 5)) + Number(time.slice(6, 8)) / 60;
+  return d * DAY_HOURS + Math.max(0, h - DAY_START);
+};
+const xMax = days.length * DAY_HOURS;
+const yTop =
+  Math.ceil(Math.max(...points.map(([, c, i]) => Math.max(c, i))) / 200) * 200;
+const sx = (x: number) => pad.l + (x / xMax) * (W - pad.l - pad.r);
+const sy = (y: number) => H - pad.b - (y / yTop) * (H - pad.t - pad.b);
+
+// Step path: hold the previous value until the next commit, then jump.
+const stepPath = (k: 1 | 2) =>
+  points
+    .map((p, n) => {
+      const x = sx(xOf(p[0]));
+      const y = sy(p[k]);
+      if (n === 0) return `M${x},${y}`;
+      return `H${x}V${y}`;
+    })
+    .join('');
+
+const ticks = Array.from({ length: yTop / 200 + 1 }, (_, i) => i * 200);
+const last = points[points.length - 1];
+const month = lang === 'ru' ? 'окт.' : 'Oct';
+const names =
+  lang === 'ru'
+    ? ['[C] подтверждено', '[I] выведено']
+    : ['[C] confirmed', '[I] inferred'];
+const show = lang === 'ru' ? 'Показать числа' : 'Show the numbers';
+const timeHead = lang === 'ru' ? 'Время' : 'Time';
+
+const hoverPoints = points.map(([time, c, i]) => [sx(xOf(time)), time, c, i]);
+---
+
+<figure class="viz tag-timeline">
+  <p class="viz-title">{title}</p>
+  {sub && <p class="viz-sub">{sub}</p>}
+  <ul class="viz-legend">
+    <li>
+      <span class="viz-swatch" style="background: var(--viz-1)"></span>{
+        names[0]
+      }
+    </li>
+    <li>
+      <span class="viz-swatch" style="background: var(--viz-2)"></span>{
+        names[1]
+      }
+    </li>
+  </ul>
+
+  <div
+    class="tt-plot"
+    data-points={JSON.stringify(hoverPoints)}
+    data-names={JSON.stringify(names)}
+  >
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      role="img"
+      aria-label={`${title}. ${names[0]}: ${last[1]}, ${names[1]}: ${last[2]}.`}
+    >
+      {
+        ticks.map((v) => (
+          <g>
+            <line
+              x1={pad.l}
+              x2={W - pad.r}
+              y1={sy(v)}
+              y2={sy(v)}
+              class="tt-grid"
+            />
+            <text x={pad.l - 8} y={sy(v) + 4} class="tt-tick" text-anchor="end">
+              {v}
+            </text>
+          </g>
+        ))
+      }
+      {
+        days.map((d, i) => (
+          <g>
+            {i > 0 && (
+              <line
+                x1={sx(i * DAY_HOURS)}
+                x2={sx(i * DAY_HOURS)}
+                y1={pad.t}
+                y2={H - pad.b}
+                class="tt-day"
+              />
+            )}
+            <text x={sx(i * DAY_HOURS) + 4} y={H - pad.b + 18} class="tt-tick">
+              {`${Number(d)} ${month}`}
+            </text>
+          </g>
+        ))
+      }
+      <line x1={pad.l} x2={W - pad.r} y1={sy(0)} y2={sy(0)} class="tt-axis"
+      ></line>
+      <path d={stepPath(1)} class="tt-line" style="stroke: var(--viz-1)"></path>
+      <path d={stepPath(2)} class="tt-line" style="stroke: var(--viz-2)"></path>
+      <circle
+        cx={sx(xOf(last[0]))}
+        cy={sy(last[1])}
+        r="4"
+        class="tt-dot"
+        style="fill: var(--viz-1)"></circle>
+      <circle
+        cx={sx(xOf(last[0]))}
+        cy={sy(last[2])}
+        r="4"
+        class="tt-dot"
+        style="fill: var(--viz-2)"></circle>
+      <text x={sx(xOf(last[0])) + 10} y={sy(last[1]) + 4} class="tt-end"
+        >{`[C] ${last[1]}`}</text
+      >
+      <text x={sx(xOf(last[0])) + 10} y={sy(last[2]) + 4} class="tt-end"
+        >{`[I] ${last[2]}`}</text
+      >
+      <line
+        class="tt-cross"
+        x1="0"
+        x2="0"
+        y1={pad.t}
+        y2={H - pad.b}
+        visibility="hidden"></line>
+    </svg>
+    <div class="tt-tip" aria-live="off"></div>
+  </div>
+
+  {note && <p class="viz-note">{note}</p>}
+
+  <details class="viz-data">
+    <summary>{show}</summary>
+    <table>
+      <thead>
+        <tr><th>{timeHead}</th><th>[C]</th><th>[I]</th></tr>
+      </thead>
+      <tbody>
+        {
+          points.map(([time, c, i]) => (
+            <tr>
+              <td>{`${Number(time.slice(0, 2))} ${month} ${time.slice(3)}`}</td>
+              <td>{c}</td>
+              <td>{i}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </details>
+</figure>
+
+<script>
+  // Crosshair + tooltip: snap to the last commit at or before the pointer.
+  for (const plot of document.querySelectorAll<HTMLElement>('.tt-plot')) {
+    const pts = JSON.parse(plot.dataset.points ?? '[]') as [
+      number,
+      string,
+      number,
+      number,
+    ][];
+    const names = JSON.parse(plot.dataset.names ?? '[]') as string[];
+    const svg = plot.querySelector('svg');
+    const cross = plot.querySelector<SVGLineElement>('.tt-cross');
+    const tip = plot.querySelector<HTMLElement>('.tt-tip');
+    if (!svg || !cross || !tip || pts.length === 0) continue;
+
+    const move = (ev: PointerEvent) => {
+      const box = svg.getBoundingClientRect();
+      const x =
+        ((ev.clientX - box.left) / box.width) * svg.viewBox.baseVal.width;
+      let p = pts[0];
+      for (const q of pts) if (q[0] <= x) p = q;
+      cross.setAttribute('x1', String(p[0]));
+      cross.setAttribute('x2', String(p[0]));
+      cross.setAttribute('visibility', 'visible');
+      const [, time, c, i] = p;
+      tip.textContent = `${time.slice(3)}, ${Number(time.slice(0, 2))}.10 · ${names[0]} ${c} · ${names[1]} ${i}`;
+    };
+    const leave = () => {
+      cross.setAttribute('visibility', 'hidden');
+      tip.textContent = '';
+    };
+    plot.addEventListener('pointermove', move);
+    plot.addEventListener('pointerleave', leave);
+  }
+</script>
+
+<style>
+  .tt-plot {
+    position: relative;
+    touch-action: pan-y;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .tt-grid {
+    stroke: var(--viz-grid);
+    stroke-width: 1;
+  }
+  .tt-axis {
+    stroke: var(--viz-axis);
+    stroke-width: 1;
+  }
+  .tt-day {
+    stroke: var(--viz-axis);
+    stroke-width: 1;
+  }
+  .tt-tick {
+    font-size: 12px;
+    fill: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .tt-end {
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--color-text-primary);
+  }
+  .tt-line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .tt-dot {
+    stroke: var(--color-bg-primary);
+    stroke-width: 2;
+  }
+  .tt-cross {
+    stroke: var(--color-text-muted);
+    stroke-width: 1;
+  }
+  .tt-tip {
+    min-height: 1.5em;
+    margin-top: var(--space-1);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

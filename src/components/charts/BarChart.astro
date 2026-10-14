@@ -1,0 +1,213 @@
+---
+// Horizontal bar chart in plain HTML/CSS: grouped (one thin bar per series)
+// or stacked (segments split by a 2px surface gap, total at the tip).
+// Colours follow the series index, never the rank. Every bar has a native
+// tooltip, and the numbers are repeated in a table under the chart.
+import '../../styles/viz.css';
+
+interface Series {
+  name: string;
+}
+
+interface Row {
+  label: string;
+  values: number[];
+}
+
+interface Props {
+  title: string;
+  sub?: string;
+  note?: string;
+  series: Series[];
+  rows: Row[];
+  stacked?: boolean;
+  /** Appended to every printed value, e.g. "%". */
+  unit?: string;
+  /** Scale maximum; defaults to the largest bar, so several charts can share one scale. */
+  max?: number;
+  lang?: 'en' | 'ru';
+  wide?: boolean;
+}
+
+const {
+  title,
+  sub,
+  note,
+  series,
+  rows,
+  stacked = false,
+  unit = '',
+  max,
+  lang = 'en',
+  wide = false,
+} = Astro.props;
+
+const show = lang === 'ru' ? 'Показать числа' : 'Show the numbers';
+const totalWord = lang === 'ru' ? 'всего' : 'total';
+const fmt = (n: number) =>
+  n.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US') + unit;
+
+const sum = (vs: number[]) => vs.reduce((a, b) => a + b, 0);
+const top =
+  max ??
+  Math.max(
+    ...rows.map((r) => (stacked ? sum(r.values) : Math.max(...r.values))),
+  );
+// Bar length as a share of the track left after room for the value label.
+const frac = (v: number) => (top > 0 ? v / top : 0);
+const single = series.length === 1;
+---
+
+<figure class:list={['viz', 'bar-chart', { 'viz-wide': wide }]}>
+  <p class="viz-title">{title}</p>
+  {sub && <p class="viz-sub">{sub}</p>}
+
+  {
+    !single && (
+      <ul class="viz-legend">
+        {series.map((s, i) => (
+          <li>
+            <span
+              class="viz-swatch"
+              style={`background: var(--viz-${i + 1})`}
+            />
+            {s.name}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  <div class="bc-rows" role="list">
+    {
+      rows.map((r) => (
+        <div class="bc-row" role="listitem">
+          <span class="bc-label">{r.label}</span>
+          {stacked ? (
+            <span class="bc-track">
+              <span class="bc-stack" style={`--p: ${frac(sum(r.values))}`}>
+                {r.values.map((v, i) =>
+                  v > 0 ? (
+                    <span
+                      class="bc-seg viz-hit"
+                      style={`flex: ${v} 0 0; background: var(--viz-${i + 1})`}
+                      title={`${r.label}, ${series[i].name}: ${fmt(v)}`}
+                    />
+                  ) : null,
+                )}
+              </span>
+              <span class="bc-value">{fmt(sum(r.values))}</span>
+            </span>
+          ) : (
+            <span class="bc-group">
+              {r.values.map((v, i) => (
+                <span class="bc-track">
+                  <span
+                    class="bc-bar viz-hit"
+                    style={`--p: ${frac(v)}; background: var(--viz-${i + 1})`}
+                    title={`${r.label}${single ? '' : `, ${series[i].name}`}: ${fmt(v)}`}
+                  />
+                  <span class="bc-value">{fmt(v)}</span>
+                </span>
+              ))}
+            </span>
+          )}
+        </div>
+      ))
+    }
+  </div>
+
+  {note && <p class="viz-note">{note}</p>}
+
+  <details class="viz-data">
+    <summary>{show}</summary>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          {series.map((s) => <th>{s.name}</th>)}
+          {stacked && <th>{totalWord}</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          rows.map((r) => (
+            <tr>
+              <td>{r.label}</td>
+              {r.values.map((v) => (
+                <td>{fmt(v)}</td>
+              ))}
+              {stacked && <td>{fmt(sum(r.values))}</td>}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </details>
+</figure>
+
+<style>
+  .bc-rows {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  /* Mobile first: label above the bar; side by side from 640px. */
+  .bc-row {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  @media (min-width: 640px) {
+    .bc-row {
+      grid-template-columns: minmax(8rem, 13rem) 1fr;
+      gap: var(--space-3);
+      align-items: center;
+    }
+  }
+
+  .bc-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-tight);
+  }
+
+  .bc-group {
+    display: grid;
+    gap: 2px;
+  }
+
+  .bc-track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .bc-bar,
+  .bc-stack {
+    display: flex;
+    flex: none;
+    width: calc((100% - 5rem) * var(--p));
+    height: 14px;
+    min-width: 2px;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .bc-stack {
+    gap: 2px;
+    overflow: hidden;
+  }
+
+  .bc-seg {
+    min-width: 2px;
+    height: 100%;
+  }
+
+  .bc-value {
+    flex: none;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

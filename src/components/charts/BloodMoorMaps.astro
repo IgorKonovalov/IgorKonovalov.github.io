@@ -1,0 +1,229 @@
+---
+// Small multiples of the Blood Moor's cell layout for several map seeds, as
+// d2-recon's outdoor model builds them (src/data/d2recon.ts, bloodMoorMaps).
+// One square per 8x8-tile cell; no game art, only what kind of piece sits there.
+import '../../styles/viz.css';
+import { bloodMoorMaps } from '../../data/d2recon';
+
+interface Props {
+  title: string;
+  sub?: string;
+  note?: string;
+  lang?: 'en' | 'ru';
+}
+
+const { title, sub, note, lang = 'en' } = Astro.props;
+
+const t = {
+  en: {
+    seed: 'map seed',
+    level: 'level seed',
+    kinds: {
+      B: 'border or cliff',
+      '.': 'open ground',
+      W: 'river',
+      K: 'bridge',
+      D: 'Den of Evil entrance',
+      F: 'other preset (cottages, stones, pond)',
+      O: 'way into a neighbouring level',
+      R: 'road',
+      S: 'shrine',
+    } as Record<string, string>,
+    cells: (w: number, h: number) => `${w} by ${h} cells`,
+    den: (x: number, y: number) =>
+      `Den of Evil entrance at column ${x}, row ${y}`,
+    bridge: 'a bridge over the river',
+  },
+  ru: {
+    seed: 'сид карты',
+    level: 'сид уровня',
+    kinds: {
+      B: 'граница или скала',
+      '.': 'открытая местность',
+      W: 'река',
+      K: 'мост',
+      D: 'вход в Den of Evil',
+      F: 'другой пресет (дома, камни, пруд)',
+      O: 'проход на соседний уровень',
+      R: 'дорога',
+      S: 'святилище',
+    } as Record<string, string>,
+    cells: (w: number, h: number) => `${w} на ${h} клеток`,
+    den: (x: number, y: number) =>
+      `вход в Den of Evil: столбец ${x}, строка ${y}`,
+    bridge: 'мост через реку',
+  },
+}[lang];
+
+const legend = ['.', 'B', 'W', 'K', 'D', 'F', 'O', 'R', 'S'];
+
+const describe = (rows: string[]) => {
+  const parts = [t.cells(rows[0].length, rows.length)];
+  rows.forEach((row, y) => {
+    const x = row.indexOf('D');
+    if (x >= 0) parts.push(t.den(x + 1, y + 1));
+  });
+  if (rows.some((r) => r.includes('K'))) parts.push(t.bridge);
+  return parts.join('; ');
+};
+---
+
+<figure class="viz viz-wide blood-moor">
+  <p class="viz-title">{title}</p>
+  {sub && <p class="viz-sub">{sub}</p>}
+  <ul class="viz-legend">
+    {
+      legend.map((k) => (
+        <li>
+          <span class={`bm-key bm-${k === '.' ? 'G' : k}`} />
+          {t.kinds[k]}
+        </li>
+      ))
+    }
+  </ul>
+
+  <div class="bm-maps">
+    {
+      bloodMoorMaps.map((m) => (
+        <div class="bm-map">
+          <div
+            class="bm-grid"
+            style={`grid-template-columns: repeat(${m.rows[0].length}, var(--bm-cell))`}
+            role="img"
+            aria-label={`${t.seed} ${m.seed}: ${describe(m.rows)}`}
+          >
+            {m.rows.flatMap((row) =>
+              [...row].map((k) => (
+                <span
+                  class={`bm-c bm-${k === '.' ? 'G' : k}`}
+                  title={t.kinds[k]}
+                />
+              )),
+            )}
+          </div>
+          <p class="bm-caption">
+            {t.seed} <strong>{m.seed}</strong>
+            <br />
+            <span>
+              {t.level} <code>{m.levelSeed}</code>
+            </span>
+          </p>
+        </div>
+      ))
+    }
+  </div>
+  {note && <p class="viz-note">{note}</p>}
+</figure>
+
+<style>
+  .blood-moor {
+    --bm-cell: 18px;
+    --bm-ground: #ebe6d8;
+    --bm-rock: #9c9a90;
+  }
+  @media (min-width: 640px) {
+    .blood-moor {
+      --bm-cell: 22px;
+    }
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .blood-moor {
+      --bm-ground: #34322b;
+      --bm-rock: #6c6b66;
+    }
+  }
+  :root[data-theme='dark'] .blood-moor {
+    --bm-ground: #34322b;
+    --bm-rock: #6c6b66;
+  }
+
+  .bm-maps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-6);
+  }
+
+  .bm-grid {
+    display: grid;
+    gap: 2px;
+  }
+
+  .bm-c,
+  .bm-key {
+    position: relative;
+    display: block;
+    width: var(--bm-cell);
+    height: var(--bm-cell);
+    border-radius: 2px;
+  }
+  .bm-key {
+    width: 14px;
+    height: 14px;
+  }
+
+  .bm-G,
+  .bm-R,
+  .bm-S,
+  .bm-O {
+    background: var(--bm-ground);
+  }
+  .bm-B {
+    background: var(--bm-rock);
+  }
+  .bm-W {
+    background: var(--viz-1);
+  }
+  .bm-K {
+    background: linear-gradient(
+      var(--viz-1) 30%,
+      var(--bm-rock) 30% 70%,
+      var(--viz-1) 70%
+    );
+  }
+  .bm-D {
+    background: var(--viz-2);
+  }
+  .bm-F {
+    background: var(--viz-3);
+  }
+  .bm-V {
+    background: transparent;
+  }
+
+  /* Overlays drawn on open ground: road dot, shrine diamond, opening ring. */
+  .bm-R::after,
+  .bm-S::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+  }
+  .bm-R::after {
+    width: 35%;
+    height: 35%;
+    border-radius: 50%;
+    background: var(--color-text-secondary);
+  }
+  .bm-S::after {
+    width: 45%;
+    height: 45%;
+    transform: rotate(45deg);
+    background: var(--viz-4);
+    box-shadow: 0 0 0 1px var(--color-text-secondary);
+  }
+  .bm-O {
+    box-shadow: inset 0 0 0 2px var(--color-text-primary);
+  }
+
+  .bm-caption {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-tight);
+  }
+  .bm-caption span {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+</style>
