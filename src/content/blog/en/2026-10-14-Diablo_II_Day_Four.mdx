@@ -12,6 +12,7 @@ import BloodMoorMaps from '../../../components/charts/BloodMoorMaps.astro';
 import ProgressMultiples from '../../../components/charts/ProgressMultiples.astro';
 import TagTimeline from '../../../components/charts/TagTimeline.astro';
 import MagicFindCurve from '../../../components/charts/MagicFindCurve.astro';
+import GameArt from '../../../components/charts/GameArt.astro';
 
 [Days two and three](/projects/2026/10/13/diablo_ii_days_two_and_three/) stopped at 19:46 on 13 October. This post covers what came after: a bit of that evening and all of 14 October, up to 20:50. In that time five specs passed their reviews, the runs reproduced every monster the game put into the visited rooms, special ones included, the item path got as far as unique and set items, and the outdoor levels can now be rebuilt from their seeds.
 
@@ -140,6 +141,41 @@ This run was scripted too, by my choice: twelve sessions over classic and expans
 
 **390,144 checks, 0 mismatches.** All 169 mod picks matched: the list of candidates, the total weight and the draw. The 606 calls of the mod handlers on bosses and pack members kept every seed unchanged, except the one step of `rndname`. Eleven superuniques, among them Rakanishu, Griswold, Bishibosh and Beetleburst, were built as the model said, with their minion counts. Rakanishu had 8 minions in Normal, 9 in Nightmare and 10 in Hell, inside the range `MinGrp + difficulty` to `MaxGrp + difficulty`.
 
+<GameArt
+  title="The monster classes behind four of the run's superuniques"
+  images={[
+    {
+      src: '/images/diablo-ii/monster-fallen',
+      alt: 'A Fallen: a small red demon with an axe and a shield',
+      caption: 'Fallen, the class of Rakanishu',
+      width: 33,
+      height: 58,
+    },
+    {
+      src: '/images/diablo-ii/monster-griswold',
+      alt: 'Griswold, a large undead blacksmith',
+      caption: 'Griswold',
+      width: 31,
+      height: 71,
+    },
+    {
+      src: '/images/diablo-ii/monster-scarab',
+      alt: 'A scarab demon, a large dark insect with long claws',
+      caption: 'Scarab, the class of Beetleburst',
+      width: 65,
+      height: 79,
+    },
+    {
+      src: '/images/diablo-ii/monster-fallen-shaman',
+      alt: 'A Fallen Shaman holding a curved staff',
+      caption: 'Fallen Shaman, the class of Bishibosh',
+      width: 45,
+      height: 67,
+    },
+  ]}
+  note="Composed from the game's own sprite layers with the project's tools/cof.py, first frame of the neutral pose, without the colour shift a superunique gets in the game."
+/>
+
 The community had this one half right. The Arreat Summit says unique monsters gain one bonus ability in Nightmare and two in Hell, and that holds: a unique gets `1 + difficulty` mods. A fandom wiki page says the same about superuniques, with "3-6 minions". For superuniques it is wrong. They get the fixed mods from their own record plus `difficulty` extra picks, and the run had 3 to 10 minions. The finding thinks the numbers were meant for random uniques: _"The numbers fit random uniques … which is likely what was meant."_
 
 Another surprise was in the names. A random unique monster's name is a prefix and a suffix from two string tables, sometimes with a title after them, and it is built on the client from a name seed. The server sends 16 bits of it. The first reading, from code, covered only the server side, so the finding said the name roll uses 16 bits. The first client roll in the development session disagreed with that and agreed with the low byte. The client reads all 16 bits and then keeps only the low byte. The finding now says: _"only 256 random-unique names are possible."_ All 94 client name rolls of the run followed the low byte.
@@ -214,6 +250,34 @@ The ADR is strict about what such a run may prove. It confirms the forced path: 
 - **Ladder uniques in single player.** Djinnslayer and Leviathan, ladder-only rows, were picked in single player Hell. The ladder bit is ignored when a byte of the game structure is non-zero, and in single player it is 3.
 - **The reset seed.** Each fallback step resets the item seed to the same fixed start, `{S, 666}`, that the failed builder began from, so the draws of a failed builder are simply thrown away.
 - **Sets have no once-per-game test.** No `enabled`, no ladder test either.
+
+<GameArt
+  title="Two ladder uniques from the forced run, and the base of the made-twice case"
+  images={[
+    {
+      src: '/images/diablo-ii/item-djinnslayer',
+      alt: 'Djinnslayer: the inventory picture of a curved sword, its drop frames and a character holding it',
+      caption: 'Djinnslayer',
+      width: 151,
+      height: 88,
+    },
+    {
+      src: '/images/diablo-ii/item-leviathan',
+      alt: 'Leviathan: green body armour in the inventory, its drop frames and a character wearing it',
+      caption: 'Leviathan',
+      width: 176,
+      height: 88,
+    },
+    {
+      src: '/images/diablo-ii/item-breast-plate',
+      alt: 'A breast plate in the inventory, its drop frames and a character wearing it',
+      caption: 'Breast Plate, the base of the unique built twice',
+      width: 165,
+      height: 88,
+    },
+  ]}
+  note="Each sheet: the inventory picture, the frames of the item falling to the ground, and the item on a character. Rendered with the project's tools/item_art.py."
+/>
 
 ### The afternoon of farming
 

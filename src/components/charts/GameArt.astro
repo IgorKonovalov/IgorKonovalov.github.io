@@ -1,0 +1,112 @@
+---
+// A row of small pixel-art images from a game (sprites, item icons), each
+// with its own caption. The images are scaled by a whole number with nearest-
+// neighbour sampling so the pixels stay crisp, served as WebP with a PNG
+// fallback, lazy-loaded, and the figure always carries the copyright line.
+import '../../styles/viz.css';
+
+interface Art {
+  /** Site path without extension; `<src>.webp` and `<src>.png` must both exist. */
+  src: string;
+  alt: string;
+  caption: string;
+  /** Natural size in pixels. */
+  width: number;
+  height: number;
+}
+
+interface Props {
+  title: string;
+  images: Art[];
+  note?: string;
+  /** Whole-number upscale factor. */
+  scale?: number;
+  lang?: 'en' | 'ru';
+  credit?: string;
+}
+
+const {
+  title,
+  images,
+  note,
+  scale = 2,
+  lang = 'en',
+  credit = 'Diablo II',
+} = Astro.props;
+const creditLine =
+  lang === 'ru'
+    ? `Графика ${credit} © Blizzard Entertainment.`
+    : `${credit} art © Blizzard Entertainment.`;
+---
+
+<figure class="viz game-art">
+  <p class="viz-title">{title}</p>
+  <ul class="ga-row">
+    {
+      images.map((a) => (
+        <li class="ga-item">
+          <span class="ga-frame">
+            <picture>
+              <source srcset={`${a.src}.webp`} type="image/webp" />
+              <img
+                src={`${a.src}.png`}
+                alt={a.alt}
+                width={a.width * scale}
+                height={a.height * scale}
+                loading="lazy"
+                decoding="async"
+              />
+            </picture>
+          </span>
+          <span class="ga-caption">{a.caption}</span>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="viz-note">
+    {note ? `${note} ` : ''}{creditLine}
+  </p>
+</figure>
+
+<style>
+  .ga-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ga-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    max-width: 100%;
+  }
+  /* A quiet backing tile, so dark sprites stay visible on the dark theme. */
+  .ga-frame {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-secondary);
+    max-width: 100%;
+  }
+  .ga-frame img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+  }
+  .ga-caption {
+    max-width: 14rem;
+    font-size: var(--text-sm);
+    line-height: var(--leading-tight);
+    text-align: center;
+    color: var(--color-text-secondary);
+  }
+</style>
