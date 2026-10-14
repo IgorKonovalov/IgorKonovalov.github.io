@@ -6,6 +6,10 @@ description: 'The d2-recon preservation project, days two and three: the room-se
 ---
 
 import Mermaid from '../../../components/Mermaid.astro';
+import ResearchMap from '../../../components/charts/ResearchMap.astro';
+import ProgressMultiples from '../../../components/charts/ProgressMultiples.astro';
+import TagTimeline from '../../../components/charts/TagTimeline.astro';
+import MagicFindCurve from '../../../components/charts/MagicFindCurve.astro';
 
 [Day one](/projects/2026/10/11/diablo_ii_day_one/) ended at 20:39 on 11 October with the 134th commit. Since then the repository has got 206 more: 13 that same evening, 149 on 12 October, and 44 on the 13th, the last one at 19:46, while I was writing this. The 13th is not finished yet, so this post stops at that commit.
 
@@ -219,6 +223,13 @@ Magic find for unique, set and rare has diminishing returns, `F = 100 + mf·C/(m
 - **MF up to 10 is linear.** The code checks `mf + 100 > 110` before applying the curve. At MF 10 the community formula gives 9 for uniques, and 1.14d uses 10.
 - **Classic games use the expansion rows.** A community source says classic games use the `Version 0` rows of `ItemRatio`. The drop code pushes a constant 100, so classic drops use the expansion rows.
 
+<MagicFindCurve
+  marks={[10, 100]}
+  title="What magic find adds to the unique, set and rare chances"
+  sub="Up to MF 10 the bonus is MF itself; above it, mf·C/(mf + C). The dots mark MF 10 and MF 100."
+  note="items/0002. At MF 100 the bonus is 71% for uniques, 83% for sets and 85% for rares."
+/>
+
 Again all of it from my play. Two sessions on the Lightning Sorceress with MF 100, from Harlequin Crest and War Traveler, with no gear changes and no mercenary, on my instruction, so nothing else killed: 782 of 782 and 65 of 65 rolls. Without the logged value, a scan of every magic find from −150 to 400 fits **only 100**. A linear model changes 34 rolls. In one of them, an item the game rolled unique comes out low quality.
 
 Then two more characters, built from recipe files for exactly this. A Necromancer with MF 10 from one ring, a Wisp Projector, 954 kills in Nightmare, which I played with skeletons and Corpse Explosion: 574 of 574 rolls, and only MF 10 fits. 85 of the rolls came from his skeletons' kills, and removing his MF breaks 27 of them, so a summon uses its owner's magic find. And a classic Sorceress, 459 kills in Normal: all 52 rolls that reach a test used the expansion rows. The `Version 0` rows break 29 of them, including both classic uniques.
@@ -261,20 +272,32 @@ The backlog shows how much each piece of work leaves behind. On day one it had 4
 
 ## Where it is now
 
-The numbers, against day one:
+The research map, against day one. Switch between the two days to see what moved:
 
-|                        | Day one  | Now       |
-| ---------------------- | -------- | --------- |
-| Reviewed specs         | 3        | 7         |
-| Not started (of 28)    | 24       | 17        |
-| `[C]` / `[I]` findings | 48 / 175 | 240 / 455 |
-| Named addresses        | 278      | 626       |
-| Python tools           | 26       | 38        |
-| Closed plans           | 5        | 14        |
+<ResearchMap
+  snapshots={['d1', 'd3']}
+  title="The research map at the end of day one and of day three"
+  note="The arrow marks a row that moved since day one. Source: docs/specs/README.md at 8faba4f2 and c8753c82."
+/>
+
+And the other numbers:
+
+<ProgressMultiples
+  snapshots={['d1', 'd3']}
+  keys={['reviewed', 'confirmed', 'inferred', 'symbols', 'tools', 'plans']}
+  title="Day one against day three"
+  note="Each measure has its own scale. Sources: the research map, docs/findings, re/symbols.csv, tools/ and docs/plans/done at each cut-off."
+/>
 
 The seven reviewed specs are the RNG, the seed tree, the data tables, treasure classes, the monster pool, the level generator overview and preset units. The save format is a draft until item properties are done. Item quality, monster spawning and the string tables are at the findings stage.
 
 In the findings, confirmed claims went from about one in five to about one in three. In the specs, more than half are now confirmed.
+
+<TagTimeline
+  until="13 19:46"
+  title="Confirmed and inferred claims in the findings"
+  sub="[C]: read in the code and confirmed by something independent, usually a run. [I]: read in the code only. Nights are cut out."
+/>
 
 What is open in the repository right now: the population finding has its review fixes to apply and then its runs, which means the first reproduction of a monster spawn from the seed. The quality roll was reviewed three minutes before my cut-off, accepted with fixes, and 183 of the 485 classic calls stop at _"classic selection not modelled"_. And the map from a seed is still to be drawn.
 

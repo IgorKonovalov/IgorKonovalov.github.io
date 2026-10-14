@@ -5,6 +5,10 @@ tags: ['projects']
 description: 'The first day of a preservation project: documenting Diablo II 1.14d precisely enough to rebuild it. A random number generator with 666 in it, a seed tree checked against 5,954 values from the running game, three million rendered sprites, and a file format an agent remembered from somewhere it could not name.'
 ---
 
+import Mermaid from '../../../components/Mermaid.astro';
+import ResearchMap from '../../../components/charts/ResearchMap.astro';
+import TagTimeline from '../../../components/charts/TagTimeline.astro';
+
 At 10:21 on 11 October I made the first commit in a new repository, [diablo-2-recompilation](https://github.com/IgorKonovalov/diablo-2-recompilation). At 20:39 I made the 134th. In between, the repository learned what Diablo II's random number generator is, how one number typed on the command line turns into every map, every room and every monster of a game, and how a dying monster decides what to drop. It also learned how to read almost every file format the game ships with, and it rendered three million images from them, far more than I asked for.
 
 This is a developer diary for that day. Day one of something that will take a lot more days.
@@ -91,15 +95,18 @@ A generator is only half of it. The other half is which seed each random number 
 
 The rule turned out to be simple. A child seed is created as `init(step(parent).low)`: step the parent once, take the low word, initialise a new seed from it. So creating a child costs its parent exactly one draw. From the top down:
 
-```
--seed N
- ├─ map seed = N, game seed = {N, 666}
- ├─ act seed = init(map seed), stepped once → stored, the same for every act
- │   └─ level seed = init(stored act value + level id)
- │       └─ room seed = step(level seed)
- │           └─ active room seed: re-init, then k draws, then one more
- └─ server units (monsters, items, NPCs) draw from the game seed
-```
+<Mermaid
+  code={`
+flowchart TB
+  n["-seed N"] --> ms["map seed = N"]
+  n --> gs["game seed = {N, 666}"]
+  ms --> act["act seed = init(map seed), stepped once, stored: the same for every act"]
+  act --> lvl["level seed = init(stored act value + level id)"]
+  lvl --> room["room seed = step(level seed)"]
+  room --> active["active room seed: re-init, then k draws, then one more"]
+  gs --> units["server units: monsters, items, NPCs"]
+`}
+/>
 
 Two details from there.
 
@@ -114,6 +121,17 @@ The Act II seed then gives two more draws that pick two different Tal Rasha tomb
 Reading code gives you `[I]`. To get `[C]` for the seed tree we needed the actual game running, with a debugger watching the seeds.
 
 That took the afternoon. The game runs under wine. On my machine `ptrace_scope` is 1, which means a process can only debug its own descendants. So `winedbg` attach failed with error 5 and `winedbg` launch hung. Lowering `ptrace_scope` was rejected, because it weakens a security setting for the whole machine. A logging DLL injected into the game was kept for later. What worked is in ADR-0003 (an ADR is a decision record, a short document saying what was decided and why): a small launcher starts `wine game.exe -seed N` on a hidden Xwayland display and then _turns into_ `gdb` itself, keeping its process. So for the kernel the debugger is the game's ancestor, and it is allowed to attach. Another script clicks through the menus with XTEST, so nobody has to touch the game.
+
+<Mermaid
+  code={`
+flowchart LR
+  l["launcher: python"] -->|starts| w["wine game.exe -seed N on a hidden display"]
+  l -->|then becomes| g["gdb, the same process"]
+  g -->|"allowed to attach: it is the game's ancestor"| w
+  x["click script, XTEST"] -->|menus| w
+  g --> log["every seed the game makes, logged"]
+`}
+/>
 
 The ADR also has this sentence: _"A character was created by accident in the first test."_ The first version did not use the hidden display, and the game window took stray input on my workspace. I saw it happen, and it felt like magic.
 
@@ -222,6 +240,18 @@ Then, at 18:32, I wrote: _"create worktrees and orchestrate, we have a lot of to
 ## What is actually done
 
 The research map has 28 rows. At the end of day one, three of them are reviewed specs: the RNG core, the seed tree and the data tables. One more has findings in progress (treasure classes), level generation has an approved plan, and 24 are not started. Item quality, affixes, uniques, monster pools, packs, the maze generator: all of that is still ahead.
+
+<ResearchMap
+  snapshots={['d1']}
+  title="The research map at the end of day one"
+  note="Level generation's plan is approved, so its row shows as planned; the text above counts it among the 24 not started. Source: docs/specs/README.md at 8faba4f2."
+/>
+
+<TagTimeline
+  until="11 20:39"
+  title="Confirmed and inferred claims in the findings, day one"
+  sub="[C]: read in the code and confirmed by something independent. [I]: read in the code only."
+/>
 
 The repository's own README is already stale. Its status list has four unchecked items, and all four were done by 13:54. Its tool table lists 5 tools, and the folder has 26 Python scripts.
 
