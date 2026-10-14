@@ -14,6 +14,9 @@ the author asked for it to be the standard way.
   recount every number that is a sum (the first draft said "fourteen parks" over a list that
   added up to ten), check timezones (conductor records mix UTC and local), and remove every
   sentence that states the author's feelings, memories or plans that nobody told you.
+- Plan the visuals with the sections, per [visuals.md](visuals.md): a status grid, a chart per
+  result, a diagram per algorithm, game art where the text names a monster or an item. Chart
+  deliverables, not commit counts.
 - Draft the Russian twin per [russian-translation.md](russian-translation.md).
 - Run `node scripts/check-post-length.mjs` and `yarn build`.
 
@@ -33,6 +36,8 @@ Each gets:
     tables that do not earn their place, mixed units or timezones.
   - **Report voice:** places with no person in them, missing reactions, skipped scenes.
   - **Repetition:** a conclusion that restates the sections above it.
+  - **Visuals:** a section with numbers or a shape and no picture; a chart note that repeats the
+    sentence next to it; process metrics charted as if they were results.
   - **Overreach:** claims stronger than the evidence, including internal contradictions.
   - **Russian critic only:** calques per [russian-translation.md](russian-translation.md),
     one Russian term per concept, ё, grammar.

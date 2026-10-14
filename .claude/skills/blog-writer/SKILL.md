@@ -9,7 +9,8 @@ description: >
   ALSO use when translating an English post into Russian (the `src/content/blog/ru/` twin) or
   reviewing a Russian translation for naturalness.
   ALSO use when drafting a long-form post from research (git history, run records) — follow the
-  write → critique → questions → fix loop in references/review-loop.md.
+  write → critique → questions → fix loop in references/review-loop.md, and plan the post's
+  charts, diagrams and game art with references/visuals.md.
 ---
 
 # Blog Writer
@@ -89,6 +90,14 @@ than polishing the author's dictation, follow the loop in
 [review-loop.md](references/review-loop.md): research with agents, draft EN and RU, then two
 parallel critic agents (one per language), then numbered questions to the author for anything
 only the author knows, then apply. Never fill a gap with an invented feeling, memory or plan.
+
+## Visuals
+
+Make visualisations whenever the material allows it: a status grid of what is done, a chart for
+every result with numbers, a diagram for every algorithm, and pictures of the thing itself (game
+art, maps). Chart what was delivered, never process metrics such as commit counts. Components,
+data rules, how to get Diablo II art and how to check the result are in
+[visuals.md](references/visuals.md).
 
 ## Translating an English Post to Russian
 
