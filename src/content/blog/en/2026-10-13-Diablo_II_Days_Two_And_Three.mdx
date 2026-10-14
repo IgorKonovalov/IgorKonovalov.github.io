@@ -10,6 +10,7 @@ import ResearchMap from '../../../components/charts/ResearchMap.astro';
 import ProgressMultiples from '../../../components/charts/ProgressMultiples.astro';
 import TagTimeline from '../../../components/charts/TagTimeline.astro';
 import MagicFindCurve from '../../../components/charts/MagicFindCurve.astro';
+import GameArt from '../../../components/charts/GameArt.astro';
 
 [Day one](/projects/2026/10/11/diablo_ii_day_one/) ended at 20:39 on 11 October with the 134th commit. Since then the repository has got 206 more: 13 that same evening, 149 on 12 October, and 44 on the 13th, the last one at 19:46, while I was writing this. The 13th is not finished yet, so this post stops at that commit.
 
@@ -182,6 +183,27 @@ The other open case from day one was a champion monster: none had been killed in
 
 The agent was failing, so I played it. A Lightning Sorceress, built by the save tool and raised to level 80, alone in Nightmare. 124 resolver calls, all reproduced, and two of them were champions: both `fallenshaman4`, class 61. A champion takes the champion column of the treasure classes. Here that was 698, `Act 1 (N) Champ C`, and the drop was then upgraded by monster level 44 through 699 to 700, `Act 2 (N) Champ B`. A unique of the same class took 783 instead. Andariel took her quest class 834 with no upgrade.
 
+<GameArt
+  title="The champion and the act boss of the Nightmare session"
+  images={[
+    {
+      src: '/images/diablo-ii/monster-fallen-shaman',
+      alt: 'A Fallen Shaman holding a curved staff',
+      caption: 'Fallen Shaman, class 61: both champions were these',
+      width: 45,
+      height: 67,
+    },
+    {
+      src: '/images/diablo-ii/monster-andariel',
+      alt: 'Andariel, a tall demon with long red hair and spider legs on her back',
+      caption: 'Andariel, quest treasure class 834',
+      width: 122,
+      height: 169,
+    },
+  ]}
+  note="Composed from the game's own sprite layers with the project's tools/cof.py, first frame of the neutral pose. Champions and bosses get colour shifts in the game that are not drawn here."
+/>
+
 The champion rule is `[C]` now, but only as far as the runs went: Nightmare, expansion, single player, class 61.
 
 The treasure class spec itself was closed and reviewed on the morning of the 12th. Its review caught one error: the spec said the quality roll returns codes 2 to 7, and the run's own logs had code 1 eight times.
@@ -234,6 +256,48 @@ Again all of it from my play. Two sessions on the Lightning Sorceress with MF 10
 
 Then two more characters, built from recipe files for exactly this. A Necromancer with MF 10 from one ring, a Wisp Projector, 954 kills in Nightmare, which I played with skeletons and Corpse Explosion: 574 of 574 rolls, and only MF 10 fits. 85 of the rolls came from his skeletons' kills, and removing his MF breaks 27 of them, so a summon uses its owner's magic find. And a classic Sorceress, 459 kills in Normal: all 52 rolls that reach a test used the expansion rows. The `Version 0` rows break 29 of them, including both classic uniques.
 
+<GameArt
+  title="The characters and the magic find gear of the quality runs"
+  images={[
+    {
+      src: '/images/diablo-ii/char-sorceress',
+      alt: 'A Sorceress in light armour',
+      caption: 'Sorceress',
+      width: 19,
+      height: 71,
+    },
+    {
+      src: '/images/diablo-ii/item-harlequin-crest',
+      alt: 'Harlequin Crest: a helm in the inventory, its drop frames and a character wearing it',
+      caption: 'Harlequin Crest',
+      width: 142,
+      height: 82,
+    },
+    {
+      src: '/images/diablo-ii/item-war-traveler',
+      alt: 'War Traveler: boots in the inventory, their drop frames and a character wearing them',
+      caption: 'War Traveler',
+      width: 109,
+      height: 60,
+    },
+    {
+      src: '/images/diablo-ii/char-necromancer',
+      alt: 'A Necromancer in light armour',
+      caption: 'Necromancer',
+      width: 21,
+      height: 73,
+    },
+    {
+      src: '/images/diablo-ii/item-wisp-projector',
+      alt: 'Wisp Projector: a ring in the inventory and its drop frames',
+      caption: 'Wisp Projector, MF 10',
+      width: 54,
+      height: 32,
+    },
+  ]}
+  note="Item sheets rendered with tools/item_art.py: the inventory picture, the drop frames and, for worn items, the item on a character. Characters composed with tools/cof.py, without the gear."
+/>
+
 **1,916 rolls reproduced** in total.
 
 ### The Expansion row again
@@ -241,6 +305,34 @@ Then two more characters, built from recipe files for exactly this. A Necromance
 Day one had a line about a marker row called "Expansion" that sits in 30 `.txt` tables and is dropped from the compiled `.bin`. It came back today.
 
 The first Act V superunique kills in these sessions, Siege Boss, Megaflow Rectifier, Threash Socket and Sharp Tooth Sayer, failed: 18 resolver calls did not reproduce. The cause was in our own tool. `superuniques.txt` has an Expansion marker row that takes no record, and `tc.py` counted it, so _"every superunique id >= 42 was read one row late."_ The format notes already said the row takes no record. `tc.py` just had not followed them.
+
+<GameArt
+  title="The monster classes behind the four Act V superuniques that were read one row late"
+  images={[
+    {
+      src: '/images/diablo-ii/monster-overseer',
+      alt: 'An Overseer, a hunched demon with a whip',
+      caption: 'Overseer: Siege Boss and Sharp Tooth Sayer',
+      width: 131,
+      height: 116,
+    },
+    {
+      src: '/images/diablo-ii/monster-minion',
+      alt: 'A Minion of Destruction, a small horned demon',
+      caption: 'Minion: Megaflow Rectifier',
+      width: 82,
+      height: 61,
+    },
+    {
+      src: '/images/diablo-ii/monster-siege-beast',
+      alt: 'A Siege Beast carrying a wooden cage on its back',
+      caption: 'Siege Beast: Threash Socket',
+      width: 117,
+      height: 162,
+    },
+  ]}
+  note="Composed from the game's own sprite layers with the project's tools/cof.py, first frame of the neutral pose. Without the colour shift a superunique gets in the game."
+/>
 
 ## Saves, art and the smaller things
 

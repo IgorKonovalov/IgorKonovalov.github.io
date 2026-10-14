@@ -8,6 +8,7 @@ description: 'The first day of a preservation project: documenting Diablo II 1.1
 import Mermaid from '../../../components/Mermaid.astro';
 import ResearchMap from '../../../components/charts/ResearchMap.astro';
 import TagTimeline from '../../../components/charts/TagTimeline.astro';
+import GameArt from '../../../components/charts/GameArt.astro';
 
 At 10:21 on 11 October I made the first commit in a new repository, [diablo-2-recompilation](https://github.com/IgorKonovalov/diablo-2-recompilation). At 20:39 I made the 134th. In between, the repository learned what Diablo II's random number generator is, how one number typed on the command line turns into every map, every room and every monster of a game, and how a dying monster decides what to drop. It also learned how to read almost every file format the game ships with, and it rendered three million images from them, far more than I asked for.
 
@@ -214,6 +215,27 @@ To check the drop model against the game, somebody has to kill monsters. Here an
 It started from what the harness already had. The menus are a steps file: clicks in coordinates of the 800×600 game window, with comments like _"empty background: the first click only activates the window"_, then SINGLE PLAYER, then OK on the character screen. Walking to the camp waypoint is another steps file that goes around Warriv and the camp fire, with a warning in the header: _"NPCs wander, so if the last screenshot shows no menu, take a shot, find the stone pad and click it by hand."_ "By hand" here means the agent looking at a screenshot and sending one click.
 
 The first session went the most literal way. A script walked a level 1 Barbarian north-east out of the Rogue Encampment into the Blood Moor. Then the agent took screenshots, found monsters on them, and attacked each one with a single click at its position. Even before that, a first attempt stopped at the very first drop, because the debugger script read a 32-bit game pointer as a 64-bit one. The second attempt worked: 4 resolver calls, every one reproduced. Three of them were Fallen that dropped nothing.
+
+<GameArt
+  title="The first drop run: the hunter and the hunted"
+  images={[
+    {
+      src: '/images/diablo-ii/char-barbarian',
+      alt: 'A Barbarian in light armour, bare-handed',
+      caption: 'The Barbarian',
+      width: 30,
+      height: 79,
+    },
+    {
+      src: '/images/diablo-ii/monster-fallen',
+      alt: 'A Fallen: a small red demon with an axe and a shield',
+      caption: 'Fallen: three of the first four kills',
+      width: 33,
+      height: 58,
+    },
+  ]}
+  note="Composed from the game's own sprite layers with the project's tools/cof.py, first frame of the neutral pose. The character is shown in starting armour without a weapon."
+/>
 
 Four kills is far too few. So the second session changed two things.
 
