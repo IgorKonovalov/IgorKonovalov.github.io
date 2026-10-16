@@ -1,0 +1,306 @@
+---
+title: 'Diablo II, days five and six'
+date: 2026-10-16
+tags: ['projects']
+description: 'Days five and six of the d2-recon preservation project: the agents ran an unattended queue of plans through two nights, every row of the research map but the newest is now a reviewed spec, the creation paths that waited for the core are done, combat simulation entered scope, and seven sessions the agents could not play, I played.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+import ResearchMap from '../../../components/charts/ResearchMap.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+import ProgressMultiples from '../../../components/charts/ProgressMultiples.astro';
+import TagTimeline from '../../../components/charts/TagTimeline.astro';
+import GameArt from '../../../components/charts/GameArt.astro';
+
+[Day four](/projects/2026/10/14/diablo_ii_day_four/) stopped at 20:50 on 14 October. This post covers the rest of that evening, all of the 15th and most of the 16th. On day four the research map had 28 rows and 12 of them were reviewed specs. Now it has 29 rows and 28 are reviewed, and the one that is not is the newest, combat, because on the morning of the 16th game simulation entered the project's scope, and it is the first thing on this blog about Diablo II that is not about creating something.
+
+The other thing that changed is who did the work. Until the 15th every plan had a phase with me in it: a run I played, a question I answered. On the morning of the 15th I approved nine plans at once to run without me, and the lanes, each an agent with its own copy of the repository, ran them through the day and the night on the harness, the game under a debugger with a logger attached. The record says what came of that, and it also says where the agents could not get and I had to play: seven sessions, on the 16th, to kill the bosses the scripted play kept dying on the way to. The post stops at 17:53 on the 16th, when the record of those sessions merged.
+
+## The map of the work
+
+<ResearchMap
+  snapshots={['d1', 'd3', 'd4', 'd6']}
+  title="The research map at each cut-off"
+  note="The arrow marks a row that moved since the previous snapshot. Source: docs/specs/README.md at commits 8faba4f2, c8753c82, 2c8eb42 and 33dc648. The Simulation band was added on 16 October by ADR-0014."
+/>
+
+Sixteen rows moved to reviewed in two days. The last six core rows: affixes, properties, the maze generator, the outdoor generator, warps and objects. The last three enablers: the formula bytecode, the string tables, the save file. And all seven **creation paths**, the band that on day four I wrote "waits for the core": vendors, the Horadric Cube, sockets and runewords, quest drops, monster stats, hirelings and player creation. Once the core was reviewed, the paths went in two days.
+
+Each row went the same way as before, the pipeline the [day one](/projects/2026/10/11/diablo_ii_day_one/) post describes: findings read from the code and tagged `[I]`, a harness run that raises them to `[C]` where a model reproduces the game, a spec, a review by an agent that did not write it. Every run record added in the window ends with zero mismatches. The ones that carry a result for this post:
+
+| Run                    | What the model reproduced                                                                                     | Checks       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- | ------------ |
+| Affixes                | 3,102 item creations: 366 magic, 105 rare, 35 superior, 31 low, 2,472 normal, 36 automagic                    | 0 mismatches |
+| Properties             | 2,281 creations: base stats, property rolls, ethereal, sockets                                                | 0            |
+| Mazes, links and warps | 14 sessions, 189,355 checks                                                                                   | 0            |
+| Outdoor levels         | 11 new logs and 93 older ones, 572,211 checks on the new ones                                                 | 0            |
+| Objects                | 13 sessions, 142,540 checks; the room's objects, which on day four still came from the log, are now predicted | 0            |
+| Monster stats          | 4,571 monster creations, 62,991 checks                                                                        | 0            |
+| Acts III to V presets  | 6 logs, 155,215 checks                                                                                        | 0            |
+| String tables          | 336 index and 3,928 key lookups                                                                               | 0            |
+| Sockets and runewords  | 22 sessions, 351 inserts, 50 runewords                                                                        | 0            |
+| The Cube               | 182 transmutes, 51 of them crafted                                                                            | 0            |
+| Items end to end       | 889 creations, 219 followed from the pick to the written stats                                                | 0            |
+| Vendors                | 94 stock builds, 325 gamble windows, 9,206 created items                                                      | 0            |
+| Player creation        | 35 new characters, 269 item copies, 20 level-ups, 11,152 comparisons                                          | 0            |
+| The formula evaluator  | 44,529 evaluations, all 14 opcodes the stock data uses                                                        | 0            |
+| Hirelings              | 53 hire tables, 49 hires, 33 saved mercenaries                                                                | 0            |
+| Quest drops            | 53 scripted sessions and 7 of mine; in mine, 221 drop resolutions and 4,737 monster levels                    | 0            |
+
+A check is one value the model predicted and the game logged. The sessions were driven by the agent from screenshots, with the pilot from day four, the script that moves the character by the collision grid and clicks for it, except the seven at the end of the quest drops row.
+
+## The night of the 14th
+
+Day four ended with five findings waiting for their runs, and with the harness slots that let several games run at once. The runs came that night, the first at 22:37, the last at 04:14, and the last of the five plans closed at 07:50.
+
+The maze run found the first thing the day four reading had wrong. The warp pairing between two levels was read as a match of rank slots. The run showed it falls back: _"Warp pairing falls back when the destination has no room with the rank slot's bit... A Durance level carries only the slot its finisher's rotation faced, so rank pairing alone mispredicts there."_ The finding is corrected and says so. The same run found that the Act V red portals are not objects placed by the preset files or the object groups; they come from somewhere else.
+
+The outdoor run caught the harness in a mistake. The maze run had labelled one session classic. The outdoor run loaded the same character and saw five act tabs in its waypoint menu. The save's status byte had the expansion bit set. The maze record was corrected, and the harness play guide got a rule: _"Check a classic character really is classic before a classic session: the `.d2s` status byte must have bit `0x20` (expansion) clear, and the waypoint menu shows four act tabs, not five."_ Every character recipe now has to say which game it is for, and the save builder refuses one that does not.
+
+Monster stats had three surprises of its own. The first run showed the regeneration of a pack's members growing with the pack's HP multiplier, although the handler the reverser read writes no such stat. The unit's stat callback does. It also corrected a day-four reading about classic: the HP stat is halved together with its fraction, where the finding had said it kept the unhalved value. And unit ids are reused within a game, which a model that keyed on them had to learn.
+
+<BarChart
+  title="Item creations reproduced by the item runs"
+  sub="Each creation is one item the game made and the model rebuilt from the seed."
+  series={[{ name: 'creations' }]}
+  rows={[
+    { label: 'Vendors (stock and gambling)', values: [9206] },
+    { label: 'Affixes', values: [3102] },
+    { label: 'Properties', values: [2281] },
+    { label: 'Items end to end', values: [889] },
+    { label: 'Sockets and runewords (inserts)', values: [351] },
+    { label: 'Player creation (item copies)', values: [269] },
+    { label: 'The Cube (transmutes)', values: [182] },
+  ]}
+  note="run records in docs/findings/items/experiments.md and docs/findings/player/experiments.md."
+/>
+
+## The unattended queue
+
+At 08:05 on the 15th nine plans and one ADR landed in one commit, under the name "the unattended queue". The plans index records the decision: _"The owner approved plans 0027–0036 together, to run without them. Phases with the human owner are gone: plan 0020 Phase 4 is agent-driven, with owner play as the fallback."_ The queue was two enablers, the string tables and the formula language, six of the seven creation paths, and a wiki.
+
+The harness had to change for it. On the 15th the memory manager killed every lane at once, and I found that in the morning: _"systemd-oomd killed the whole editor scope (every lane at once) when RAM and swap passed 90%."_ Each run now gets its own memory cap in its own scope, so a runaway run is stopped alone, and the rule became at most two harness lanes at a time. Slot 0, the first game, on my own display, stays mine.
+
+One more rule came from the lanes killing themselves. On day four the cleanup rule was already "no `pkill -f` with several games running". Now it is no `pkill -f` at all: _"the pattern also matches the shell running the `pkill` and every other process whose command line holds it (two lanes killed their own shell this way)."_ A loop writes its PID at start and is stopped by it.
+
+The queue ran for thirty-one hours, sockets first at 19:34 on the 15th and the wiki last at 15:27 on the 16th, with the Cube, player creation, the formula evaluator, vendors, hirelings and quest drops closing through the night between. What the specs say is below. Where they disagree with the community, it is nearly always the same way: a divisor, a constant, a bit.
+
+### Vendors and gambling
+
+When the game creates a new game, it spends the first draws of the game seed on fixed things, and two of them matter for this post:
+
+<Mermaid
+  code={`
+flowchart LR
+  gs["game seed"] --> d1["draw 1: monster regions"] --> d2["draw 2: object regions"] --> d3["draw 3: the store seed"] --> d4["draw 4: the quest seed"]
+`}
+/>
+
+The first time you talk to a vendor in a game, the server builds that vendor's stock from the store seed.
+
+Gambling is where the community was wrong by a factor of a hundred. The Arreat Summit gives the chance of a gambled item being upgraded as _"(ilvl − qlvl) × 0.9% + 1%"_, where ilvl is the item's level and qlvl the base item's quality level. The slope is right. The constant is one in 10,000, not one in 100. The spec's words: _"`R(S, 10000) < (lvl − qlvl)·GambleUber + 1` gives `(lvl − qlvl)·0.9 % + 0.01 %`."_ The run reproduced all 2,292 upgrade tests. The gamble level is drawn in `clvl − 5 .. clvl + 4`, five below your character level to four above, and it is used three times: to filter the base, as the item's creation level, and as the upgrade level. The first two slots of the gamble screen are always a ring and an amulet, and their level and pick draws are made and thrown away. The Arreat Summit's magic-items page says the range is plus six to minus three; the same publisher's gambling page says minus five to plus four, and that one is right. With stock tables the quality shares are 50 unique, 100 set, 10,000 rare and 89,850 magic in 100,000. And the order of equal-level rows on the screen is whatever the C library's `qsort` left, not the order of the data file.
+
+### The Cube
+
+The server scans the recipe table in row order for the first recipe whose header conditions and seven inputs fit; the first match wins. A recipe row has two percentages, so much of your character level plus so much of the input item's level, and a created output gets their sum. The crafted recipes have 50 and 50, so a craft sits halfway between you and the input. An output that reuses the input keeps the input's level. The run saw one row refuse a rare amulet because its output wants sockets and an amulet cannot have any.
+
+The cow portal opened three times in the run, in Normal, Nightmare and Hell, and was refused three other times, each for a different reason. It is refused if the game already opened one, if this character already killed the Cow King, if Baal is not dead in the expansion, or if you are not standing in the Rogue Encampment. The two Uber Tristram recipes are stubs in 1.14d single player: _"PandemoniumPortalStub, PandemoniumFinalePortalStub: return 0."_
+
+### Hirelings
+
+The first time you talk to a mercenary seller in a game, the server builds the hire table from the store seed: one seed per name in the seller's name range, then ten names picked into the list. The list sits at your level minus five to minus one, never above you. When the tenth hire empties the list, it is rebuilt on the spot from the chained seed, and the run caught that once: _"the 10th hire emptied the list, `HIRE_RebuildIfEmpty` built a new table from the chained S inside `HIRE_Hire`."_
+
+The stats per level are the table's values plus a per-level term, with one division the community has wrong. The resistance per level column is divided by four in 1.14d, where the community guide says eighths. The experience for the next level is `(L + 1) × L² × Exp/Lvl`, not the formula in the guides. A mercenary's kill counts its own magic find plus its owner's: _"three kills by the `MercMF` Rogue read 0 for the mercenary and 40 for the player."_ And one class in the monster table, 560, has no hireling row, so _"no save and no hire can make it."_
+
+### Player creation
+
+A new character begins as a save with only a header, written by the client. The server reads it, sees the "new" bit, and builds the character from its class row. Life at creation is vitality plus the class's add, with no per-point factor: a Sorceress starts at 40 life, 35 mana, 74 stamina; a Barbarian at 55, 10 and 92. A level-up draws nothing from any seed. The experience penalties above level 25 are not the percentages the Arreat Summit lists; the game uses factors over 256, and the spec says so: _"207/256 is 80.9 %, 13/256 is 5.1 %."_
+
+### The formula language
+
+The game has a small formula language in its skill and item data, and the day four post said no item property uses it. Now the whole thing is specified. In the shipped data each formula is already compiled into postfix bytecode in four header-less pools, and the game runs a stack machine of 64 integers over the bytes. The stock pools use exactly 14 opcodes. The run evaluated 44,529 formulas and reproduced every one. The evaluator can draw a random number through one function, `rand`, and no stock formula called it in play: no seed passes through the evaluator.
+
+### Quest drops
+
+The quest seed is the fourth draw in the diagram above, right after the store seed. From it come Andariel's gems, the Hellforge's gems and rune, and the quest reward items. A treasure class is one row of the game's drop table, what a monster or a chest may drop and with what weights, and a boss has a quest treasure class that he uses while his quest is not done. The quest state is a set of bits in the save, and two things about those bits that players argue about:
+
+- Andariel's quest drop. Her death script sets one bit, and Warriv's talk turns it into another. So her quest treasure class, with its two chipped gems and one standard, is used again _"if the game was saved before the report"_.
+- Duriel's. His bit is set at the kill and never cleared, so his quest treasure class is used until the first kill. A save with every quest done still has Duriel's quest drop, because his quest's completion bit is not the one the drop tests.
+
+The imbue reward creates an item at `max(clvl, 1)`, plus four if that is above five, as a rare, and takes two fresh steps of the game seed. Only low, normal and superior bases can be imbued.
+
+## The seven sessions I played
+
+The quest drops plan had a Phase 2 of 53 scripted sessions. They confirmed the quest treasure class, the quest seed, the special drops and the rewards. They could not reach four things: _"Mephisto quest done (4 attempts), the Countess in all four states (10 attempts), the Hell Hellforge (3 deaths), the Cow King."_ The Countess sessions all ended with none killed. The Cow King session killed 565 Hell Bovines and never met him. The Hellforge in Hell: _"died on the way three times."_ The plan closed with those rows at `[I]` and an owner addendum in the backlog.
+
+So on the 16th I played them: seven sessions on slot 0, seeds 3501 to 3507, fullscreen with sound, the logger attached, no stepping. All seven reached their target, about ten minutes each; with a prepared character it was easy. The record is careful about what is mine and what is logged: _"sound and fullscreen are not in the header and rest on the owner's statement."_
+
+<GameArt
+  title="Three of the four targets, as the game draws their class"
+  images={[
+    {
+      src: '/images/diablo-ii/monster-hell-bovine',
+      alt: 'A Hell Bovine: a cow standing on two legs, holding a halberd',
+      caption: 'Hell Bovine, the class of the Cow King',
+      width: 92,
+      height: 132,
+    },
+    {
+      src: '/images/diablo-ii/monster-hephasto',
+      alt: 'Hephasto the Armorer: a large horned demon with a hammer',
+      caption: 'Hephasto, who guards the Hellforge',
+      width: 66,
+      height: 99,
+    },
+    {
+      src: '/images/diablo-ii/monster-dark-stalker',
+      alt: 'A Dark Stalker: a corrupt rogue with a sword and a shield',
+      caption: 'Dark Stalker, the class of the Countess',
+      width: 36,
+      height: 73,
+    },
+  ]}
+  note="Composed from the game's own sprite layers with tools/cof.py, first frame of the neutral pose, without the colour shift a superunique gets in the game."
+/>
+
+What the seven sessions settled:
+
+- **Mephisto with his quest done** drops from his normal treasure class, 848, not the quest one, 851. No Soulstone after the kill, because the killer's quest bit is set.
+- **The Countess** uses the same treasure class whatever the state of her quest, 1004 in Normal and 1005 in Nightmare. Her death script creates nothing and draws nothing from the quest seed. One of her drops, from the log: `gld tsc vbt r06 r06`, gold, a scroll of town portal, a pair of boots and two runes.
+- **The Cow King** resolves his own treasure class first, then sets the killer's bit, then asks for eight stamina potions at quality 0. The eight items that come out are quality 2, at his level, and take no draw. Why a request for quality 0 yields quality 2 is an open question in the spec.
+- **The Hellforge in Hell.** Hephasto dropped his treasure class, then the Hellforge Hammer, at quality 7 and level 88, without a draw. Then the four waves of gems, _"perfect, flawless, flawless, standard"_, and the rune: the quest seed modulo 11 gave 4, which in Hell's table is `r19`. All five normal quality, at item level 85, the area's monster level in Hell. The hammer has to be equipped and carry a stat that is at least the difficulty, with a boundary the finding checked: _"a hammer whose stat 356 is below the difficulty is not found."_
+
+<GameArt
+  title="Four quest items"
+  images={[
+    {
+      src: '/images/diablo-ii/item-hellforge-hammer',
+      alt: 'The Hellforge Hammer: a large maul in the inventory, its drop frames and a character holding it',
+      caption: 'The Hellforge Hammer',
+      width: 157,
+      height: 88,
+    },
+    {
+      src: '/images/diablo-ii/item-horadric-cube',
+      alt: 'The Horadric Cube in the inventory and on the ground',
+      caption: 'The Horadric Cube',
+      width: 88,
+      height: 60,
+    },
+    {
+      src: '/images/diablo-ii/item-mephistos-soulstone',
+      alt: "Mephisto's Soulstone, a small blue gem, in the inventory and on the ground",
+      caption: "Mephisto's Soulstone",
+      width: 56,
+      height: 32,
+    },
+    {
+      src: '/images/diablo-ii/item-stamina-potion',
+      alt: 'A stamina potion, a small yellow flask, in the inventory and on the ground',
+      caption: "A stamina potion, the Cow King's drop",
+      width: 54,
+      height: 32,
+    },
+  ]}
+  note="Each sheet: the inventory picture and the frames of the item falling to the ground. Rendered with the project's tools/item_art.py."
+/>
+
+## Simulation enters scope
+
+The project's second ADR, on day one, kept game simulation out of scope until at least one item spec was reviewed. On the morning of the 16th, with nearly every row reviewed, ADR-0014 brought it in, in five phases: combat formulas, stats and states, skills and missiles, monster AI, animation timing. The ADR lists the other order, stats and states first, as the alternative it rejected: it lost because _"the owner wants combat formulas first."_ I had no particular reason for that order. The research map got a fourth band, Simulation, with one row in it, and the rows of the other four phases are to be added when their plans start.
+
+The hard part is in the evidence rule, and the ADR spends most of its words on it. Everything the project reproduced so far happens once: a level is built, an item is created. Combat runs every frame, on many units, and under wine _"the frame on which an event happens depends on wall-clock timing and on how long each breakpoint stalls the thread... A session can't be replayed frame for frame."_ So a simulation claim reaches `[C]` by reproducing **events**, never frames or sessions: _"An event is one call of a named in-scope entry point (for example one attack resolved against one target, or one damage-over-time tick)."_ The model predicts every draw and every output from the logged inputs and asserts the logged exit seed. Two events of the same kind in a row on the same seed are chained, so the second's entry seed is predicted from the first's exit, and chaining is required for every event kind. Stat values read from the unit are value oracles. Every timing claim is in game frames; nothing is claimed about wall-clock time.
+
+The ADR also says why this is the part of the game where the community's numbers matter least: _"much of that folklore was derived from 1.09 and 1.10 code, so its numbers and formulas may not hold for 1.14d."_
+
+Plan 0037 followed. Its phase 0 documented the combat columns of the tables, with one surprise: no monster record that has an `S1` damage entry has the `S1` mode. Its phase 1 was a static reading of the server's combat module, 77 symbols named, everything at `[I]` because no run has happened yet. The attack resolution it read:
+
+<Mermaid
+  code={`
+flowchart TB
+  ar["chance to hit = 100 x AR / (AR + DEF), times 2 x alvl / (alvl + dlvl), clamped to 5..95"]
+  ar --> roll["one draw on the attacker's seed: low % 100"]
+  roll -->|hit| def["defender's seed, in order: shield block; then evade or weapon block; then dodge (melee) or avoid (missile)"]
+  roll -->|miss| none["no damage"]
+  def -->|not avoided| red["reductions: a 12-row table; resistances, damage reduction, absorb"]
+  red --> fx["on-hit effects: crushing blow, deadly strike, open wounds"]
+`}
+/>
+
+Against the community's thirty claims the reading compared: 15 held, 9 held with a refinement, 5 contradicted (four distinct behaviours, since two sources are wrong about crushing blow in the same way), 1 not covered.
+
+<BarChart
+  title="Thirty community claims about combat, against the code"
+  series={[
+    { name: 'held' },
+    { name: 'held with refinement' },
+    { name: 'contradicted' },
+    { name: 'not covered' },
+  ]}
+  stacked
+  rows={[{ label: 'combat/0001, static reading', values: [15, 9, 5, 1] }]}
+  note="docs/findings/combat/0001-formulas.md § 13. All still [I]: the harness phase comes next."
+/>
+
+The ones that held are the ones every player knows: the chance to hit never below 5 or above 95 percent, blocking capped at 75. The contradicted ones:
+
+- The Arreat Summit's class bonus to the attacker's level in the to-hit formula, 20, 15, 5, −10, −15 by class. The constants exist, but they are `ToHitFactor`, added to attack rating; the level term has no class bonus.
+- Healing from absorb comes from the absolute absorb only. Both the percent and the flat amounts heal.
+- Crushing blow is one eighth on a boss or champion. One eighth for bosses and superuniques; champions and random uniques take one quarter.
+- Crushing blow does not scale with the player count. It does: `k += MulDiv(k, PlayerHpPct(n), 100)`.
+
+And one that is not in the community's list but in the project's own tables: a column of the difficulty table that the table documentation had called unread, `HireableBossDamagePercent`, is read by the combat code. The table doc was corrected at the review.
+
+Two more ADRs went in on the 16th, both about what a run may prove. ADR-0013 rewrites the rule of day four's forced-path ADR. That rule was written at the level of a table: a run that edits a table proves nothing about the code that reads the table. The rulings since had been finer than the rule, and _"a later reviewer applying ADR-0010 literally could revert every `[C]` above."_ The new rule is cell by cell: a claim may cite a forced run as evidence only when _"the code the claim describes reads none of the edited cells."_ ADR-0015 admits the emulator past pure functions. Ghidra, the disassembler, can interpret one function of the binary on its own, with no game running; the binary's own, unmodified code run that way, with a declared memory image, counts as `[C]` for what the code does with those inputs and never for what the game's memory holds at run time. The first run under it reproduced the formula functions `min`, `max` and `rand` and the missile code that reads formulas, with no game running.
+
+## The sweep
+
+With every row reviewed, the next question was the one the plans never asked side by side. Plan 0038 asks it: _"The reviewed specs hold 1,526 `[I]` statements, against 2,531 `[C]`. Each plan raised what its own run reached and left the rest at `[I]`, so the remaining `[I]`s were never looked at side by side."_ I chose it on the 16th and approved it to run unattended. It adds no subsystem and changes no spec's status.
+
+Its phase 0 is an inventory of all 1,526, one file per spec, every file's count summing to its spec's front matter. Each statement got a class: a kept log already holds the values, or a new session is needed, or a static second source, or the emulator, or blocked. The totals after review:
+
+<BarChart
+  title="Where the 1,526 inferred statements of the reviewed specs go"
+  series={[{ name: 'statements' }]}
+  rows={[
+    { label: 'Ten static batches: kept logs, second sources', values: [634] },
+    { label: 'Twenty-one harness batches: new sessions', values: [516] },
+    { label: 'Blocked: nothing can reach them yet', values: [364] },
+    { label: 'Raised at the inventory', values: [10] },
+    { label: 'Deferred', values: [2] },
+  ]}
+  note="docs/plans/0038-inventory/README.md § 2.4. Of the blocked: 239 have no reachable evidence, 69 need an edited table, 26 need the simulation, 14 need two players in one game, which the harness cannot do yet, 8 need me to play, 8 are the quest-drops rows of the addendum."
+/>
+
+Two static batches ran before the cut-off. The first replayed 166 kept logs of 11 item runs through the treasure class and quality models with counts: 9,390 calls, 9,390 reproduced, and from that 29 statements raised, 25 raised in part, 3 shortfalls, 8 reclassified. The review wrote down a principle on the way: _"Counterfactual replays are not evidence by themselves. A switch that fails is a sensitivity check... The evidence is still the replay."_ The second batch went over the level and object logs: 57 raised, 18 in part, 2 shortfalls, 12 reclassified, with 24 addresses raised to confirmed in the symbol table. One of its reclassifications is the kind of statement a static sweep finds: _"none of the 39,096 logged bit-2 merges went through rows 0–5, returned on row −2 or met the 8/9 edge rule."_ It is not wrong; nothing we logged ever exercised it.
+
+## The wiki
+
+On the 15th I asked for a human wiki, and ADR-0012 made it a rule: pages a person reads to understand the game's systems, with no claims of their own. Plan 0036 wrote it on the 16th: an index and ten pages, about 45,000 words, over every reviewed spec. The README's rules: _"No claims of their own. … If a page and a spec disagree, the spec is right. Nothing hidden. … Each topic page ends with a What is not known yet section. Not published."_ No confidence tags, no anchors, no addresses. It starts with randomness, because _"almost everything else is a sequence of random draws on some seed"_, and has 29 diagrams. Its second pass made about 80 wording fixes, _"mostly hedges restored on code-only points"_. The gate got three rules and a staleness warning so the wiki cannot drift from the specs, and the main README of the repository now starts with it. I read it. It is good, and it needs improvement.
+
+The ADR rejected two alternatives: a summary at the top of each spec, because it mixes audiences, and a rendered site kept local, because it would add a toolchain and any rendered form raises the question of publication. So the wiki stays markdown in the repository.
+
+## The numbers
+
+<ProgressMultiples
+  snapshots={['d1', 'd3', 'd4', 'd6']}
+  title="Where it is now, against the last three posts"
+  note="Each measure has its own scale. Sources: the research map, docs/findings, re/symbols.csv, tools/ and docs/plans/done at each cut-off."
+/>
+
+<TagTimeline
+  title="Confirmed and inferred claims in the findings"
+  sub="[C]: read in the code and confirmed by something independent, usually a run. [I]: read in the code only. Nights are cut out."
+  note="The flat stretch on the 15th is the day the queue ran: the creation-path readings landed together in the evening. The jump of [I] at 16:08 on the 16th is the combat reading."
+/>
+
+On day four the confirmed share in the findings was about 38 percent. Now it is 1,150 against 1,189, 49 percent, and in the specs, which are the deliverable, 2,546 confirmed against 1,539 inferred. The sweep's 1,526 was counted at 14:50 on the 16th; the specs moved again during the afternoon. The named addresses in `Game.exe` went from 1,143 to 1,814. The tools directory went from 56 top-level scripts to 91, and the save recipes from 10 to 112: a recipe is one character built for one purpose, a Nova Sorceress with every waypoint, a classic Barbarian, a hireling test, and the queue wrote one for nearly every session it needed.
+
+## What is open
+
+- **Combat, phase 2.** The harness run of the combat formulas, under the per-event rule: 2,000 player attacks and 1,000 monster attacks, at least 300 in each difficulty, at least 300 hits and 300 misses, 20 chained pairs per event kind, 30 crushing blows, 30 deadly strikes, 30 open wounds with their ticks checked in frames. Four characters are named for it: a melee Barbarian with a mercenary, the Nova Sorceress, a shield defender, and a classic one.
+- **The other four phases** of the simulation: stats and states, skills and missiles, monster AI, animation timing. Each gets its row on the map when its plan starts.
+- **The sweep's remaining batches**: eight static, twenty-one harness. And the 364 blocked statements, eight of which need me to play.
+- **The addendum's rows.** At the cut-off the quest drops spec still carries Mephisto, the Countess, the Cow King and the Hellforge at `[I]` with "owner addendum open"; the re-tag merged twenty-four minutes after it.
+
+And on the same day as the sweep, in another repository, [a voxel engine](/projects/2026/10/16/voxel_engine_day_one/) got its first cave. Its newest decision cites this project by name: _"Every system the recompilation project documents is integer arithmetic on per-thing seeds."_ The combat run, the first two thousand player attacks, has not happened yet.
