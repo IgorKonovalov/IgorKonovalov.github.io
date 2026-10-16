@@ -80,6 +80,40 @@ From the first draft of `2026-10-13-Diablo_II_Days_Two_And_Three` (RU), which th
 Also: «в Nightmare» → «на Nightmare» (difficulty), and "draw" is «взять число», never «шаг»,
 which collides with "step" of the generator.
 
+### 7. Calques the critics caught in the 16 October posts
+
+From the Russian critiques of `2026-10-16-Voxel_Engine_Day_One` and `2026-10-16-Diablo_II_Days_Five_And_Six`
+(agent critics, not yet confirmed by the author).
+
+| English                            | Calque                                | Natural                                         |
+| ---------------------------------- | ------------------------------------- | ----------------------------------------------- |
+| destruction feeds the loot         | разрушение кормит лут                 | разрушение — источник лута                      |
+| a cautionary tale                  | поучительный пример                   | пример того, как делать не надо                 |
+| blessed on Linux (a golden)        | благословлён на Linux                 | закреплён на Linux                              |
+| falls back when…                   | откатывается, когда…                  | уходит на запасной путь, когда…                 |
+| a runaway run                      | сбежавший запуск                      | запуск, который разъелся по памяти              |
+| missed by a lot                    | не выполнено с большим запасом        | промах большой («с запасом» значит «уложились») |
+| the op fails / the builder refuses | правка отказывает, сборщик отказывает | правка отвергается; сборщик не принимает        |
+| a mercenary's kill                 | убийство наёмника                     | когда убивает наёмник                           |
+| the level term                     | член с уровнем                        | слагаемое с уровнем                             |
+| on the wire                        | на проводе                            | в канале                                        |
+| rulings finer than the rule        | решения тоньше правила                | ревьюеры решали тоньше, чем написано в правиле  |
+| projections (unmeasured numbers)   | проекции                              | оценки, прикидки                                |
+| killed every lane at once (OOM)    | убил все лейны разом                  | убил все сессии разом (author, 2026-10-16)      |
+
+Collisions to avoid, one Russian word per concept:
+
+- **addendum** (owner addendum to a run record) → «аддендум владельца». Never «дополнение»: that is
+  the expansion (LoD). The author rejected «приписка» (2026-10-16).
+- **chamber** (a carved cavity) → «полость». «Камера» is the camera.
+- **blocked phase** → «остановка». «Блокировка» is a lock.
+- **reference image / visual reference** → «ориентир» or «планка». «Эталон» is a golden image.
+- **rank slot** (warps) → «позиция ранга». «Слот» is a harness slot.
+- **drop resolution** → «вызов раскрытия», as in the earlier posts; not «раскрытие дропа».
+- **probe** → «зонд»; **spike** (a time-boxed experiment) → «проба».
+- headless stays `headless`; ray marching stays `ray marching`, the march pass is «проход лучей».
+- Gem grades: perfect → «идеальный», flawless → «безупречный», chipped → «сколотый».
+
 ## Terminology
 
 Pick one Russian term per concept, use it everywhere, including Mermaid labels and table rows.
