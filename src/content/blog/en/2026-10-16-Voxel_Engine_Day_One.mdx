@@ -1,0 +1,256 @@
+---
+title: 'Voxel engine, day one'
+date: 2026-10-16
+tags: ['projects']
+description: 'A new project: a game-agnostic voxel engine in Rust, ray-marched in compute shaders. Day one took it from an empty repository to a streaming cave you can fly through and dig, with every budget the code could touch measured and three of them missed.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+import Screenshots from '../../../components/charts/Screenshots.astro';
+
+This is a new project, and this post is its day one. The last four posts on this blog were about [reading Diablo II out of its executable](/projects/2026/10/14/diablo_ii_day_four/). This one is about a new project: a voxel engine in Rust, where the world is small cubes you can dig through, drawn by ray marching in compute shaders.
+
+The engine started on 16 October at 08:51, as an empty repository with a licence, a roadmap and a list of budgets. By 15:20 the first plan was closed: a bounded world of voxels, deterministic edits that report what they changed, and a window with a cave in it, lit by a headlamp, that you can fly through and dig. By 17:29 the second plan was closed: the cave is now unbounded and streams around the camera, with a ring of lower detail behind the full-detail sphere. Every budget the day's code could touch was measured on the way, on my laptop and not on the card the budgets are written for, and three of them were missed and recorded as missed: the cost of an edit, the processor time of streaming, and the primary rays once the cave streamed.
+
+## The requirements before the engine
+
+The engine is built alongside a first game, which this post does not describe. What matters here is that the game's requirements were written before the engine, so that early engine decisions would not block it, and they set the scale. Levels of about 128 × 128 × 48 metres at a voxel of 10 cm, the Teardown scale, which is about 1280 × 1280 × 480 cells per level. Sphere, box, capsule and tool-along-ray edits. And one thing the document calls non-negotiable: every edit returns to the game the number of voxels removed per material, plus where. It also asks that generation be a pure function of the seed, that carve math be integer so a server and a client agree bit for bit, and that any gameplay query run on a coarse grid that never depends on render or audio rays.
+
+## The decisions before the code
+
+The engine is a Cargo workspace of library crates, and the README is careful to say what it is not: _"There is no ECS, no scene editor and no asset pipeline beyond voxel-model import. A game composes the crates it needs and owns its own loop and entity model."_ The crates so far:
+
+| Crate             | Owns                                                                                                                                                  |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vxe-world`       | Voxel storage, materials, edit ops and their results, spatial queries, streaming. Headless and deterministic: no GPU, no wall clock, no unseeded RNG. |
+| `vxe-render`      | `wgpu` upload, compute ray marching, lighting. All the WGSL lives here.                                                                               |
+| `vxe-app`         | A thin, optional `winit` shell: window, input, surface, frame loop.                                                                                   |
+| `apps/flythrough` | The engine's own testbed: fly, dig, read the edit results.                                                                                            |
+
+The first architecture decision, ADR-0001, is the big one: Rust, `wgpu`, and ray marching in compute shaders with no hardware ray tracing. The rays are DDA walks, a grid walk one cell at a time along the ray, through a brick map. The reasoning is that RT cores accelerate triangle hierarchies, and voxels are not triangles: _"Voxels and hardware ray tracing are a poor fit."_ Four alternatives were rejected and written down. Native Vulkan through `ash` with hardware RT, because voxels gain little from it. Bevy plugins, because _"Bevy's app and schedule model fights a deterministic authoritative server loop."_ A bounded-only world, because adding paging to a bounded brick map later rewrites chunk addressing. And C++, because the toolchain, the harness and the production experience I have are in Rust. The ADR also names what this costs: no DLSS and no vendor denoiser, and it calls that _"the largest single technical risk in the roadmap."_
+
+The Rust and `wgpu` part is not a leap. [Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/), the music visualiser, runs on Rust, `wgpu` and `winit` on three platforms, and the plan and ADR harness that runs this repository is a copy of the one that runs that one. Two of the plans drafted this evening copy code from Ritmolux outright: its GPU pass timer and frame statistics ring for the testbed's HUD, and two of its repository gates. The plan says it plainly: same licence, same owner, _"so its code is copied without ceremony."_
+
+Two decisions went into the roadmap rather than an ADR. The surface look: smooth and natural rock, not visible cubes, and the reference is the Sibenik cathedral figure in [Laine and Karras's 2010 sparse voxel octree paper](https://www.nvidia.com/docs/IO/88889/laine2010i3d_paper.pdf). The roadmap is honest about what that figure is: _"5 mm voxels with a unique colour and precomputed ambient occlusion per voxel, 2.7 GB on the GPU: twenty times our resolution and shading data we do not store."_ How to get there, smoothed normals, contour planes or procedural detail, is to be chosen by measurement, in a spike that is now plan 0005. The other decision, the first milestone: a fly-through with digging, built on a headless world crate that is tested without a window. The plan's own words: _"the owner wants pixels before the mechanism debates (smoothing, contours) start."_
+
+Then the budgets, in a file called `nfr.md`. The baseline hardware is a 2019 mid-range desktop: a GTX 1660 or RX 5600 class card with 6 GB, four cores, 16 GB of RAM, Vulkan 1.2 and no RT hardware. I do not have that card yet; the file says it is to be acquired or borrowed before the lighting milestone closes, and that until then the baseline numbers are projections. The file's rule is on every figure: _"a proposal until a measurement replaces it."_ The frame budget splits 16.6 ms at 1080p into streaming and upload 1.0 ms, primary rays 3.0 ms, lighting 6.0 ms, denoise 3.0 ms, upscale and post 1.5 ms, and 2.1 ms of headroom. Memory: 3 GB of VRAM for the world, 4 GB of RAM. Edits: 100 carves of radius one metre in 2 ms of CPU. Streaming: a chunk resident within 500 ms of being wanted. Startup: first frame under 3 s.
+
+## Plan 0001: a bounded world, and a cave in a window
+
+The first plan has eight phases and a one-line hook: _"a radius-10-voxel sphere carved out of solid material 3 returns `{3: 4169}`."_ That is the whole idea of the world crate in one assertion. An edit is a shape, a mode and a tool; what comes back is a count per material, the list of touched chunks and a bounding box. Every number is an integer.
+
+The layout is ADR-0002. A voxel is a 16-bit material id, zero for air. A brick is 8 × 8 × 8 voxels and is either `Uniform(material)` or `Full(Box<[u16; 512]>)`, and a full brick collapses back to uniform when an edit makes it so. A chunk is 8 × 8 × 8 bricks, so 64 × 64 × 64 voxels, with a dirty mask of one bit per brick. Positions inside an edit are fixed-point at 1/256 of a voxel. The store is a map of chunks behind locks, and an edit locks the chunks it touches one at a time in ascending coordinate order, after checking that all of them are resident, that is, loaded in memory, so an edit either happens or fails whole. The rejected alternatives: a sparse voxel octree or DAG, because an edit rebuilds a subtree; immutable copy-on-write chunks, because a hundred edits per frame copy megabytes before the walk starts; and a single owner thread with messages, because then every audio probe becomes a round trip.
+
+The cave the testbed generates is the testbed's own; the engine ships no terrain. It is integer value noise: caverns on a 64-voxel lattice plus detail on a 16-voxel lattice at one eighth weight, thresholded into rock and air, a third noise for ore veins, two voxels of indestructible shell inside every face of the level, and a pocket of air three metres across at the spawn point. Every value is a pure integer function of the seed and the coordinate, so chunks come out identical in any order on any thread and on any platform. The lattices align with bricks, which gives a cheap trick: inside one brick each octave is trilinear in one cell, so if the eight corners of a brick all lie on one side of the threshold, the brick is uniform and is emitted without evaluating its 512 voxels.
+
+The determinism vector pins all this down. Twenty-four edits over a seeded cave, every shape and mode, one that carves into the shell, one that fails because a chunk is not resident, one with a negative radius, and a hash over the world before, every result, and the world after: `0x2b6b_6a0d_1f9b_8d75`. The test says _"Blessed on Linux x86_64. Never loosened to make another arm pass,"_ and CI runs it on Linux and Windows. A second test greps the cave and the noise source for `f32`, `f64`, `sin`, `exp`, `powf` and any digit-dot-digit literal. The world crate has no floating point in generation at all; a `clippy.toml` entry bans the wall clock on top.
+
+### The walk
+
+The renderer mirrors the world into GPU buffers: a pool of bricks, a 64-bit occupancy mask per brick with one bit per 2 × 2 × 2 block, a record per chunk, and a table of chunks. The compute shader walks a ray through cells of four sizes:
+
+<Mermaid
+  code={`
+flowchart TB
+  ray["a ray enters a chunk"] --> c{"chunk absent or uniform air?"}
+  c -->|yes| skip64["step over 64^3 as one cell"]
+  c -->|no| b{"brick uniform?"}
+  b -->|air| skip8["step over 8^3 as one cell"]
+  b -->|solid| hit1["hit where the ray enters the brick"]
+  b -->|full| m{"2^3 block empty in the mask?"}
+  m -->|yes| skip2["step over 2^3 as one cell"]
+  m -->|no| vox["step the block's voxels one at a time"]
+  vox --> hit2["first non-air voxel is the hit"]
+`}
+/>
+
+The occupancy masks came last, as phase 8, and they are what makes the primary rays cheap: at 1080p from the spawn pose the march pass took 1.99 to 2.01 ms without them and 1.58 to 1.59 ms with. The reading list the roadmap collected that morning, about thirty sources, had this as its first distilled point: skip empty space with bit masks. Its second was that memory bandwidth is the bottleneck.
+
+Lighting is one headlamp. The lamp sits 25 cm right of and 15 cm below the eye, with a cone and inverse-square falloff, and one shadow ray per pixel from half a voxel off the hit face toward the lamp. A 320 × 180 reference image, which the project calls a golden, rendered on Mesa's software Vulkan driver, lavapipe, pins the output. CI compares every build against it on Linux, and at most one pixel in a thousand may differ by more than 2/255 in any channel.
+
+<Screenshots
+  title="The cave at the end of day one"
+  sub="Rendered headless at 1280 × 720 on a Radeon with the plan 0002 build, bounded level, seed 1, headlamp with the shadow ray. The dark ring is the lamp's cone; nothing lights the cave but the lamp."
+  images={[
+    {
+      src: '/images/voxel-engine/spawn-pocket.webp',
+      alt: 'A spherical pocket of air in grey voxel rock, lit by a cone of light from the viewer, with the stepped rings of the sphere visible and a dark opening ahead',
+      caption: 'The spawn pocket, three metres across, looking along +x',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/cavern.webp',
+      alt: 'A natural cavern of 10 cm voxels under a headlamp: a stepped floor in the foreground and a dark passage leading away',
+      caption:
+        'The cavern with the longest sight lines in the level, found by raycasts from a grid of air voxels',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  note="The frames come from a small example binary written for this post against the engine's public API: generate, sync the mirror, march, read the texture back. The engine's own frame dump is the golden test at 320 × 180."
+/>
+
+### Two blocks, and what they taught
+
+Two phases stopped on their done-when, the condition a phase has to meet before it counts as done. Both are in the plan's log, because the rule of the log is _"Observations, never conclusions: no pass list, no self-assessment. Deviations and unmet done-whens are always disclosed."_
+
+Phase 6, the shadow ray. The condition was that at least one percent of the pixels get brighter when the shadow ray is turned off. The measurement was 0.31 percent. The log explains why: the walls are 4.4 to 5.7 metres from the eye, and a 29 cm lamp offset gives little parallax at that distance. So the condition was measuring the scene, not the shadow. The amendment keeps the rule that no pixel may get darker without shadows, and moves the "shadows exist" proof to a constructed scene: air, a rock wall at x 44 to 46, a slab at x 28 to 30, and a camera placed so that the slab's near face shadows an L-shaped band on the wall. The band's size is computed from the geometry: _"Between 820 and 840 pixels (830 computed)."_ The measurement was 823. The amendment adds: _"If the count lands outside it, the shadow ray is wrong. Stop and report; don't widen the range."_
+
+Phase 8, the occupancy masks. The condition was that the goldens stay bit-exact with masks on. They did not: 17 pixels moved in one image, 15 in the other (the block note said 19 and 23, and its own percentages give 17 and 15), all isolated single pixels with no cluster. The diagnosis in the log: a block skip reaches a boundary by a different float path than stepping the voxels inside it, so a corner tie can break the other way. The amendment replaced the bit-exact rule with three: with masks off, the phase 7 goldens must reproduce byte for byte (they did, 0 pixels); with masks on, at most 57 pixels may differ; and no two differing pixels may be 8-neighbours, because a real mask bug opens a hole the size of a block, not a pixel. None of the 17 and 15 were adjacent. The log also records the control: a deliberately transposed bit index read 6,604 differing pixels and failed.
+
+<Screenshots
+  title="Digging, from the testbed's edit ops"
+  sub="Each op returned its counts: the tunnel removed 54,469 rock and 135 ore voxels over 16 chunks; the chamber 53,805 and 65; the column filled 2,900 air voxels."
+  images={[
+    {
+      src: '/images/voxel-engine/tunnel.webp',
+      alt: 'A round tunnel of one metre radius carved straight into voxel rock, seen from its mouth, its walls stepped in 10 cm voxels under the headlamp',
+      caption: 'A capsule carve: a tunnel 25 m long, radius 1 m',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/chamber.webp',
+      alt: 'Inside a spherical chamber carved into rock, with the round opening of the tunnel in its wall',
+      caption: 'A sphere carve of radius 2.5 m off the side of the tunnel',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/column.webp',
+      alt: 'A bright rectangular column of rock standing in the carved chamber, very close to the lamp, with the tunnel opening behind it',
+      caption: 'A box fill: a 1 × 1 × 3 m column of rock put back',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+/>
+
+### The numbers at the close
+
+The close review of a plan runs in a fresh session, and it reads every assertion the plan named. The readings it recorded:
+
+- **Edits.** The bench, 100 carves of radius one metre, each exactly 4,169 voxels: 4.92 ms of CPU, against the 2 ms budget. Missed. The budget stands, by my call at the close, and a plan to reach it was drafted the same evening.
+- **Primary rays** at 1080p: 1.59 ms with the masks, against 3.0 ms. Under.
+- **Storage** for the level-size cave, 20 × 20 × 8 chunks, 128 × 128 × 51 metres: 3,200 chunks, 383,608 full bricks and 1,254,792 uniform ones. The full fraction is 23.4 percent; the roadmap had assumed under ten. 400 MiB on the CPU and 384 MiB in the mirror. The level generates in half a second.
+- **First frame**: 2.2 to 2.3 s cold, 1.1 to 1.2 s warm, against 3 s. Device creation alone is 1.8 to 1.9 s of it.
+
+The adapter limits mattered more than expected. Lavapipe binds at most 128 MiB per storage buffer, and the level's brick pool at 16 bits is about 375 MiB, so nothing running on lavapipe, which is what CI has, could hold the level. That became the second plan's palette and sharding work.
+
+## Plan 0002: the cave with no edge
+
+The second plan makes the world unbounded. The cave streams around the camera, full detail near, lower detail further out, and what you dug stays dug when you come back.
+
+<Mermaid
+  code={`
+flowchart TB
+  f["focus point: the camera's chunk"] --> full["full tier: chunks within r_full = 16, all voxels resident (102 m)"]
+  f --> lod["LOD tier: chunks within r_lod = 24, only mips resident (154 m)"]
+  f --> out["beyond r_lod + 1: evicted"]
+  full --> gen["worker pool generates or loads chunks, nearest first"]
+  lod --> gen
+  out --> keep{"was it edited?"}
+  keep -->|yes| ram["kept in RAM; spilled to a checked file past a cap"]
+  keep -->|no| drop["dropped; the source regenerates it"]
+`}
+/>
+
+ADR-0003 chose spheres over cubes for the residency, in integer chunk units with one chunk of hysteresis, and gives the arithmetic: _"Spheres hold pi / 6, about 52 %, of the chunks of the bounding cube."_ A LOD-only chunk keeps three mips of itself, the chunk at half, quarter and eighth resolution, 32³, 16³ and 8³ cells, built under a majority rule where a tie goes to the lowest material id and any solid child makes the cell solid, so a mip never opens a hole in a wall. The mips are the same `Brick` type as the voxels, so the marcher walks them with the same code at a scaled cell size. Keeping the ring's full voxels in RAM was rejected with a number: about 4.8 GB.
+
+The GPU side is ADR-0004. A full brick in the mirror is no longer 512 16-bit values but 512 one-byte indices into a per-chunk palette of up to 255 materials, with a fallback to a wide two-slot brick for a chunk that needs more. The level's mirror went from 384 MiB to 198 MiB, and the lookup cost nothing you can see in the noise: _"1.854 to 1.874 ms before narrowing and 1.869 to 1.889 ms after."_ The pool is sharded over up to four storage bindings, sized from what the adapter offers, which is how the level now fits on lavapipe, in two shards. One of the tests renders the same scene with the pool in one shard and split over two to four, and asserts that not one byte of the image changes.
+
+<Screenshots
+  title="The ring of mips"
+  sub="The cavern above, with every chunk but the camera's walked from its mips at a forced level, so the loss of detail is visible from up close. The rule in the streaming cave is level 1 out to 2 × r_full, level 2 out to 4 × r_full, level 3 beyond; at the default radii the ring ends at 24 chunks, so only level 1 is walked and the other two wait for a wider ring."
+  images={[
+    {
+      src: '/images/voxel-engine/cavern-mips-1.webp',
+      alt: 'The same cavern drawn with 20 cm cells: the stepped floor is coarser, the shapes the same',
+      caption: 'Level 1: 20 cm cells',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/cavern-mips-2.webp',
+      alt: 'The cavern drawn with 40 cm cells: large blocks, the passage still visible',
+      caption: 'Level 2: 40 cm cells',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/cavern-mips-3.webp',
+      alt: 'The cavern drawn with 80 cm cells: a few large blocks, the floor a staircase of slabs',
+      caption: 'Level 3: 80 cm cells',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  note="A mip cell is solid if any voxel under it is solid, so a mip chunk is never more open than the real one."
+/>
+
+### The autopilot flight
+
+The testbed got an autopilot for the measurements, because a human at the keyboard does not fly the same path twice. It waits for full residency, carves one metre of rock at the first wall within 30 m along +x, hashes the chunks it touched, flies 300 m out at 10 m/s, well past the eviction radius of 160 m, flies back, waits for the dug chunks to be resident again, and compares the hash. Both recorded runs end with `return: 2 chunks, hash match`. The dig survived its own eviction. Over the flight it counts frames where a chunk wanted at full detail near the camera was not yet resident and mirrored: 0 of 2,775 and 0 of 2,772.
+
+The first autopilot run found a bug: full residency took 29.3 s because the pool grew on almost every sync, copying a whole shard each time. With the pool growing by 1.5× and never shrinking, it took 11.2 to 12.8 s. The log also admits that the one windowed run _"took stray clicks from the desktop (five fills near the spawn before takeoff)"_, and that the display was off for most of the session.
+
+The readings are where the two misses are:
+
+<BarChart
+  title="Frame budget lines against the measurements"
+  sub="Milliseconds per frame at 1080p on the development machine. The baseline card is not on hand; its numbers are projections."
+  series={[{ name: 'budget line' }, { name: 'measured' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Streaming CPU per frame, p50', values: [1.0, 6.97] },
+    { label: 'Primary rays, bounded level', values: [3.0, 1.95] },
+    { label: 'Primary rays, streaming cave', values: [3.0, 6.69] },
+    { label: '100 carves of 1 m, CPU', values: [2.0, 4.92] },
+  ]}
+  note="docs/nfr.md §2 and §4 at the plan 0002 close. The streaming p99 was 57.8 and 60.7 ms over the two autopilot runs."
+/>
+
+**Streaming CPU.** The line is 1 ms per frame for update, poll and sync. The two flights measured a median, the p50, of 7.01 and 6.97 ms; a p99, the frame slower than 99 in 100, of 57.8 and 60.7 ms; and maxima of 83 and 106 ms. Missed by a lot. The ADR's own outcome note says the render-thread residency work is what misses it; a plan for it is on the list.
+
+**Primary rays in the streaming cave.** At rest, at 1080p, the march pass takes 6.69 ms in the streaming cave, where the same commit does the bounded level in 1.95 ms. The marcher is the same; the window is 51 chunks on a side and the walk is longer. The close names a diagnosis spike: _"the cost of `MAX_STEPS = 4096` rays across a 51-chunk window."_ Both lines stand, my ruling at the close.
+
+**Residency latency.** From wanted to mirrored, the p95 was 455 and 462 ms over about 73,000 chunks, under the 500 ms proposal. The maximum was 1.8 and 2.4 s, over it. The proposal now stands as a p95 figure, and says so.
+
+**Memory.** The default residency, full to 16 chunks and mips to 24, holds 17,077 full chunks and 40,700 LOD-only ones: 2,916 MiB on the CPU and 1,530 MiB in the mirror. Under motion the mirror's allocated bytes peaked at 2.43 GB, and the whole process at 3.87 GB of peak RSS, its peak memory as the kernel counts it, against the 4 GB line. The budget file's own words: _"RAM is the tightest margin."_
+
+<BarChart
+  title="Memory lines against the measurements, under motion"
+  sub="Peak over the two autopilot flights on the development machine, in gigabytes as docs/nfr.md writes its lines."
+  series={[{ name: 'budget line' }, { name: 'measured' }]}
+  unit=" GB"
+  rows={[
+    { label: 'RAM: process peak RSS', values: [4.0, 3.87] },
+    { label: 'VRAM: world mirror, allocated', values: [3.0, 2.43] },
+  ]}
+  note="docs/nfr.md §3 and the plan 0002 fix-pass readings. The resident world alone, 17,077 full chunks and 40,700 LOD-only ones, is 3.06 GB of that RAM."
+/>
+
+The generation rate under streaming was 6.96 × 10⁷ voxels per second per worker on 15 workers, against 1.03 to 1.12 × 10⁸ per thread for the bounded level. The headless streaming cave shows its first frame in 0.5 to 1.5 s, and reaches full residency in 11.7 to 12.1 s after the fix.
+
+## What is open
+
+The roadmap has nine milestones after bootstrap, and the first is done with its three misses on record. What is drafted and approved for the next ones, all this evening:
+
+- **Plan 0003**, edit cost under 2 ms: row spans instead of per-voxel writes, a per-op target table, and the determinism hash must not move.
+- **Plan 0005**, the surface-look spike that decides how the rock stops looking like cubes, with the cathedral figure as the bar and a measured baseline: inside a carved sphere, where the true surface direction is known, the cube faces point about 32 degrees off it on average. The last phase is mine: looking at the three modes and choosing.
+- **Plan 0009**, collapse: a capped support flood on the coarse grid, and a rigid vertical drop. This came from a decision I made this evening against the earlier wording, which said scripted collapse only: _"voxel dynamics, not a rigid-body engine. Collapse is emergent and authoritative."_ The ADR names the limit: a region larger than the cap never falls, so the roof of a large cavern is supported by its size.
+- **Plan 0011**, the WebAssembly host for the game's logic. ADR-0010 is the newest decision and it changes the founding wording: the game's whole server logic is one component behind a `Logic` trait, developed natively and shipped as a `wasmtime` component with canonical NaNs, no clock and fuel per tick, and Lua is deferred because its number model is floating point. The ADR's reason comes straight from the Diablo II work: _"Every system the recompilation project documents is integer arithmetic on per-thing seeds."_ Such code is bit-identical in WebAssembly and native. Layouts cross the boundary; voxels never do.
+
+The other six are smaller and have no story yet: collision as a vertical cylinder swept in integer steps, with a character controller and a coarse grid for navigation; spatial audio from one measured head, mixed on the audio thread; the server's op log and a byte channel between server and client even in solo play, where a sphere carve is 47 bytes; MagicaVoxel import and prefab stamping; a stats HUD drawn with an embedded bitmap font and no UI library, the zero-dependency option of the three I was offered; and the two repository gates copied from Ritmolux, which already find two violations in this tree. Four of the twelve were already running on their own branches when the day's record ends.
+
+Two things are open that no plan closes. The baseline card, which decides whether any of the frame numbers above mean anything, is not here. And the lighting milestone, M2, where the ADR put the largest risk: no vendor denoiser, a headlamp sweep across a dug-out wall, and emissive voxels that have to light a cave on their own. VR got a decision too, this evening: views as asymmetric frusta and lighting shared between them, so nothing bakes in a single view, and actual VR support is unscheduled and never a promise on the baseline card.
+
+## How the day was run
+
+The repository runs the way the [Ritmolux](/projects/2026/09/26/approval_is_the_go/) one does. A design question with a real tradeoff becomes an ADR, the ADR becomes a phased plan, each phase has one owner, `dev` or `human`, and a behavioural done-when, and my "go" is the approval. The architect designs and never writes production code; `dev` builds and edits only the status line and the implementation log of a plan. The close review runs in a fresh session, _"because a review from inside the session that wrote the code is worthless."_ The hooks deny broad `git add`, history rewrites and agent attribution in commit messages, and have their own bite tests. Two hooks changed today. In the morning a plain `git push` was allowed, and the commit says I am experimenting with letting the agent push this repository. In the evening a new hook denies closing windows through the compositor. The reason is in the commit: twice during the day a dev agent asked Hyprland to close the fly-through window, once by address and once by title, and both times the compositor closed the focused VS Code window instead, with every session in it. From my side it was just a sudden close, surprising and frustrating.
+
+The one thing in the record that the sections above do not cover is the first flight. Before plan 0001 could close, at 14:41, I flew the cave myself and dug in it, and the log records that every control worked.
+
+The README still says no engine code has landed yet. That sentence was true at 08:58.
