@@ -59,6 +59,23 @@ const show = lang === 'ru' ? 'Показать числа' : 'Show the numbers';
 const timeHead = lang === 'ru' ? 'Время' : 'Time';
 
 const hoverPoints = points.map(([time, c, i]) => [sx(xOf(time)), time, c, i]);
+
+// End labels: when the two series end within a line height of each other,
+// push the labels apart so neither covers the other.
+const endX = sx(xOf(last[0])) + 10;
+let endYC = sy(last[1]) + 4;
+let endYI = sy(last[2]) + 4;
+const MIN_GAP = 14;
+if (Math.abs(endYC - endYI) < MIN_GAP) {
+  const mid = (endYC + endYI) / 2;
+  if (endYC <= endYI) {
+    endYC = mid - MIN_GAP / 2;
+    endYI = mid + MIN_GAP / 2;
+  } else {
+    endYI = mid - MIN_GAP / 2;
+    endYC = mid + MIN_GAP / 2;
+  }
+}
 ---
 
 <figure class="viz tag-timeline">
@@ -137,12 +154,8 @@ const hoverPoints = points.map(([time, c, i]) => [sx(xOf(time)), time, c, i]);
         r="4"
         class="tt-dot"
         style="fill: var(--viz-2)"></circle>
-      <text x={sx(xOf(last[0])) + 10} y={sy(last[1]) + 4} class="tt-end"
-        >{`[C] ${last[1]}`}</text
-      >
-      <text x={sx(xOf(last[0])) + 10} y={sy(last[2]) + 4} class="tt-end"
-        >{`[I] ${last[2]}`}</text
-      >
+      <text x={endX} y={endYC} class="tt-end">{`[C] ${last[1]}`}</text>
+      <text x={endX} y={endYI} class="tt-end">{`[I] ${last[2]}`}</text>
       <line
         class="tt-cross"
         x1="0"

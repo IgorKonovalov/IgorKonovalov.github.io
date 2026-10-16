@@ -35,13 +35,14 @@ const t = {
       core: 'Core',
       enablers: 'Enablers',
       paths: 'Creation paths',
+      sim: 'Simulation',
     } as Record<Band, string>,
-    snaps: { d1: 'Day 1', d3: 'Day 3', d4: 'Day 4' } as Record<
+    snaps: { d1: 'Day 1', d3: 'Day 3', d4: 'Day 4', d6: 'Day 6' } as Record<
       SnapshotId,
       string
     >,
     moved: 'moved since the previous snapshot',
-    of: 'of 28',
+    of: 'of',
     show: 'Show as a table',
     row: 'Subsystem',
   },
@@ -57,27 +58,33 @@ const t = {
       core: 'Ядро',
       enablers: 'Опоры',
       paths: 'Пути создания',
+      sim: 'Симуляция',
     } as Record<Band, string>,
-    snaps: { d1: 'День 1', d3: 'День 3', d4: 'День 4' } as Record<
+    snaps: { d1: 'День 1', d3: 'День 3', d4: 'День 4', d6: 'День 6' } as Record<
       SnapshotId,
       string
     >,
     moved: 'сдвинулось с прошлого снимка',
-    of: 'из 28',
+    of: 'из',
     show: 'Показать таблицей',
     row: 'Подсистема',
   },
 }[lang];
 
-const bands: Band[] = ['core', 'enablers', 'paths'];
+const bands: Band[] = ['core', 'enablers', 'paths', 'sim'];
 const uid = `rm-${Math.random().toString(36).slice(2, 8)}`;
 const states: MapState[] = [4, 3, 2, 1, 0];
+
+// The Simulation band joined the map on day 6; before that its row is not on
+// the map at all, so it is neither counted nor drawn.
+const rowsAt = (snap: SnapshotId) =>
+  researchMap.filter((r) => r.band !== 'sim' || snap === 'd6');
 
 const counts = (snap: SnapshotId) =>
   states
     .map((st) => ({
       st,
-      n: researchMap.filter((r) => r.state[snap] === st).length,
+      n: rowsAt(snap).filter((r) => r.state[snap] === st).length,
     }))
     .filter((c) => c.n > 0);
 
@@ -141,40 +148,44 @@ const lastIndex = snapshots.length - 1;
                   <strong>{c.n}</strong> {t.states[c.st]}
                 </span>
               ))}
-              <span class="rm-of">{t.of}</span>
+              <span class="rm-of">
+                {t.of} {rowsAt(snap).length}
+              </span>
             </p>
-            {bands.map((band) => (
-              <section class="rm-band">
-                <p class="rm-band-name">{t.bands[band]}</p>
-                <ul class="rm-grid">
-                  {researchMap
-                    .filter((r) => r.band === band)
-                    .map((r) => {
-                      const st = r.state[snap];
-                      const moved = prev !== null && st > r.state[prev];
-                      return (
-                        <li
-                          class={`rm-box rm-fill-${st}`}
-                          title={`${r.id}: ${t.states[st]}${moved ? ` (${t.moved})` : ''}`}
-                        >
-                          <span class="rm-name">{r.id}</span>
-                          <span class="rm-pips" aria-hidden="true">
-                            {[1, 2, 3, 4].map((p) => (
-                              <span class={p <= st ? 'on' : ''} />
-                            ))}
-                          </span>
-                          <span class="rm-sr-only">{t.states[st]}</span>
-                          {moved && (
-                            <span class="rm-moved" aria-label={t.moved}>
-                              ↑
+            {bands
+              .filter((band) => rowsAt(snap).some((r) => r.band === band))
+              .map((band) => (
+                <section class="rm-band">
+                  <p class="rm-band-name">{t.bands[band]}</p>
+                  <ul class="rm-grid">
+                    {researchMap
+                      .filter((r) => r.band === band)
+                      .map((r) => {
+                        const st = r.state[snap];
+                        const moved = prev !== null && st > r.state[prev];
+                        return (
+                          <li
+                            class={`rm-box rm-fill-${st}`}
+                            title={`${r.id}: ${t.states[st]}${moved ? ` (${t.moved})` : ''}`}
+                          >
+                            <span class="rm-name">{r.id}</span>
+                            <span class="rm-pips" aria-hidden="true">
+                              {[1, 2, 3, 4].map((p) => (
+                                <span class={p <= st ? 'on' : ''} />
+                              ))}
                             </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                </ul>
-              </section>
-            ))}
+                            <span class="rm-sr-only">{t.states[st]}</span>
+                            {moved && (
+                              <span class="rm-moved" aria-label={t.moved}>
+                                ↑
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </section>
+              ))}
           </div>
         );
       })

@@ -1,0 +1,80 @@
+---
+// One or more rendered frames (screenshots) from a program, each with its
+// own caption, in the same chrome as the charts. One image fills the column;
+// several sit in a grid and keep their aspect ratio. WebP only, lazy-loaded.
+import '../../styles/viz.css';
+
+interface Shot {
+  /** Site path of the WebP. */
+  src: string;
+  alt: string;
+  caption?: string;
+  /** Natural size in pixels, for the aspect ratio before load. */
+  width: number;
+  height: number;
+}
+
+interface Props {
+  title: string;
+  sub?: string;
+  images: Shot[];
+  note?: string;
+  /** Columns on a wide screen; defaults to one for one image, else the count up to 3. */
+  columns?: number;
+  wide?: boolean;
+}
+
+const { title, sub, images, note, columns, wide = false } = Astro.props;
+const cols = columns ?? Math.min(images.length, 3);
+---
+
+<figure class:list={['viz', 'shots', { 'viz-wide': wide }]}>
+  <p class="viz-title">{title}</p>
+  {sub && <p class="viz-sub">{sub}</p>}
+  <div class="shots-grid" style={`--shots-cols: ${cols}`}>
+    {
+      images.map((s) => (
+        <figure class="shot">
+          <img
+            src={s.src}
+            alt={s.alt}
+            width={s.width}
+            height={s.height}
+            loading="lazy"
+            decoding="async"
+          />
+          {s.caption && <figcaption>{s.caption}</figcaption>}
+        </figure>
+      ))
+    }
+  </div>
+  {note && <p class="viz-note">{note}</p>}
+</figure>
+
+<style>
+  .shots-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  @media (min-width: 640px) {
+    .shots-grid {
+      grid-template-columns: repeat(var(--shots-cols), 1fr);
+    }
+  }
+  .shot {
+    margin: 0;
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    background: #000;
+  }
+  .shot figcaption {
+    margin-top: var(--space-1);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+  }
+</style>
