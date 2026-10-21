@@ -1,6 +1,13 @@
-import type { CollectionEntry } from 'astro:content';
-
-type BlogPost = CollectionEntry<'blog'>;
+/**
+ * The shape every URL helper needs. A `blog` collection entry satisfies it,
+ * and so does a frontmatter scan made at config time (`contentIndex.ts`),
+ * which is how the legacy redirects and sitemap dates derive their URLs from
+ * the same code the pages do.
+ */
+export interface PostLike {
+  id: string;
+  data: { date: Date; tags?: string[] };
+}
 
 export type Locale = 'en' | 'ru';
 
@@ -11,12 +18,12 @@ export const LOCALES: Locale[] = ['en', 'ru'];
  * The post's locale, taken from the leading path segment of its id
  * (`en/2017-02-14-Maurer_rose`, `ru/…`). Defaults to `en` for safety.
  */
-export function getLocale(post: BlogPost): Locale {
+export function getLocale(post: PostLike): Locale {
   return post.id.startsWith('ru/') ? 'ru' : 'en';
 }
 
 /** Category is the post's first tag, defaulting to `personal`. */
-export function getCategory(post: BlogPost): string {
+export function getCategory(post: PostLike): string {
   return post.data.tags?.[0] || 'personal';
 }
 
@@ -24,7 +31,7 @@ export function getCategory(post: BlogPost): string {
  * The post's slug: the id with its locale folder and the leading
  * `YYYY-MM-DD-` date prefix stripped (`Maurer_rose`).
  */
-export function getSlug(post: BlogPost): string {
+export function getSlug(post: PostLike): string {
   return post.id.replace(/^(en|ru)\//, '').replace(/^\d{4}-\d{2}-\d{2}-/, '');
 }
 
@@ -34,7 +41,7 @@ export function getSlug(post: BlogPost): string {
  * are prefixed with `/ru`. This is the single source of truth for post URLs —
  * every page, feed, and route derives its links from here.
  */
-export function postHref(post: BlogPost): string {
+export function postHref(post: PostLike): string {
   const { date } = post.data;
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -48,12 +55,12 @@ export function postHref(post: BlogPost): string {
  * The route param for `[...slug].astro` — `postHref` without its surrounding
  * slashes (`projects/2017/02/14/Maurer_rose`).
  */
-export function postSlugParam(post: BlogPost): string {
+export function postSlugParam(post: PostLike): string {
   return postHref(post).slice(1, -1);
 }
 
 /** The post's filename without its locale folder — the translation key. */
-export function translationKey(post: BlogPost): string {
+export function translationKey(post: PostLike): string {
   return post.id.replace(/^(en|ru)\//, '');
 }
 
@@ -61,10 +68,10 @@ export function translationKey(post: BlogPost): string {
  * The same post in the other locale, paired by identical filename, or
  * `undefined` when no translation exists.
  */
-export function findCounterpart(
-  post: BlogPost,
-  allPosts: BlogPost[],
-): BlogPost | undefined {
+export function findCounterpart<T extends PostLike>(
+  post: T,
+  allPosts: T[],
+): T | undefined {
   const key = translationKey(post);
   return allPosts.find(
     (p) =>
