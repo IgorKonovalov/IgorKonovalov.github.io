@@ -151,3 +151,32 @@ When the English quotes an earlier post, **quote the Russian version of that pos
    specifically for patterns 1–5.
 3. Check terminology consistency (grep for the "Avoid" column).
 4. Run `node scripts/check-post-length.mjs ru`.
+
+### 8. Calques the critics caught in the 21 October posts
+
+From the Russian critiques of `2026-10-21-Diablo_II_Days_Seven_To_Eleven` and
+`2026-10-21-Voxel_Engine_Days_Two_To_Six` (agent critics, applied, not yet confirmed by the author).
+
+| English                                   | Calque                          | Natural                                                |
+| ----------------------------------------- | ------------------------------- | ------------------------------------------------------ |
+| the blows took 1/4 (of life)              | взяли 1/4                       | сняли 1/4                                              |
+| do the specs compose?                     | складываются ли спецификации    | стыкуются ли спецификации                              |
+| retire an oracle                          | вывести из обращения            | убрать оракул                                          |
+| a value saturates                         | насыщается                      | обрезается до максимума                                |
+| the plan asked for N and got M            | план просил и получил           | в плане стояло N, вышло M                              |
+| the discount decided 30 checks            | решила 30 проверок              | от скидки зависели 30 проверок                         |
+| the claim covers nothing after the call   | покрывает «ничего после вызова» | на то, что после вызова, не распространяется           |
+| the record's way of saying                | —                               | (do not gloss a quote; ask the author what it meant)   |
+| Switch 1 is out of reach                  | Switch 1 недосягаем             | до Switch 1 движок не дотянется                        |
+| no library to blame                       | винить некого                   | свалить не на какую библиотеку                         |
+| a probe (collision, network)              | проба                           | зонд («проба» is a spike)                              |
+| the footprint (memory)                    | объём                           | память под атрибуты                                    |
+| landed (a commit, a fix)                  | лёг, легло                      | появился, влили, вошло (once is fine, thrice is a tic) |
+| standing instruction                      | постоянное указание             | одно указание на все случаи                            |
+| chose the other door                      | выбрал другую дверь             | пошёл другим путём                                     |
+| a dangling participle for "rebuilt with…" | Собранные с…, оба дерева…       | После пересборки с… оба дерева…                        |
+
+Collisions added: **collapse** → «обрушение» (day one), never «обвал»; **worktree** stays `worktree`;
+**the owner's "go"** stays «go»; a "sweep batch" is «пакет», so network packets are «сетевые пакеты»;
+place names (Arreat Summit, Harrogath, the Ancients) stay in English like item and monster names;
+**the bless verb** «закрепить» is for goldens and hashes only, an ADR «фиксирует» a decision.

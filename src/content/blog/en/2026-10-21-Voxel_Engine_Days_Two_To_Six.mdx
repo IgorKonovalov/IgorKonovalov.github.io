@@ -1,0 +1,326 @@
+---
+title: 'Voxel engine, days two to six'
+date: 2026-10-21
+tags: ['projects']
+description: 'Five days of the voxel engine, from version 0.3 to 0.24: the surface look chosen by eye, a night in which nine plans closed while I slept, collision, audio, an op log and a WebAssembly host, a new brick format that cut RAM by four, the primary-ray line met, the edit line raised, cavern reverb tuned by listening, and a world you can see from outside.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+import Screenshots from '../../../components/charts/Screenshots.astro';
+
+[Day one](/projects/2026/10/16/voxel_engine_day_one/) ended at 18:35 on 16 October with two plans closed, version 0.3.0, a streaming cave you could fly through and dig, and three budgets missed. This post is the five days after it, to 11:31 on 21 October: version 0.24.0, twenty-five plans closed, twenty-one decision records, and the engine has collision, spatial audio with a reverb sized by the room you are standing in, an op log, a WebAssembly host for the game's logic, prefabs, a HUD, a gamepad, collapse that crushes what it falls through, a new brick format on the CPU side, with the mirror's half still owed, a view of the world from outside its rock, and surfaces that no longer look like cubes. Of the three misses, one is met, one is met after I raised the line, and one is still missed and now has a named cause.
+
+The engine is built alongside a first game, which this post does not describe. Every number below was read on my laptop, which the budgets file calls the dev reference: an RTX 3080 Laptop GPU and a Ryzen 9. Two words from day one that the rest leans on: a brick is 8 × 8 × 8 voxels, and a chunk is 8 × 8 × 8 bricks.
+
+## The evening of the 16th
+
+Day one's post was written while the day's last plans ran, and three of them closed before midnight. Each had a phase with me in it.
+
+**The surface look.** Plan 0005 measured four ways to shade a voxel surface against the bar the roadmap had set, the Sibenik cathedral figure of Laine and Karras: face normals, a trilinear blend of eight neighbours, a gradient over twenty-seven, and contour planes, a per-voxel plane that moves the hit point, plus a procedural detail noise on top of any of them. Two analytic scenes gave the numbers: a carved sphere, where the true normal is known at every point, and a rock pillar, where the true silhouette is.
+
+<BarChart
+  title="Normal error inside a carved sphere, by surface mode"
+  sub="Mean angle between the shaded normal and the sphere's true normal, degrees, at 320 × 180 on the software driver."
+  series={[{ name: 'degrees' }]}
+  unit="°"
+  rows={[
+    { label: 'Face', values: [40.75] },
+    { label: 'Face with detail', values: [46.36] },
+    { label: 'Trilinear, 8 neighbours', values: [18.62] },
+    { label: 'Gradient, 27 neighbours', values: [6.95] },
+    { label: 'Contour planes', values: [7.41] },
+    { label: 'Contour with detail', values: [28.4] },
+  ]}
+  note="docs/plans/done/0005-surface-look-spike.md, the Phase 5 table. The pillar's silhouette error was 172 pixels in every mode but contour, where it was 32: a normal cannot move a hit, a plane can."
+/>
+
+<BarChart
+  title="The march pass at 1080p, by surface mode"
+  sub="Milliseconds on the bounded level, three readings each, on the RTX 3080."
+  series={[{ name: 'ms' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Face', values: [1.877] },
+    { label: 'Face with detail', values: [1.994] },
+    { label: 'Trilinear, 8 neighbours', values: [2.878] },
+    { label: 'Gradient, 27 neighbours', values: [4.568] },
+    { label: 'Contour planes', values: [1.944] },
+    { label: 'Contour with detail', values: [2.069] },
+  ]}
+  note="Same table. Gradient's accuracy costs 2.7 ms a frame; contour's costs 0.05 to 0.07."
+/>
+
+The last phase was mine: fly the level in each mode and choose. The log keeps what I said. _"I like gradient27 the most, but shadows look not right; contour feels weird with a lot of artifacts - black lines"_; _"contours without shadows look the best (if I press L)"_; of the detail, _"looks like something between noise and shadows, maybe less will be better."_ I named two finalists, and then: _"I was wrong, contour is the best mode."_ The black lines had a number by then. A speck count on the software driver found contour at 646 isolated dark pixels with shadows and 301 without, and 372 pixels that were specks only with the shadow on, so the shadow ray was starting inside the plane it had just hit; face mode had 174 of the same. ADR-0011 fixed the decision that evening: each voxel of a full brick carries a 16-bit attribute, an octahedral normal in twelve bits and a plane offset in four, stored in attribute pages of the existing brick pool so the shader binds nothing new. Its own caveat: _"The decision is not shippable at the default radius until the follow-up reduces the footprint."_ With the attribute pages the streaming cave had reached 3.3 GB live and 4.1 GB allocated on the 8 GB card and died with an out-of-memory error. The follow-up became plan 0013, approved at 21:27.
+
+One more line from that plan's log, because it explains the day one post: _"the RTX 3080 Laptop GPU fell off the PCIe bus at 17:51 on 2026-10-16"_, with the kernel's _"GPU lost from the bus"_. The spike's first two phases were read on the integrated Radeon, face mode at 17.2 ms and the gradient at 41.3, and the frames in the day one post were rendered on the Radeon too, and that post names it. A reboot brought the card back for phase 3.
+
+<Screenshots
+  title="The same passage in the two looks"
+  sub="Rendered headless at 1280 × 720 with the version 0.24.0 build, the bounded level, seed 1, the camera of the README's hero image, headlamp with the shadow ray."
+  images={[
+    {
+      src: '/images/voxel-engine/passage-face.webp',
+      alt: 'A cave passage under a headlamp drawn with face normals: every voxel a visible cube, the walls stepped',
+      caption: 'Face normals, the day one look',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/passage-contour.webp',
+      alt: 'The same cave passage drawn with contour planes and rock detail: smooth rounded walls with fine grain, the cubes gone',
+      caption:
+        'Contour planes with the rock detail at strength 0.1, the default since day five',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  note="The frames come from a small example written for this post against the engine's public API: generate, mirror with attribute pages, run the attribute pass, march, read back."
+/>
+
+**The walk.** Plan 0004 gave the engine a character controller: a vertical cylinder, flat at both ends, swept through the voxels by integer conservative advancement, with a step-up probe for ledges. ADR-0005 says why a cylinder and not a capsule: _"a hemispherical foot cannot stand on a step's edge until its axis is past the edge... Every shipped controller works around this with a flat-footed probe."_ My first windowed walk that evening found the body _"froze on open floor and at walls or corners, no ledge could be climbed anywhere, and only `G` freed it."_ Four causes were fixed in the next two hours, and two of them are the kind of bug integer geometry produces. A voxel box less than one unit beside the body, at an offset the log gives as 768.89 units from an edge, floored to a squared distance of zero and _"stopped every later move including a fall and a move straight away."_ And the square root of the step length was rounded down, so a remainder up to one unit longer than the step was taken whole and ended inside the box. At 22:04 I walked again: _"all good, felt natural. we will tune later if needed."_ Two tests pin it now: 115,248 sweeps of which none ends overlapping a box, and 800 random walks over 56,135 ticks that never freeze.
+
+**The ears.** Plan 0006 brought spatial audio: a head-related transfer function from the SADIE II database, subject D2, a KEMAR dummy head, packed to an engine format and convolved in the time domain, 128 taps per ear, in a mixer that runs on the output device's callback and never allocates or locks. Packed whole, the head was 9,083,684 bytes, three times the repository, so every third azimuth is kept: 2,950 directions, 3,044,420 bytes. Occlusion walks the sound's seven probe rays through the rock as runs of material; the headline test is a 100 Hz tone ten metres away behind five metres of a material with transmission 0.5 and absorption 0.3 per metre, which has to render at 0.0814 of its open level and renders at 0.081379. I put the headset on that evening and reported two things: left and right were swapped, and there were clicks when I turned or walked. The first was the headset: _"`speaker-test` played 'Front Left' in the right ear"_, the system's channel map, and the engine changed nothing. The clicks had three causes, each measured: a linear crossfade between directions whose fourth difference was 227 times the static one, replaced by a raised cosine; the audio crate compiled without optimisation in debug builds, 1.25 ms per 256-frame block against the 5.33 ms the block lasts; and the packed head's per-direction windows starting up to 23 samples apart. I A/B'd a one-window pack live: blocks with a phase jump over 0.3 radians fell from 378 of 2,722 to 14 of 3,611, _"and the clicks were gone by ear."_
+
+**The hook.** At 18:35 a new hook landed, the one day one's post mentions: an agent may not ask the compositor to close a window, because twice that day it had closed my editor instead. An hour later came an exit hang I could not reproduce: my windowed fly-through ignored its close and had to be killed, while every headless variant exited promptly. The shell now logs each teardown stage in a fixed order, so the next hang says where it is.
+
+## The night of the 17th
+
+I left the plans approved with the standing instruction _"go with your recommendations."_ The orchestrating session ran them in parallel worktrees, and between 00:24 and 06:09 nine closed:
+
+| Time  | Plan                                         | Version |
+| ----- | -------------------------------------------- | ------- |
+| 00:24 | 0003, edit cost: row spans and per-op tables | 0.4.1   |
+| 00:27 | 0004, collision and the character controller | 0.5.0   |
+| 01:12 | 0012, two repository gates from Ritmolux     | —       |
+| 02:06 | 0008, MagicaVoxel import and prefab stamping | 0.6.0   |
+| 03:16 | 0014, edit cost, second pass                 | 0.7.0   |
+| 03:43 | 0009, the support query and the collapse ops | 0.8.0   |
+| 03:53 | 0010, the stats HUD                          | 0.9.0   |
+| 04:04 | 0007, the op log, a byte channel, clients    | 0.10.0  |
+| 06:09 | 0011, the WebAssembly host for the logic     | 0.11.0  |
+
+Six phases stopped on their done-when during the night, the condition a phase has to meet before it counts as done, and were amended on the spot, each amendment logged as _"orchestrator-applied... overturnable by the owner."_ The stamp key `V` collided with the detail toggle, so stamping is `P`. The op log could not tell an op the logic made from one submitted directly in the same tick, and a refused op took a sequence number no log recorded; the amendment is a 13-byte boundary entry. The edit-cost plan stopped on its own profile: the span work it had set out to cut below five percent read thirteen, and the amendment states _"The `nfr.md` §4 target of 2 ms is not reached by this plan."_ And the WebAssembly host found that after any trap, fuel, memory or a panic, _"wasmtime 49.0.3 refuses to enter the component instance again"_, so a trapped script stayed stopped.
+
+At 07:11 the session wrote me a file called `decisions-pending.md`, and at 09:12 I answered it. The calls: the baseline stays the GTX 1660, with a Switch-2-class portable profile as a quality profile and not a gate, and _"Switch 1 is out of reach for a ray marcher of this shape"_; translucent solids are voxels and gas is a separate volume, later; direct light by resampled importance sampling and indirect by probes; open-sky scenes are in scope; and the edit cost question is reframed _"around frame-time stability on complex scenes."_ I overturned three of the night's calls: the controller gets depenetration, a body an edit fills into is lifted out; a trapped script restarts from its seed instead of staying stopped, up to eight times; and the gates plan gets a patch bump. Plans 0016 to 0019 were drafted and approved by 10:02, plan 0020 by 10:36, and I pushed `main`.
+
+### What the night built
+
+**The op log.** The server owns the world and a log of `(tick, seq, op)`; a client is either shared, one world behind an `Arc`, or owned, its own world that replays the bytes and raises a desync event on the first mismatch. A sphere carve is 47 bytes on the wire, a box fill 65, a capsule 75. Replaying 10,000 one-metre carves takes 279 ms. ADR-0007's sentence: _"The op log is the single order of truth. Whatever thread interleaving fed `submit`, the log's `seq` order is what replay follows."_ The testbed got `--save` and `--replay`, and a saved session's world hash reproduces on replay.
+
+**The WebAssembly host.** ADR-0010 on day one said the game's logic is one component behind a trait, developed natively and shipped as WebAssembly. Plan 0011 proved it: the same 100 inputs through the server with the native echo logic and with the compiled component, _"the two op logs' encoded bytes are equal, the two worlds' hashes are equal."_ The fly-through's own dig logic moved into a crate of its own and gives the same session hash either way. The knobs that make it deterministic were each proven by a guest written to break them: canonical NaN bits, a clock that reads the tick, a random source seeded from the tick, no filesystem, a guest that spins out its fuel, one that eats its memory cap, one that writes 64 KiB of stderr per call. The number the proposal got wrong is in the ADR's outcome: _"A host call costs about 1.4 µs, not tens of nanoseconds."_ The budget was set at 2 µs; the quiet reading at the cut-off is 1.56. Three days later plan 0019 made the host charge for its work: each byte of an op list, each voxel of an edit's bounds, each step of a raycast, each cell a support query looks at, against the tick's fuel, so that a count over a cube of 1,024 voxels a side fails the tick on fuel instead of running it.
+
+**Prefabs, the HUD, collapse.** A MagicaVoxel file imports to a prefab with a material map, and a prefab stamps into the world at any of 24 rotations, at generation time or at run time; a 16 × 16 × 16 vault with a one-voxel shell stamped into rock changes exactly 4,096 voxels, and the same vault placed at generation gives a world with the same hash. The review found a 70-byte file that would allocate 3.1 GiB, and the loader now caps a model at 256 voxels on a side. The HUD is an 8 × 8 bitmap font of 95 glyphs in one overlay pass, 0.038 ms a frame, because when offered a UI library and a text renderer I chose the option with no dependency; ADR-0009: _"a wrong bit is a wrong pixel with no library to blame."_ And collapse arrived in its first form: a support query that floods the coarse grid, the per-brick grid collision and audio read, from a changed cell through load-bearing cells, capped, and two ops, a rigid vertical drop by the minimum gap below a region and a removal that leaves a fraction as rubble. _"A region larger than `max_region` never falls: the roof of a large cavern is 'supported' by its size."_
+
+### The evening of the 17th, and the 18th
+
+The listen of the 17th, on the merged audio at 10:00, passed: the knock on the correct side, the hum duller behind rock, no clicks turning. One finding stayed open, clicks while the listener moves, which went away with the reflections off and so belonged to the way a reflection's tap was swapped; it was handed to plan 0020. In the evening I ran the windowed test of version 0.12.0 and found two things the overnight closes had not. A removed thin region printed _"removed: \{rock: 201\}, 0 rubble"_, because each column's quarter was rounded away. And the scroll wheel never changed the dig radius: I _"scrolled about 40 times and every line read `dig radius 0.5 m`"_, each frame's fraction rounded away too. A third finding was not a bug of any plan: collapse rarely triggered in the cave, because _"a 0.8 m cell with 64 of 512 voxels solid still bears load, so a thin leftover bridge holds an overhang up"_, and what I wanted was overhangs that fail by span and weight and not only by disconnection. That went to the roadmap's collapse milestone, where it became the decision of the 20th below. Plan 0016, the fix pass for all of it and for the three calls I had overturned, ran on the 18th and closed at 22:09 as version 0.13.0; my recheck has the scroll printing _"dig radius 0.4, 0.5, 0.3, 0.2, 0.3 m"_ and a ring cut through a thin wall leaving 134 rubble voxels of 598, which is the quarter.
+
+## The edit line, and the brick that moved it
+
+Day one missed the edit budget: 100 carves of one metre in 4.92 ms against 2. Plan 0003 brought it to 3.56 on a quiet box with row spans solved analytically per brick row. Plan 0014 profiled before it changed anything and falsified the plan's own arithmetic: the brick expansion it had meant to remove was five percent of the time, and writing the rows was 54. It shipped a brick-array pool and a cheaper capsule row and closed at 3.03 ms warm, with the close's arithmetic: _"Removing the row solve, the span lookup and `Brick::expand` entirely leaves about 2.4 ms. Nothing inside ADR-0002's representation reaches 2 ms."_ The reviewer recommended revising the budget. I chose the other door that morning: a new representation.
+
+ADR-0012, proposed and accepted on the 17th: a brick is a 512-bit occupancy mask, a per-brick palette, and as many bit planes as the palette needs, the same bytes on the CPU and in the GPU mirror. _"Frame time is bandwidth, and today's walk spends five dependent reads per step."_ It orders the work hierarchy first, then the format. The CPU format came on the 20th as plan 0021, and its first phase was a census of the actual bricks: in the level, 383,608 full bricks, of which 275,466 hold one material and 107,325 hold two, so the payload falls from 392.8 MB to 34.6; in the streaming cave at the default radii, from 3,053 MB to 411. The kernel bench I ruled on at 09:12 on the 20th: 505.3 ns per brick-edit today, 116.8 planar, a ratio of 0.231. The plan closed at 13:37 with the edit bench at 1.49 ms warm in the same window where the old code read 2.86.
+
+<BarChart
+  title="The edit line and its readings across the plans"
+  sub="100 sphere carves of radius one metre, CPU milliseconds; the warm reading where the plan recorded one."
+  series={[{ name: 'line' }, { name: 'measured' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Plan 0001, day one', values: [2.0, 4.92] },
+    { label: 'Plan 0003, row spans', values: [2.0, 3.56] },
+    { label: 'Plan 0014, pool and capsule row', values: [2.0, 3.03] },
+    { label: 'Plan 0021, the packed brick', values: [2.0, 1.49] },
+    { label: 'Quiet re-read, 20 Oct', values: [2.2, 1.79] },
+  ]}
+  note="docs/nfr.md §4 and the plans' close readings. The fly-through's own bench read 2.06 to 2.09 ms on the 20th with the world crate unchanged, 'so machine state, not code', and I raised the line to 2.2 ms on the dev box with one more pass planned."
+/>
+
+The brick did more for memory than for edits. Day one's budgets file had said _"RAM is the tightest margin."_ The level's first upload fell from about 585 ms to about 190, and a spilled chunk of 512 two-material bricks is 37,416 bytes on disk against 524,840.
+
+<BarChart
+  title="Memory before and after the packed brick"
+  sub="Megabytes at the streaming defaults, as the census and the close readings of plan 0021 record them."
+  series={[{ name: 'before' }, { name: 'after' }]}
+  unit=" MB"
+  rows={[
+    { label: 'Process peak, as the kernel counts it', values: [3886, 966] },
+    { label: 'Resident chunks in RAM', values: [3242, 442] },
+    { label: 'Brick payload, the streaming cave', values: [3053, 411] },
+    { label: 'Brick payload, the bounded level', values: [393, 35] },
+  ]}
+  note="docs/plans/done/0021-packed-cpu-brick-census-kernel-and-readers.md and docs/nfr.md §3. The mirror's bytes did not move: its half of the format is the plan ADR-0012 still owes."
+/>
+
+## The march, and the hierarchy
+
+The other recorded miss was the primary rays in the streaming cave: 6.69 ms against 3, where the bounded level took 1.95 with the same marcher. Plan 0015's first phase put a steps view in the testbed and found the shape of it: _"The streamed spawn's mean is 15.55 steps per ray against the level's 10.48, 1.5 times, while its march time is 3.7 times... Most of the gap is cost per step, five dependent reads into a mirror of about 1.7 GB."_ So the plan built a hierarchy of occupancy bits, one read per level: 512 brick bits at the head of each chunk record, a bit in the chunk table for a chunk that is all air, a 512-bit opaque mask per brick in place of the 8-byte one, and a walk that keeps its chunk, bits, brick entry and mask across steps and reads the pool only at the hit.
+
+<BarChart
+  title="The march pass before and after the hierarchy"
+  sub="Milliseconds at 1920 × 1080, median of the last 30 frames, three runs, shaded with the shadow ray."
+  series={[{ name: 'before' }, { name: 'after' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Streaming cave, the spawn', values: [6.81, 1.95] },
+    { label: 'Bounded level, the spawn', values: [1.82, 1.45] },
+  ]}
+  note="docs/plans/done/0015-traversal-hierarchy-chunk-bits-brick-masks-and-translucent-class.md, the close readings; the line is 3.0 ms. Mean steps per ray at the streaming spawn fell from 15.55 to 10.98, the p99 from 84 to 53."
+/>
+
+The phase that stopped was the one that changed how a skip exits a cell. Day one's post told the story of 17 isolated pixels moving when the 2 × 2 × 2 masks went in; the 4 × 4 × 4 skip moved pixels in every golden, the reference images CI compares each build against, and the plan's rule was bit-exact. I was asked and ruled a one-time re-bless: _"the one-time re-bless has no pixel bound"_, every golden was regenerated once, the differing pixels counted, 58 to 141 per image, and the walk's exit coordinates now follow the plane order so that _"the image is independent of every skip."_ The plan closed at 10:32 on the 19th with the streamed spawn at 1.93 to 1.98 ms over six runs, _"the line is met on the dev reference,"_ and a translucent material class on the side: a second, short walk from the eye to the opaque hit that composites up to four translucent voxels in front of it. The plan's test says it costs the opaque walk nothing; the spawn reading rose by about 0.1 ms when it landed.
+
+## Contour as the default
+
+Plan 0013 had three jobs: the shadow ray's origin, the footprint, the detail strength. The origin moved half a voxel along the plane's normal and the speck count fell from 174 in face mode to 52. The detail strength was mine to pick, on the 18th, from 0.1, 0.15, 0.2 and 0.3: 0.1. The footprint was the hard one, and it ended in an option the plan calls (c). On the 17th I had chosen a lower full-detail radius, 14 chunks instead of 16, as an interim. In between, plan 0017 had made the mirror reserve its 3 GB once at startup and report a pressure, the fraction of it in use, with a rule that drops a chunk of full-detail radius when the pressure passes 0.9 and gives it back under 0.7. On the 20th, with that in, the phase stopped: at 14 the pressure read 0.911 once everything was loaded, and the rule lowered the radius anyway. Option (c) withdraws the interim and sets no new radius: the default look fits the 3 GB budget by the pressure rule alone. Two autopilot flights settled at 12 to 13 chunks, 76.8 to 83.2 m of full detail, against the roadmap's _"about 100 m"_; the plain look holds 16, 102 m. The budgets file records it as a finding, not a miss: live bytes peak under the line. The plan to hold 16 under contour, surface-only attribute storage, is ADR-0012's last step and is not drafted. I flew it on the 20th, and the log has _"the default look is accepted; `--level` is the owner's favourite and smooth."_
+
+The close review of that plan found _"a real regression"_: the attribute pass's CPU work on the render thread had a p99, the frame slower than 99 in 100, of 167 ms, and the default look flew a fifth fewer frames than plain. That became plan 0023.
+
+## The render thread
+
+ADR-0017's hypothesis, confirmed by a profile on the 20th: when the camera crosses a chunk boundary, about 2,000 chunks of the low-detail ring are evicted at once, and each drives a scan of the 488 bricks on its border, close to a million hash lookups in one frame; a bench counted 956,968 shell brick visits per crossing. Three fixes, each measured. The shell scan visits only the border bricks of full neighbours, which turns the eviction case into 50,986 neighbour lookups and zero brick visits, 170.89 ms to 1.399 for the bench's crossing frame. The pass is capped at 8,192 bricks a frame with a carry-over queue, and a brick that waits gets a clear item that writes "no plane", so it _"shows face-mode normals, never stale planes."_ And the stream queue, the residency sweep and the window shift became incremental, the update's worst frame from 37.8 ms to 4.75. The phase that would have moved the upload's palette narrowing onto the stream workers I skipped on the 21st, on its entry profile.
+
+<BarChart
+  title="Render-thread CPU, before and after plan 0023"
+  sub="Milliseconds per frame on the default look in the streaming cave, the quiet-box re-reads of 20 and 21 October."
+  series={[{ name: 'before' }, { name: 'after' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Attribute pass, p99', values: [180, 6.0] },
+    { label: 'Attribute pass, max', values: [390, 14.6] },
+    { label: 'Streaming update, max', values: [37.8, 4.75] },
+  ]}
+  note="docs/nfr.md §2 and the plan's Phase 6 readings. The attribute line is p99 under 4 ms; 5.5 to 6.0 is a recorded miss. The streaming line of 1.0 ms per frame is still missed in the plain look, p50 4.9 to 5.0; the default look reads 0.006 at its settled radius."
+/>
+
+I flew the result on the morning of the 21st: _"Hitch: 'mostly gone', no stalls felt; the frame rate dropped to about 40 fps during the fast passes... Face-mode lag on newly streamed rock: 'non existent', no visible delay. Carves: contour in the same frame."_ The plan closed at 11:21 as version 0.23.0, with the streaming line _"still a recorded miss"_ and its cause named for the first time with a number: of the sync's samples, 41.8 percent are the copy into the GPU buffer, ahead of the narrowing at about 38. The next step is a staging ring, which the ADR had rejected as its alternative B, so taking it _"needs a new ADR that supersedes this one's rejection."_ I ordered it after the lighting plan.
+
+## Collapse that crushes
+
+On the 20th I did the windowed checks of the default look and of the plan that routes stamps and drops through the server, and the second found the bug of the window. Every region the support query reported as unsupported printed _"landed after 0 ticks, fell 0 voxels."_ The query lets a cell with fewer than 64 solid voxels of 512 hold nothing up; the drop stops at any solid voxel below. A region resting on a sparse sliver was both unsupported and wedged, and nothing ever fell. The headless reproduction on the level: the first region the seeded digs detach, four cells and 501 voxels, rests on cells holding 31 to 38 solid voxels each, and drops zero.
+
+I chose a drop that crushes what it falls through, and ADR-0016 wrote it down: _"Crush, not carry. The crushed volume becomes rubble, piled at the end of a fall through the server and the log."_ A solid voxel outside the region whose cell holds fewer than the threshold, and whose material is not indestructible, yields: the gap scan passes through it as air and the drop crushes it. The region above drops eight voxels a tick, nine times, 72 voxels, crushing 141 on the way, and lands on a cell that bears load; a pile op puts the 141 back on top of it as rubble. The level's full sweep of 40,000 seeded digs now finds one region, where the wedged code found six, because the first one falls away and the later digs that would have detached it again find nothing. Two new op kinds, five and six, so that a replay falls the same way; the collapse course hash moved and was blessed, the session hash did not.
+
+<Screenshots
+  title="The landed piece"
+  sub="The region the test detaches, after its fall of 7.2 m through the slivers: the crushed voxels piled back on top of it as rubble. Rendered headless from the collapse test's own world, the lamp turned down to an eighth for the distance."
+  images={[
+    {
+      src: '/images/voxel-engine/rubble.webp',
+      alt: 'A block of voxel rock seen from above and to the side under a dim headlamp, its top uneven with loose voxels piled on it, dark cave around',
+      caption: 'Four cells, 501 voxels, 141 crushed and piled',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+/>
+
+My check at 22:23: 17 unsupported regions, 17 landed, none refused or wedged; _"landed after 4 ticks, fell 26 voxels, crushed 159 voxels, 159 rubble"_; _"landed after 16 ticks, fell 121 voxels, crushed 17 voxels, 17 rubble"_; 14 of the 17 crushed something, each pile equal to its crush. _"all works as intended."_ The benches: a slab through a sliver 92 to 95 µs against a 100 µs proposal, the yielding cube 7.4 to 10.6 ms against 20, the pile 35 to 38 µs against 200.
+
+## The cave you can hear
+
+Plan 0020 has three phases marked `human`, more than any other plan, because its done-whens are ears. The engine had direct sound, occlusion and early reflections from the 16th. This plan added the late tail: a fan of 128 rays from the listener measures the volume and surface of the room it can see, Eyring's formula turns them into a decay time, clamped between 50 ms and 8 s, and one shared sixteen-line feedback delay network renders a tail of that length, its line lengths primes near the mean free path. Early echoes render from their wall's direction through sixteen shared direction buses, each spatialised with the head's response for that direction, and glide when the listener moves rather than swapping, which were the clicks the listen of the 17th had left open. A reflecting face keeps the fifth root of one minus its absorption, the skin-depth rule. And `--mic` opens the microphone as a voice with its direct path muted, _"so the player hears their own voice come back off the cave."_ A 12 m cube measured from its centre gives a decay of 2.249 s.
+
+Two phases stopped on done-whens that could not be met as written: the walking test asked for under half a decibel of change per block, and an ideal click-free render of the same walk changes 5.24; the room-step test measured the tail's crest instead of clicks. Both were amended. Then, at 17:55 on the 20th, I listened. Of six checks, two passed. _"Direction is lost with the tail on. With `Y` off the knock's direction is heard; with it on, it is not."_ _"The balance is wrong, echoes too quiet and the tail too loud."_ The 4 m room was _"short and tight"_ and passed; the 36 m room _"does not read as a large chamber: the owner expects the voice to come back late and at nearly full strength, as when yelling in a natural cave."_ A moving listener produced something _"like a Doppler but with no pitch really."_ And flying out of the world and back into a chamber gave _"a loud burst."_
+
+The fix pass, five phases, landed between 18:40 and 19:44. The burst was a fan from inside rock, which reported a room with no surface at all; such a fan is discarded now and an all-miss fan gives zero. A change of room hands the tail over between two networks when the mean free path moves by more than fifteen percent, with a crossfade, measured as +2.62 dB over the chamber's steady level against +19.11 for a glide and +34.10 for the old swap. Echoes glide at the walk's own rate and reach a 100 m room. The direct path got an optional propagation delay, off by default. And the tail's lines were capped at 4,800 frames, which the 100 m room exposed: fifteen of sixteen lines pinned at the cap and the tail read −29.9 dB against the room's −22.6; the cap is 28,000 now and the reading −22.56.
+
+I listened again at 22:27, on the headset the log names, and found the levels by hand per room: +30 dB of echo in the 4 m room down to +6 in the 100 m one, the tail from −15 to 0, and in the 100 m room with the microphone _"the voice returns late and strong, then tails, 'quite natural'."_ The knock's direction held in all three rooms at those settings. So the level is a function of the room, and Phase 13 made it one: a piecewise-linear curve in the log of the mean free path, with the knots at the four rooms I had tuned. ADR-0021 records what that costs: _"The levels are no longer physical. In the 4 m cube at the defaults, the early energy is about 34 dB over the direct path's."_ The confirmation listen on the morning of the 21st: the 4 m room _"good and natural as is"_, the 12 m room better with the echoes 3 dB down, which goes back to the architect for a re-fit of that knot, a cave walk with no level jump in any chamber, and the wobble while walking _"almost non existent."_
+
+<BarChart
+  title="Echo and tail levels by room size, the curve's knots"
+  sub="Decibels of trim over the physical level, at the mean free path of each room I tuned by ear."
+  series={[{ name: 'early echoes' }, { name: 'late tail' }]}
+  unit=" dB"
+  rows={[
+    { label: '4 m cube, 2.67 m', values: [30, -15] },
+    { label: '12 m cube, 8.0 m', values: [15, 0] },
+    { label: '36 m cube, 24.0 m', values: [12, 0] },
+    { label: '100 m room, 69.0 m', values: [6, 0] },
+  ]}
+  note="docs/adrs/0021-echo-and-tail-levels-by-room-size-curves-and-a-tail-handed-between-two-networks.md. The mean free path is the average distance a ray travels between walls. Between knots a curve is linear in its log and outside them holds its end value; the tail has two knots and is 0 beyond 8 m."
+/>
+
+The last decision from this plan is a bench rule. Phase 13's paired mixer bench read the new code at +5.80 percent over its parent with no new work in the measured block. Rebuilt with the loops aligned to 64 bytes, _"both trees read the same... The gap is where the linker put the loop."_ ADR-0020: paired bench bounds are read with loops aligned, and the re-read came in at +0.08. The mixer's absolute proposals were missed anyway, 0.69 ms static against 0.6 and 1.14 turning against 1.0, on a loaded box; I accepted the loaded readings to close the plan on the 21st, with a quiet reading and an optimisation if it stays over as the follow-up. Version 0.24.0.
+
+## From outside the world
+
+Flying out of the level's bounds showed a black screen, and the wish was the look of noclipping out of a Source map: the level as a transparent dollhouse of lit rooms. Plan 0025's rule is one sentence of the marcher: a ray that starts in a non-air cell ignores solid until it has entered an empty cell of a resident chunk, then hits the next surface as usual; a chunk outside the window is not air, so rock with no cavern behind it is a miss. A hit is shaded by a fixed hemisphere light, no lamp, no shadow ray, and a miss is a flat sky. I moved the golden's camera from 20 m outside to 40, because 20 read six percent sky and 40 reads twenty-four. The key is `X`, the flag `--cutaway`, and the HUD shows the mode.
+
+<Screenshots
+  title="The level from 40 m outside its western face"
+  sub="Seed 1, the camera of the cutaway golden at 1280 × 720 on the RTX 3080: every cavern's far wall shows through the hull under the hemisphere light; where there is no cavern behind the rock, sky."
+  images={[
+    {
+      src: '/images/voxel-engine/cutaway.webp',
+      alt: 'A cross-section of the voxel level seen from outside: a band of grey rock with the lit far walls of many caverns visible through it, and grey-blue sky above, below and through the gaps',
+      caption: 'The cutaway view',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  note="A ray from outside walks the whole hull: a mean of 49.5 steps per ray and a p99 of 170, against 0.91 and 1 for the same camera with the cutaway off. A diagnostic in the budgets file, with no line."
+/>
+
+The same evening a gamepad went in, because I want to run demos from the sofa: the shell carries analog axes and pad buttons as plain enums, no gamepad library in any engine crate, and the testbed maps a DualSense's sticks to fly and look, triggers to dig and fill, a button to cycle the cutaway. The sofa check with the real controller has not been run.
+
+## The budgets at the cut-off
+
+<BarChart
+  title="Frame and CPU lines against the measurements, 21 October"
+  sub="Milliseconds on the dev reference. The baseline card is not on hand; its numbers are projections."
+  series={[{ name: 'line' }, { name: 'measured' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Primary rays, streaming cave', values: [3.0, 1.98] },
+    { label: 'Primary rays, bounded level', values: [3.0, 1.46] },
+    { label: 'Streaming CPU per frame, plain, p50', values: [1.0, 5.02] },
+    { label: 'Attribute pass, render thread, p99', values: [4.0, 6.02] },
+    { label: '100 carves of 1 m', values: [2.2, 1.79] },
+    { label: 'Mixer block, 32 voices, static', values: [0.6, 0.69] },
+    { label: 'Mixer block, turning', values: [1.0, 1.14] },
+    { label: 'Acoustics update, 32 sources', values: [1.1, 0.74] },
+  ]}
+  note="docs/nfr.md §2, §4 and §9 at version 0.24.0. The lighting, denoise and upscale lines, 10.5 ms of the 16.6, have no reading yet: they are plan 0024's."
+/>
+
+<BarChart
+  title="Memory lines against the measurements"
+  sub="Gigabytes, peak over the autopilot flights at the default radii, as the budgets file writes them."
+  series={[{ name: 'line' }, { name: 'measured' }]}
+  unit=" GB"
+  rows={[
+    {
+      label: 'VRAM: world mirror, live against the reserved budget',
+      values: [3.0, 2.86],
+    },
+    { label: 'RAM: process peak, after the packed brick', values: [4.0, 0.97] },
+  ]}
+  note="docs/nfr.md §3. Day one read 2.43 and 3.87. The VRAM line is met by the pressure rule, which holds full detail to 12 or 13 chunks under contour instead of 16."
+/>
+
+Four lines were changed by me in the window: the edit line to 2.2 ms, the sweep's 5 µs proposal to its 26.3 µs reading, the acoustics update's 0.5 ms proposal to its 1.0 ms reading, and the mixer's loaded readings accepted as misses. Each says so in the file, with the date.
+
+## What is next, and what is open
+
+The next plan is the one ADR-0001 called the largest risk: lighting. Plan 0024 is approved and nothing in it is started.
+
+<Mermaid
+  code={`
+flowchart TB
+  hit["hit pass: one record per pixel (position, normal, material, plane)"] --> light["light pass: one sample per pixel, the headlamp or an emissive voxel, picked by resampling; one shadow ray"]
+  mirror["mirror upload extracts emissive voxels into a buffer of light samples"] --> light
+  light --> temporal["temporal pass: reproject last frame's result; kill the history inside every edit's bounding box"]
+  temporal --> atrous["a-trous pass: filter by variance"]
+  atrous --> comp["composite: albedo back, emission, exposure, tone map"]
+`}
+/>
+
+ADR-0018's reason is the floor's arithmetic: _"The §2 lighting line of 6.0 ms buys about two full-resolution rays per pixel on the baseline, or eight at half resolution. Any family that needs more than one or two shadow rays per pixel per frame at full resolution misses the floor."_ Four mechanisms stay switchable until I have seen them: the shadow ray's walk, the light sampler, the history killer, and whether the lighting runs at half resolution. Two of its done-whens: a 4 × 4 × 4 emissive cube _"holds exactly 56 light samples after a sync"_, the floor under an emissive ceiling within five percent of an irradiance of 1.741. The last phase re-shoots the README's hero with a glowing vein.
+
+Open besides it: the staging ring for the streaming line's copies, which needs its ADR; the mirror-slot plan that holds 16 chunks of contour under 3 GB; the audio follow-ups, a quiet mixer reading, the wobble, the 12 m knot; three hashes waiting for the Windows arm of CI to confirm them; the DualSense on the sofa; and the baseline card, _"to be acquired or borrowed before M2 closes."_ The README is behind the engine by three plans: it does not know `X`, `--cutaway`, `--pad`, `--room` or `--mic`, and still says the reverb _"is in flight."_
+
+## How the five days were run
+
+The harness is the one from day one: an ADR for a real tradeoff, a phased plan with a done-when per phase, `dev` builds, a close review in a fresh session, my "go". What the five days added is scale: on the 20th four lanes ran at once, four agents in four working copies, which is why nearly every reading of that day says _"not quiet"_ and names a one-minute load average between 8 and 29, and why the quiet re-reads exist as their own commits. Eleven plans closed on the 19th, 20th and 21st. A dependency bump went in between two of them because the security advisory tool failed on two advisories against wasmtime; the patch release fixed both. And every phase marked `human` was done by me at the keyboard or with the headset on, except the gamepad on the sofa.
