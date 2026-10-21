@@ -1,0 +1,363 @@
+---
+title: 'Diablo II, days seven to eleven'
+date: 2026-10-21
+tags: ['projects']
+description: 'Five days of the d2-recon preservation project: the combat run and two more simulation phases, quests, travel and the economy in scope, two real clients in one game, 99,450 emulated skill cases, the first run of the core specs composed end to end, and three nights the machine was asleep or out of memory while the lanes ran.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+import ResearchMap from '../../../components/charts/ResearchMap.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+import ProgressMultiples from '../../../components/charts/ProgressMultiples.astro';
+import TagTimeline from '../../../components/charts/TagTimeline.astro';
+import GameArt from '../../../components/charts/GameArt.astro';
+
+[Days five and six](/projects/2026/10/16/diablo_ii_days_five_and_six/) stopped at 17:53 on 16 October, with 29 rows on the research map and 28 of them reviewed, and the combat run, the first run of the simulation, still to come. This post covers the rest of that evening and the five days after it, to 12:11 on 21 October. The map now has 36 rows and 35 are reviewed. The one that is not is again the newest: a row called `chain`, added on the 20th, for the core specs run as one chain from the game seed to the drops on the floor, with nothing read from the game in between.
+
+The difference from the earlier posts is that I did not play. Seven sessions of day six were mine; in these five days none were. The record of what I did is short: on the evening of the 16th I approved six plans to run unattended, on the 20th five more and the order of what was left, on the 17th I ran one command as root, to show that the firewall already blocked the game's port from outside, which was the condition on letting two clients into one game, I accepted the seven decisions put to me, I paused the lanes twice, and on the 20th I asked for the backlog to be archived because it was getting large. Everything else below was done by the lanes, each an agent with its own copy of the repository, on the harness, the game under a debugger with a logger attached, through nights in which the machine was shut down, suspended for nine hours, suspended for seven, and once out of memory.
+
+## The map of the work
+
+<ResearchMap
+  snapshots={['d1', 'd6', 'd8', 'd11']}
+  title="The research map at each cut-off"
+  note="The arrow marks a row that moved since the previous snapshot. Source: docs/specs/README.md at commits 8faba4f2, 33dc648, 02d790d and 483728e. The Game rules band was added by ADR-0017 on the evening of 16 October; the chain row by plan 0048 on the 20th."
+/>
+
+Seven rows are new. Two are the second simulation phase, stats and states. One is room lifecycle, an enabler that nothing had named until the lifecycle run found that a room put to sleep and woken again creates things. Three are a new band, game rules: quest progression, travel, and the item economy, two areas the project's second decision had kept out of scope on day one. And one is the chain.
+
+Every row went the same way as before: a static reading of the code tagged `[I]`, a harness run under the debugger that raises what it reproduces to `[C]`, a spec, a review by an agent that did not write it. The runs of the window:
+
+| Run                             | What the model reproduced                                                                                 | Mismatches     |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------- |
+| Combat                          | 40 logs, 40,655 attack and on-hit events, chained on the seeds                                            | 0              |
+| Stats and states                | 18 sessions; 891,844 stat reads, 3,643 state applies, 54,719 regeneration ticks                           | 0              |
+| Room lifecycle                  | 13 sessions, 2,215,807 checks; 2,440 room releases and 1,362 restores                                     | 0              |
+| Lifecycle, the town-follow      | 3 Hell sessions, 675,849 checks                                                                           | 4, explained   |
+| Quests and travel, three runs   | 45 sessions, 45,714 checks                                                                                | 0              |
+| Economy, two runs               | 33,901 price calls, 1,061 durability rolls, 1,412 wear events, 14 resurrections                           | 0              |
+| Two clients                     | 19 sessions with two real game clients; 417 party kills, 385 experience shares, 230 player-against-player | 0              |
+| Simulation shortfalls           | 31 combat logs, 18,737 events; 10 stats logs; 1 travel log                                                | 0              |
+| Objects, the sweep              | 22 sessions, 234,315 checks                                                                               | 0 in the model |
+| Items, three sweep batches      | 35 sessions; 873 treasure class calls, 1,043 creations, 1,078 throwable picks                             | 0              |
+| Skills, eleven emulated batches | 99,450 cases of the skill and missile functions, run in the disassembler with no game                     | 0              |
+| Seed to world, run 1            | 28 logs, 156 levels, 9,057 objects, 1,286 items from the game seed alone                                  | 2, open        |
+
+A check is one value the model predicted and the game logged. A treasure class, which the table names twice, is the row of the drop table a monster or a chest rolls on. The sessions were driven by the agents from screenshots with the pilot from day four, except the eleven skills batches, which ran in the emulator the day six post described, under a rule that was widened on the 20th, below.
+
+## The combat run
+
+Day six ended with the combat formulas read from the code and the harness run waiting. The run was accepted at 19:26 on the 16th, ninety minutes after that post's cut-off: 19 sessions, 15,358 events, zero mismatches. The plan had asked for 2,000 player attacks and got 2,030; it had asked for 1,000 monster attacks and got 4,533, because monsters miss a lot: 697 hits against 3,836 misses, 2,243 of them blocked. Every kind of event had to be chained, the second event's entry seed predicted from the first's exit, at least twenty pairs per kind, and _"every kind passes the floor of 20 on both ends."_
+
+<BarChart
+  title="Events in the first combat batch, 19 sessions"
+  sub="One event is one call of a named entry point: an attack resolved against one target, one on-hit effect applied."
+  series={[{ name: 'events' }]}
+  rows={[
+    { label: 'Monster attacks on the player', values: [4533] },
+    { label: 'Player attacks on monsters', values: [2030] },
+    { label: 'Missile defence rolls', values: [1957] },
+    { label: 'Mercenary attacks', values: [1259] },
+    { label: 'Nova hits', values: [519] },
+    { label: 'Crushing blows', values: [316] },
+    { label: 'Deadly strikes', values: [250] },
+    { label: 'Open wounds', values: [246] },
+  ]}
+  note="docs/findings/combat/experiments.md, run:2026-10-16-combat. The resume lane brought the run to 40 logs and 40,655 events by the next morning."
+/>
+
+What the first batch could not reach was Andariel in Hell: the lane ran out of time, two attempts, and the record says so. A resume lane took the shortfalls and stopped the same evening at _"the owner's deadline for the machine"_. It finished at 07:56 the next morning with 40 logs and 40,655 events, still zero mismatches, and the three things that needed a boss: crushing blow on an act boss, 34 events on Andariel, is one eighth, as read; on superuniques, 55 events, also one eighth; and the mercenary's damage percent against her is 50 in Normal, 35 in Nightmare and 25 in Hell, one read indexed by the difficulty, and the 25 in Hell is what tells that column from its neighbour, which holds 20.
+
+The run also caught the reading in a mistake. The reading said open wounds on an act boss does the full amount, and the spec said so too. The checker had been written from the code's test, which halves the bleed for any monster carrying the type flags `0x0C`, and Andariel carries `0x08`, the unique flag. All 63 of her wounds were halved. The review's words: _"the finding's 'no /2 for a boss' and the spec's 'act bosses take the full amount' were wrong, and the checker had modelled it right all along."_ The spec closed on the 17th at 08:16 with 190 confirmed claims against 139 inferred, and the four community claims that day six listed as contradicted, the class level bonus, the absorb healing, crushing blow on uniques and its player-count scaling, were confirmed as contradicted by the run. The shortfalls run three days later added the champions: _"52 crushing blows on champions took 1/4."_ Not one eighth.
+
+One monster did not fit the model: a session with _Fleshripper_, a unique knife that prevents monsters from healing, left 101 mismatches, all in a kill handler that runs inside the delivery and that nobody had read. The session was set aside and the handler went to the skills plan, where on the 20th the reading found where the dagger's state is applied: inside the to-hit roll's success branch, between the hit and the block.
+
+<GameArt
+  title="The dagger that broke the model"
+  images={[
+    {
+      src: '/images/diablo-ii/item-fleshripper',
+      alt: 'Fleshripper, a unique fanged knife: the inventory picture, its drop frames and a character holding it',
+      caption:
+        'Fleshripper, whose prevent-heal state lands between the hit and the block',
+      width: 142,
+      height: 88,
+    },
+  ]}
+  note="The item sheet from the project's tools/item_art.py: the inventory picture and the frames of the item falling to the ground."
+/>
+
+## Stats and states
+
+The second simulation phase was approved on the evening of the 16th and closed on the 17th at 20:06. It is the part of the game that adds things up: how an item's bonus reaches the wearer's strength, and how a timed state, a shrine's blessing, an aura, a curse, is applied, refreshed and expires. Eighteen sessions with six characters built by the tools, zero mismatches, and the counts are the kind a run of a tree produces: 891,844 stat reads in the logged windows, 232,042 cache writes, 17,634 requirement checks, 3,643 state applies, of which 2,608 were refreshes of a state already there, and 6,207 aura durations, every one of them the aura's delay plus one.
+
+The static reading had claimed that no function in this phase draws a random number, and the plan turned the claim into a check: the seed logged on entry and exit of every event kind. One kind drew. A damaging aura, Sanctuary, takes _"one `RNG_RangeB` per hit"_, so it was checked by chaining instead, 746 pairs. On the 21st the catalogue read it narrower: one draw per run of the aura, whatever the number of units it hits, still inferred.
+
+Three things in the spec that a player would not guess. An item's per-level bonus, the kind that grows with your character level, _"is not refreshed when the wearer levels up"_, 94 entries, confirmed; it is recomputed when the item is moved. The ethereal requirement discount of ten decided 30 of the requirement checks in the run, a character with strength 115 to 124 against a pair of War Boots that want 125. And a refresh of the whole tree runs every 136 frames with no player action at all; what queues it was not read. The community's guide says stat operation 6 _"does not work"_ and operation 7 updates only on the client; the server computes both, and no stock item reaches them, because the two affixes that use them cannot spawn. The review also struck a number from the reading, _"96 s at 25 frames a second"_ for a shrine, because the project's rule since day six is that timing is stated in frames and nothing else.
+
+## Rooms that sleep
+
+Day six's post did not mention room lifecycle because nobody had named it. The game puts a room to sleep when no player is near, and wakes it when one comes back, and the waking recreates monsters, objects and items from records it kept. Any reimplementation has to do this the same way, or a player who walks away and returns finds a different room. The plan was approved at 21:15 on the 16th, and its run on the 17th was the largest of the window: 13 sessions, 2,215,807 checks, 2,440 rooms released and 1,362 restored, 2,035 monsters brought back, every one of them with the life the model predicted.
+
+The code reading was wrong in four places, three of them: An item restore takes two draws on the game seed, and a simple item comes back with a start seed of zero. A player's visit between two release passes does not reset the idle count. And the reading's headline surprise, a dead champion saved and restored alive, turned out unreachable: _"The save test's `0x18` mask is 'special or minion'. Every logged champion carries `0x08`, so a dead champion is never saved."_
+
+Against the community, the lifecycle spec contradicts a belief players repeat often. A level without the `SaveMonsters` flag is said to leave its monsters _"injured"_; in 1.14d, _"any other live monster of a released room is freed without a record, and the room is not populated again, so it is gone, not injured."_ Blood Raven is said to be back at full health after twenty minutes; the rule is that a restored monster keeps its saved life if fewer than 7,500 frames passed between the save and the restore, and gets its maximum otherwise. And Prevent Monster Heal is said to reset when you walk too far: nothing resets by distance, _"a released and restored monster is a new unit."_
+
+<GameArt
+  title="The monster the twenty-minute rule is told about"
+  images={[
+    {
+      src: '/images/diablo-ii/monster-blood-raven',
+      alt: 'Blood Raven: a corrupt rogue archer with a bow, standing still',
+      caption: 'Blood Raven, as the game draws her class',
+      width: 45,
+      height: 73,
+    },
+  ]}
+  note="Composed from the game's own sprite layers with tools/cof.py, first frame of the neutral pose with the bow, without the colour shift a superunique gets in the game."
+/>
+
+One case the run could not reach was a monster following the player into town. A follow-up batch tried three Hell sessions on the 17th and finished on the 18th with 675,849 checks and the only non-zero mismatch count of a finished run in the window: four. All four were explained the same way, a flag bit the restore does not copy back, four of 1,689 monster records. The chaser never crossed a town, and an offline scan of 106 town layouts showed why it cannot: of 93,944 cell pairs, zero routes through a town are shorter, because _"each town's interior meets its neighbour level at one gate."_ The batch also reads the sweep for expired items as running every 1,500 frames and not every 20, as the reading had said; the 20 belonged to the quest timer beside it. That one stays inferred: the run excludes 20 without confirming 1,500.
+
+The run had a mishap, and the mishap became a rule. One launch overlapped a running development session on the same harness slot, both were killed, and the partial log of the overlapped launch was deleted. The play guide now says: _"Partial logs are kept. An aborted session, or one that overlapped another on the same slot, leaves a partial log: keep it... and never delete it."_ And the third Hell session was killed at 21:38 on the 17th, when the machine shut down with it in the middle of its second pass of leaving the room and returning; its partial log is part of the record, and the lane's draft text, kept in scratch, was lost and rewritten from its anchors.
+
+## The sweep
+
+Day six introduced plan 0038, the sweep of the 1,526 inferred statements the reviewed specs still carried, sorted into batches: static ones, where a kept log or a second source already holds the evidence, and harness ones, which need new sessions. Two batches had run by that post's cut-off. Eighteen more ran in this window.
+
+<BarChart
+  title="What each sweep batch raised"
+  sub="A statement is raised when the batch's evidence covers it whole, in part when it covers some of its cases; a shortfall is a statement the batch set out to reach and did not."
+  series={[
+    { name: 'raised' },
+    { name: 'raised in part' },
+    { name: 'shortfall' },
+  ]}
+  stacked
+  rows={[
+    {
+      label: 'S1e, emulation: calc, excel, strings, rng, saves',
+      values: [69, 1, 4],
+    },
+    { label: 'S2c, static: items', values: [48, 27, 0] },
+    { label: 'S1b, static: data, rng', values: [47, 28, 0] },
+    { label: 'S1a, static: the save file', values: [39, 15, 0] },
+    { label: 'H4b, harness: monsters', values: [35, 9, 1] },
+    { label: 'S2b, static: affixes, properties, uniques', values: [30, 18, 1] },
+    { label: 'H5c, harness: levels and warps', values: [23, 6, 11] },
+    { label: 'S3a, static: monsters, hirelings, player', values: [20, 19, 0] },
+    { label: 'S4b, static: levels and objects', values: [19, 13, 7] },
+    { label: 'H5e, harness: mazes', values: [18, 2, 2] },
+    { label: 'H5a, harness: level links', values: [16, 0, 0] },
+    { label: 'S1f, emulation, second batch', values: [15, 0, 0] },
+    { label: 'H2b, harness: the item chain', values: [14, 5, 1] },
+    { label: 'H2a, harness: treasure classes', values: [12, 5, 0] },
+    { label: 'S3b, static: monsters, hirelings, player', values: [11, 4, 0] },
+    { label: 'H5b, harness: objects', values: [10, 11, 7] },
+    { label: 'H6d, harness: quest drops', values: [5, 9, 2] },
+    { label: 'H2c, forced tables: throwables', values: [4, 2, 1] },
+  ]}
+  note="docs/plans/0038-inferred-claims-sweep.md, the review's final line of each batch. H5b's record counts rows of the inventory, the others count statements."
+/>
+
+Two batches ran in the emulator rather than the game, the method ADR-0015 admitted on day six: one function of the binary at a time, in Ghidra's processor emulator, on inputs the batch chose, with every memory read traced. The first emulated 28,643 cases over ten families of functions and every one matched bit for bit, with a negative control failing as it should. The second added 18,800 and a `guard` directive, so that a case whose program counter reaches a fatal path stops instead of wandering. It also found a limit of the emulator itself: under its instruction model, dividing the smallest 32-bit integer by minus one returns zero where the real processor traps. _"It does not change a decision, so nothing goes to the owner."_
+
+Two statements came back contradicted. The seeds spec had said that a seed of 2³¹ or more is given on the command line as its negative decimal. The run showed the parser copies a switch's text only up to the next dash, so `-seed -1` arrives empty, reads as zero, and the game takes the clock; a value of 2³¹ or more saturates. The seeds you can reproduce from the command line are 1 to `0x7FFFFFFF`. And the Cube spec said the cow portal's spot search draws; it does not, the portal object does, 171, 173 and 171 steps in the three openings. The treasure-class batch found the kind of overclaim a sweep exists for: the quality roll's clamp, which the step note said _"never acted in the runs"_, acts in 667 of the batch's rolls and decides 138. The note was true of the two quality runs it was written on, a week earlier.
+
+A re-tag recounts a spec after its batches land:
+
+<BarChart
+  title="Confirmed claims in the re-tagged specs, before and after the sweep"
+  series={[{ name: 'before' }, { name: 'after' }]}
+  rows={[
+    { label: 'items/tc', values: [49, 119] },
+    { label: 'items/affixes', values: [112, 152] },
+    { label: 'items/properties', values: [130, 152] },
+    { label: 'drlg/preset', values: [98, 134] },
+    { label: 'data/calc', values: [77, 129] },
+    { label: 'drlg/maze', values: [105, 122] },
+    { label: 'drlg/room-tiles', values: [89, 120] },
+    { label: 'drlg/warps', values: [91, 104] },
+    { label: 'drlg/outdoor', values: [170, 180] },
+    { label: 'rng/seeds', values: [62, 76] },
+    { label: 'drlg/README', values: [60, 75] },
+    { label: 'rng/README', values: [22, 28] },
+  ]}
+  note="The front-matter counts each re-tag round records in docs/plans/0038-inferred-claims-sweep.md. The inferred count falls by about as much as the confirmed count rises; items/tc went from 81 inferred to 60."
+/>
+
+The inventory at the cut-off: 567 statements in static batches, 526 in harness batches, 414 blocked, and 17 raised at the inventory itself. Of the blocked, 288 have no reachable evidence, 73 need an edited table, 28 need the simulation, 7 need two players in one game, and 10 need me to play. Day six counted twenty-one harness batches still to run; twelve are left, in an order I set on the 20th, core and enablers first.
+
+## Game rules
+
+The project's second decision, on day one, drew the scope around creation: items, monsters, levels. Day six brought in the simulation. On the evening of the 16th a third decision, ADR-0017, brought in what the ADR calls game rules, two areas, three rows on the map, outside the simulation's phase order: quest progression and travel, and the item economy. Its reason: _"A reimplementation that has every creation path but no quest progression, no waypoints and no prices is not a playable game, and those are the gaps a reimplementer meets first after the world generator."_ The evidence rule is by the shape of the claim. A one-shot function, a price, a repair cost, a gold amount, is reproduced as a creation path is; an event-driven change, a quest bit set by a kill, a durability point lost on a hit, is reproduced per event under the simulation's rule. And the ADR names the cost: _"Quests are hardcoded. There is no quest table; 1.14d inlines each quest's callbacks."_
+
+### Quests and travel
+
+Three runs, on the 17th, 18th and 19th: 11, 21 and 13 sessions, 45,714 checks, zero mismatches. The static reading of the quests had 596 symbols and the spec that came out of it is the most inferred on the map, 322 inferred against 117 confirmed, because every quest's callbacks are code, and there are a lot of callbacks that no session reached.
+
+What the runs settled. A town portal takes three draws, not the five the reading said: _"Both ends come out of `SUnitCreate` already in their mode... so neither the creation nor the following `SetMode` draws."_ The door to the Arreat Summit reads one byte, quest 35's private "done in this game", and refused both characters built to test it, one without the word, one with every quest done. A handler of quest 11 writes a bit of quest 12's word while quest 11 is switched off, 44 writes. The stones of the Tristram cairn have to be touched in an order, and the order is a draw on the quest seed, made once per game at the first use of the decoded scroll. Tyrael's travel to Harrogath is not a line in his menu: the stock menu has no travel line, and the travel is the portal object beside him. And the hostility delay the community gives as ten seconds for leaving town: _"held for waypoints (10 000 ms), contradicted for portals: the portal gate waits 5000 ms."_
+
+Two things about the method. The third run's review lowered the menu lines that had been confirmed from a screenshot: _"A screenshot is not enough for a `[C]`."_ And the night between the 18th and 19th was the first of the window's bad nights: the machine suspended for about nine hours, the game exited, and the driver kept clicking into the window that was no longer there until the main session killed it at 07:23. Each session now has a watchdog.
+
+The first run reached no Hell session: _"the scripted walk to the town waypoint failed in five Hell launches."_ The third got two. No waypoint was activated from its dormant state, because every waypoint the sessions met was already active. And the boss steps of the quests, the kills that turn a quest's bits, were marked as candidates for me to play, with the note _"Still optional"_. I have not played them.
+
+### The economy
+
+Buying, selling, gambling, repair, hiring and resurrecting a mercenary, gold on the floor and gold lost at death, and the wear of items in combat. The run started on the 17th, was rotated between lanes, and closed on the 19th with 26,525 price calls over 3,762 distinct inputs, 138 repair-all sums, 22 hires, 14 resurrections of which 4 were refused, 20 death losses, 1,061 durability rolls and 1,412 wear events, zero mismatches. A second run the same day added 7,376 price calls for the cases the first had missed: crafted items, repair in Hell, gambling at level 3.
+
+Against the community the economy spec compared 22 claims:
+
+<BarChart
+  title="Twenty-two community claims about prices and wear, against the code"
+  series={[
+    { name: 'held' },
+    { name: 'held with refinement' },
+    { name: 'contradicted' },
+    { name: 'not covered' },
+  ]}
+  stacked
+  rows={[{ label: 'items/economy', values: [10, 5, 6, 1] }]}
+  note="docs/specs/items/economy.md § Leads. Five of the six contradicted claims were also reproduced by the run; the sixth, Books, is equal on stock data."
+/>
+
+The contradicted ones:
+
+- An ethereal item sells for 25 percent less. It sells for a quarter: the sell value is shifted right by two. A class item is quartered again.
+- An ethereal throwing weapon is always worth one gold. A stack of ethereal javelins sold for 1,040 at every one of fifteen vendors.
+- An affix's price multiplier is in 1,024ths for buying and 4,096ths for selling. All three values divide by 1,024.
+- The `gamble cost` column is the gambling price. It is read only for rings, amulets and items of version 0; every other gamble price is computed.
+- Armour wears by slot weights 2, 3, 2, 1, 1, 1 for head, body, shield, waist, feet, hands. The table in the binary has seven slots at 3, 5, 4, 4, 2, 2, 2, and 964 of 964 wear picks in the run named the slot whose item then wore.
+
+What held, exactly: the 4 percent chance of weapon wear and 10 percent of armour wear per hit, the death loss of `min(L, 20)` percent with 500 gold per level kept in single player, the resurrect cost of `L² / 2 × 15` capped at 50,000. And _"'Sell mult' is the buy price."_ There is a function to charge for healing, and nothing calls it: 1.14d heals for free. The code reading had been wrong about one thing, which the first check caught in four failed resurrections: a refused resurrection pays nothing and revives nothing, which the finding had not said. And a detail of the client the run noticed on the way: it asks _"Repair... Gold: cost — Yes / No"_ even when you cannot pay.
+
+<GameArt
+  title="The gold the economy run counted"
+  images={[
+    {
+      src: '/images/diablo-ii/item-wirts-leg',
+      alt: "Wirt's Leg, a wooden leg used as a club: the inventory picture, its drop frames and a character holding it",
+      caption:
+        "Wirt's Leg, under which the run counted 18 piles of gold and reproduced every one",
+      width: 125,
+      height: 88,
+    },
+  ]}
+  note="From tools/item_art.py. The second economy run checked the gold Wirt's body drops: the count of piles and the item level of each."
+/>
+
+## Two players in one game
+
+ADR-0008, the two-client harness, had been proposed since day two and accepted on the 16th, on one condition: before any session hosts a game, the lane makes sure that port 4000, the game's port, cannot be reached from outside the machine, and records how. That was my one root command of the window, on the 17th. The record quotes the output of `ufw status verbose` line by line, _"Default: deny (incoming)"_, the only allowed ports, and ends: _"No rule names 4000, no range contains it, and no rule is portless. So TCP 4000 is dropped on every non-loopback interface... This meets ADR-0008's condition."_ The lane's request had said _"Nothing else is asked: no probe, no second machine."_
+
+The run itself was on the 20th: 19 sessions with two real clients on two harness slots, the joiner steered from the host's log because the joiner has no debugger, 417 party kills with drops, 46 vendor stock events with two players present, 385 experience shares, 12 quest bits written with both players in the game, 230 attacks of one player on another, every checker at zero mismatches. Four times a checker had to change, and each time the review ruled _"the checker, not the game, was wrong"_: one had hard-coded a single player. What the two clients found that one could not: the party experience share is computed with an 80-bit floating-point product of the share and the level, not rounded to 32 bits, and 98 inputs separate the two; the stock client refuses to declare hostility outside town; a dead player has a mode of his own, 17.
+
+The review also found that the script which checked the firewall before each hosting session always exited zero, so the guard it was in would never have stopped a session. It is fail-closed now, and the rule says never to call it without `|| exit 1`. The re-tag raised 28 claims across eleven specs, the two-player cases the sweep had blocked fell from 14 to 7, and the plan closed at 15:23 on the 20th. Four cases that need two players at a boss were left for me, _"Not blocking anything."_
+
+## Skills, in two plans
+
+Phase three of the simulation is skills and missiles, and it is bigger than the first two together: 357 skills, 64 distinct start functions and 138 do functions on the server, 684 missile rows with their own do, hit and damage functions. ADR-0020, accepted on the 20th, splits it: _"Read literally, ADR-0014 would hold monster AI (phase 4) until every one of those functions has a reviewed spec."_ Plan 0045 is the machinery, dispatch, packets, missiles and event handlers, and its spec is the phase's spec; plan 0046 is the catalogue of every numbered function, and runs beside phase four without blocking it. On the same day I swapped phases four and five: animation and frame timing before monster AI, _"since skill and combat timing need frame counts first."_
+
+The machinery's static phase closed on the 20th. The progressive finisher's seed step is a peek, saved and restored, not a draw. Against 61 community claims about skills and missiles, 27 held, 25 held with refinement, 5 were contradicted and 4 not covered, all of it read from the code and tagged inferred, with a caution in the finding: a contradiction from a community source _"may be a Resurrected change."_ The contradicted five, each now a case for the harness phase: a raised skeleton's level is not the caster's but `min(max(L × 3/4 + skill level, 1), L)`; a missile's velocity is `(VelLev × lvl) / 8 + Vel`, shifted left by eight, not `Vel` plus `VelLev` per level; `Accel` is added on every fifth path step, not every frame; `LevRange` has no minus one; and a missile that misses with pierce is freed at that unit, it does not keep flying.
+
+The catalogue is 310 entries, and it runs in the emulator, because a function that creates a missile cannot be run in the game a thousand times with chosen inputs, and it can in the emulator. Fifteen batches; by the cut-off eleven were accepted, 230 of the 310 entries, 99,450 cases, zero mismatches. The Amazon batch's first session was killed by the out-of-memory handler before it checked; the kept run is the second.
+
+The first batch produced a decision. Most catalogue functions end in a call whose inputs cannot be declared, a unit allocation, the path planner, a monster spawn, and the lane had stopped its cases at that call and claimed what happened before it. The review found that this _"does not meet ADR-0015 (1) and (3) as written"_, held the batch's claims at inferred, and drafted ADR-0021 for me: a case may end at an observed boundary, a named callee's entry, where the emulator stops before the first instruction and records the registers, the stack and the memory, and the claim covers _"nothing after the call."_ The rejected alternative was to read the old rule as already allowing it: _"widening an evidence rule by reading belongs in an ADR, not in a review."_ I accepted it at 14:56 on the 20th and the batch's claims went to confirmed without a re-run.
+
+What the emulator found that the reading had not: the do function of Fend, Zeal and Fury _"returns 0 on every path"_; two start functions pass zero as the attack rating to the melee hit test, so Power Strike's to-hit bonus never reaches it; the elemental damage roll of one function is made once per run and not once per unit, which the stats spec had as "per hit"; Blade Fury's hit creates a missile of class 0, which is the arrow; the rings never test their step count, so a count of zero never ends. And one for the paladins: a function that Raise Skeleton and Revive run before anything else _"hits a player caster of class 3 for `maxhp / 8`"_, class 3 being the paladin in the class order, inferred: no case ran it with a paladin.
+
+## Seed to world
+
+Every spec in the core band was checked with oracles at its edges: a value read from the game instead of predicted, where the thing that produced it belonged to another spec. The treasure class run read the monster's seed from the log; the drop run read the item's. That was by design, ADR-0004, and it left a question the plans never asked: do the specs compose? Plan 0048 asks it. Its phase 0 inventoried 31 oracles across the core specs and assigned ten to be retired. Phase 1 retired eight: staff mods, the unit seed after creation, the preset window's monsters, one object function, the units of one placement path, another room's seed as chain state, gold items' seeds, an object's drop. Two it could not: one is read and still logged, one is named and not modelled. The tool that runs the chain is `tools/chain.py`.
+
+Phase 2's bar is the first time this project has asked for the whole thing: _"2 000 room populations end to end from the game seed (no seed oracle in the window); 300 objects' creations; 100 special monsters...; 500 drops predicted from the dying unit's logged seed through TC, quality, affix, unique or set and property rolls with no builder oracle."_ Run 1 started on the 20th and ran through the night. One session was cut at 20:12 when the out-of-memory killer took the lane's agent and driver together and the game ran on without a pilot until its timer. Another sat through a seven-hour suspend and checked clean. The result: 28 logs, 26 passing, 156 levels of every generator type in every act and difficulty, 9,057 objects, 44 champion and 110 unique packs with 147 mod rolls, 849 monster drops with 951 items, 2,514 treasure class calls and 1,286 item creations, none failed. Two logs each had one mismatch in the objects model, and the lane's own explanation of them was wrong; the review's reading is that the two candidates are monsters re-created after their room was released and returned, _"the re-creations have no `CM` line and no modelled mark."_ Short of the bar: 1,222 of the 2,000 populations, which is about sixteen more sessions. Run 2 is on slot 1 now. The `chain` row was added to the core band at the phase 0 review, which is why the map has one row unreviewed.
+
+<BarChart
+  title="The first end-to-end run against its bar"
+  sub="What phase 2 asked for from the game seed alone, and what the 26 passing logs of run 1 delivered."
+  series={[{ name: 'asked' }, { name: 'delivered' }]}
+  rows={[
+    { label: 'Room populations with no seed oracle', values: [2000, 1222] },
+    { label: 'Monster drops predicted to the item', values: [500, 849] },
+    { label: 'Object creations', values: [300, 9057] },
+    { label: 'Champion and unique packs', values: [100, 154] },
+  ]}
+  note="docs/plans/0048-seed-to-world.md, the Phase 2 done-when and the review's corrected counts. Only the populations fell short; run 2 is for them."
+/>
+
+<Mermaid
+  code={`
+flowchart TB
+  gs["game seed"] --> lv["level seeds and layouts: drlg/overview, preset, maze, outdoor, warps"]
+  lv --> ob["objects, chests and shrines: objects"]
+  lv --> pop["room populations: monsters/pool, spawn, special, stats"]
+  pop --> kill["a monster dies: its logged seed"]
+  kill --> tc["treasure class and NoDrop: items/tc"]
+  tc --> q["quality: items/quality"]
+  q --> af["affixes, uniques and sets, properties"]
+  af --> floor["the item on the floor, with its stats"]
+`}
+/>
+
+## How it was run
+
+The lanes ran as on day six: at most two harness lanes on slots 1 and 2, slot 0 mine, at most two static Ghidra lanes, each lane with its own copy of the repository, a review by the architect in landing order, and a rule from the 20th that a phase whose prerequisite has not landed is skipped, not waited on. What changed is that the reviews are now counted. On the 17th a ledger went in, one row per lane and one per review by the reviewing agent, the one the project calls the architect: tokens, tool uses, wall minutes, the verdict, and the fixes by category. In the window it holds 121 lane rows and 107 reviews. Two verdicts were a plain accept, six lanes were merged with no review, bookkeeping and one at my request, none was a reject, and the other 113 were "accept with fixes", 514 fixes in all.
+
+<BarChart
+  title="What the reviews fixed, 16 to 21 October"
+  sub="Each fix counted once, in the first category that fits, in the order the ledger lists them."
+  series={[{ name: 'fixes' }]}
+  rows={[
+    {
+      label: 'Overclaim: a tag or wording stronger than the evidence',
+      values: [142],
+    },
+    { label: 'Omission', values: [112] },
+    {
+      label: 'Misread: a statement the code or data contradicts',
+      values: [80],
+    },
+    { label: 'Stale cross-reference', values: [45] },
+    { label: 'Other', values: [43] },
+    { label: 'Miscount: a count not recounted', values: [40] },
+    { label: 'Wrong anchor', values: [21] },
+    { label: 'Under-claim', values: [16] },
+    { label: 'Tool not kept', values: [10] },
+    { label: 'Symbol clash', values: [3] },
+    { label: 'Bookkeeping splice', values: [2] },
+  ]}
+  note="docs/plans/metrics.md. The file's own warning: 'Fix counts are the reviewer's classification, not a measure of the lane's quality: a review that reads more finds more.'"
+/>
+
+The ledger has a purpose beyond counting: every few reviews the reviewer reads its recent rows and promotes any fix seen twice into a rule in the lane's own list, and drops a rule that has not recurred in thirty reviews. The lists exist now, one per lane skill, each rule with the lane it was seen in. From the reverser's: _"A new code reading is `[I]`. `[C]` needs a named second source."_ _"Recount every count from the binary with a kept command, never from memory or a partial scan."_ _"'Never', 'only', 'no X': say what the run separates. If one case carries both readings (Andariel has flag `0x08` and `boss`), that half stays `[I]`."_ And from the architect's own list, which it calls its blind spots: _"A claim settled at review gets the lane's scrutiny."_ _"Label a plan's estimates as estimates."_
+
+The backlog changed shape twice. On the 17th it was one file of 730 lines and 519 entries, 464 of them struck, and in two days about 170 had been added and _"almost every lane merge conflicted in this file."_ ADR-0018 made it one file per entry, with no committed index, _"because a shared index would bring back the hot spot."_ Three days later the folder held 55 open and 80 closed entries, I said it was getting large, and ADR-0019 moved the closed ones to an archive. At the cut-off: 43 open, 186 archived.
+
+And the nights. The 17th: a shutdown at about 21:38 that killed a Hell session mid-cycle. The 18th to 19th: the nine-hour suspend. The 19th, a Sunday: by ten in the morning three lanes had _"stopped at the owner's usage limit"_, my subscription's cap, and nothing landed after. The 20th: a debugger crash under Wine in the middle of a batch, a thread race in gdb 18.1; at 20:12 the memory manager killed every agent at once, no resume note; and from 23:17 to 06:20 the machine slept again, so the ledger books 428 of one lane's 624 wall-clock minutes as suspend. None of it lost a claim.
+
+## The numbers
+
+<ProgressMultiples
+  snapshots={['d1', 'd6', 'd8', 'd11']}
+  title="Where it is now, against day one and day six"
+  note="Each measure has its own scale. Sources: the research map, docs/findings, re/symbols.csv, tools/ and docs/plans/done at each cut-off."
+/>
+
+<TagTimeline
+  title="Confirmed and inferred claims in the findings"
+  sub="[C]: read in the code and confirmed by something independent, usually a run. [I]: read in the code only. Nights are cut out."
+  note="The empty 18th and 19th are the suspend and the limit. On the 20th both lines climb together because every new reading lands as [I] and its run raises part of it."
+/>
+
+On day six the findings held 1,150 confirmed claims against 1,189 inferred. Now 2,540 against 2,667, and the share is the same, 49 percent, because every reading of a new area arrives inferred and its run confirms a part. The specs, which are the deliverable, went from 2,546 confirmed and 1,539 inferred to 3,791 and 2,322. The named addresses in `Game.exe` went from 1,814 to 3,373, the tools from 91 to 170, the save recipes from 112 to 233, the closed plans from 36 to 44. The wiki, which day six said was good and needed improvement, gained pages for combat, stats and states, quests and the economy.
+
+## What is open
+
+- **The skills run.** Plan 0045's harness phase waits for both slots: the five contradicted missile claims, Blaze, a skill no run has cast, and the _Fleshripper_ handler. The map's three skills rows are added when it starts.
+- **The catalogue's last four batches**: items with Unsummon, then three more.
+- **Seed to world, run 2**: the re-creation marks logged and modelled, the two mismatches re-checked, about sixteen sessions.
+- **The sweep's remaining batches**, twelve, and the 414 blocked statements, ten of which need me.
+- **Phases four and five**, animation and frame timing, then monster AI: no plan yet; the pipelining decision lets phase four's plan follow the skills run.
+- **The things only I can play**, all marked optional: the forge, Andariel and the Ancients with a second player, the boss steps of the quests, the Diablo pair of the quest-drops batch, and a Hellforge session in Hell for one treasure class property, where the pilot _"died at hop 19 in the River of Flame."_
+
+The [voxel engine](/projects/2026/10/21/voxel_engine_days_two_to_six/) ran its own five days in the other repository, and went from version 0.3 to 0.24.
