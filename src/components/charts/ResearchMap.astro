@@ -36,11 +36,16 @@ const t = {
       enablers: 'Enablers',
       paths: 'Creation paths',
       sim: 'Simulation',
+      rules: 'Game rules',
     } as Record<Band, string>,
-    snaps: { d1: 'Day 1', d3: 'Day 3', d4: 'Day 4', d6: 'Day 6' } as Record<
-      SnapshotId,
-      string
-    >,
+    snaps: {
+      d1: 'Day 1',
+      d3: 'Day 3',
+      d4: 'Day 4',
+      d6: 'Day 6',
+      d8: 'Day 8',
+      d11: 'Day 11',
+    } as Record<SnapshotId, string>,
     moved: 'moved since the previous snapshot',
     of: 'of',
     show: 'Show as a table',
@@ -59,11 +64,16 @@ const t = {
       enablers: 'Опоры',
       paths: 'Пути создания',
       sim: 'Симуляция',
+      rules: 'Правила игры',
     } as Record<Band, string>,
-    snaps: { d1: 'День 1', d3: 'День 3', d4: 'День 4', d6: 'День 6' } as Record<
-      SnapshotId,
-      string
-    >,
+    snaps: {
+      d1: 'День 1',
+      d3: 'День 3',
+      d4: 'День 4',
+      d6: 'День 6',
+      d8: 'День 8',
+      d11: 'День 11',
+    } as Record<SnapshotId, string>,
     moved: 'сдвинулось с прошлого снимка',
     of: 'из',
     show: 'Показать таблицей',
@@ -71,14 +81,15 @@ const t = {
   },
 }[lang];
 
-const bands: Band[] = ['core', 'enablers', 'paths', 'sim'];
+const bands: Band[] = ['core', 'enablers', 'paths', 'sim', 'rules'];
 const uid = `rm-${Math.random().toString(36).slice(2, 8)}`;
 const states: MapState[] = [4, 3, 2, 1, 0];
 
-// The Simulation band joined the map on day 6; before that its row is not on
-// the map at all, so it is neither counted nor drawn.
+// A row carries a state only from the snapshot it joined the map (the
+// Simulation band on day 6, Game rules on day 8); before that it is neither
+// counted nor drawn.
 const rowsAt = (snap: SnapshotId) =>
-  researchMap.filter((r) => r.band !== 'sim' || snap === 'd6');
+  researchMap.filter((r) => r.state[snap] !== undefined);
 
 const counts = (snap: SnapshotId) =>
   states
@@ -158,11 +169,12 @@ const lastIndex = snapshots.length - 1;
                 <section class="rm-band">
                   <p class="rm-band-name">{t.bands[band]}</p>
                   <ul class="rm-grid">
-                    {researchMap
+                    {rowsAt(snap)
                       .filter((r) => r.band === band)
                       .map((r) => {
-                        const st = r.state[snap];
-                        const moved = prev !== null && st > r.state[prev];
+                        const st = r.state[snap] as MapState;
+                        const was = prev !== null ? r.state[prev] : undefined;
+                        const moved = was !== undefined && st > was;
                         return (
                           <li
                             class={`rm-box rm-fill-${st}`}
@@ -205,16 +217,21 @@ const lastIndex = snapshots.length - 1;
       </thead>
       <tbody>
         {
-          researchMap.map((r) => (
-            <tr>
-              <td>
-                <code>{r.id}</code>
-              </td>
-              {snapshots.map((snap) => (
-                <td>{t.states[r.state[snap]]}</td>
-              ))}
-            </tr>
-          ))
+          researchMap
+            .filter((r) =>
+              snapshots.some((snap) => r.state[snap] !== undefined),
+            )
+            .map((r) => (
+              <tr>
+                <td>
+                  <code>{r.id}</code>
+                </td>
+                {snapshots.map((snap) => {
+                  const st = r.state[snap];
+                  return <td>{st === undefined ? '—' : t.states[st]}</td>;
+                })}
+              </tr>
+            ))
         }
       </tbody>
     </table>

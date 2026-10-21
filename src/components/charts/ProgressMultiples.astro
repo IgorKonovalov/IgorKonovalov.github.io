@@ -20,12 +20,17 @@ const { title, sub, note, lang = 'en', snapshots, keys } = Astro.props;
 
 const t = {
   en: {
-    snaps: { d1: 'day 1', d3: 'day 3', d4: 'day 4', d6: 'day 6' } as Record<
-      SnapshotId,
-      string
-    >,
+    snaps: {
+      d1: 'day 1',
+      d3: 'day 3',
+      d4: 'day 4',
+      d6: 'day 6',
+      d8: 'day 8',
+      d11: 'day 11',
+    } as Record<SnapshotId, string>,
     labels: {
-      reviewed: 'Reviewed specs (of 28 rows, 29 from day 6)',
+      reviewed:
+        'Reviewed specs (28 rows to day 4, 29 on day 6, 35 on day 8, 36 on day 11)',
       confirmed: '[C] confirmed claims in findings',
       inferred: '[I] inferred claims in findings',
       symbols: 'Named addresses in Game.exe',
@@ -34,12 +39,17 @@ const t = {
     } as Record<string, string>,
   },
   ru: {
-    snaps: { d1: 'день 1', d3: 'день 3', d4: 'день 4', d6: 'день 6' } as Record<
-      SnapshotId,
-      string
-    >,
+    snaps: {
+      d1: 'день 1',
+      d3: 'день 3',
+      d4: 'день 4',
+      d6: 'день 6',
+      d8: 'день 8',
+      d11: 'день 11',
+    } as Record<SnapshotId, string>,
     labels: {
-      reviewed: 'Спецификации после ревью (из 28 строк, с шестого дня 29)',
+      reviewed:
+        'Спецификации после ревью (28 строк до дня 4, 29 в день 6, 35 в день 8, 36 в день 11)',
       confirmed: '[C] подтверждённые утверждения в находках',
       inferred: '[I] выведенные утверждения в находках',
       symbols: 'Именованные адреса в Game.exe',
