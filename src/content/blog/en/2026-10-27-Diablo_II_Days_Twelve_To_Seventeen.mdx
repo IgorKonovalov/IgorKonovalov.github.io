@@ -1,0 +1,323 @@
+---
+title: 'Diablo II, days twelve to seventeen'
+date: 2026-10-27
+tags: ['d2-recon', 'reverse-engineering', 'agents']
+description: 'Six days of the d2-recon preservation project with three of them worked: the core specs composed end to end past their bar, the skills phase reviewed, every one of 310 skill functions emulated, animation timing against 61 community claims, monster AI approved with a sixth phase behind it, a sweep that raised 158 statements, and a commit gate that had quietly stopped guarding.'
+---
+
+import ResearchMap from '../../../components/charts/ResearchMap.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+import ProgressMultiples from '../../../components/charts/ProgressMultiples.astro';
+import TagTimeline from '../../../components/charts/TagTimeline.astro';
+import GameArt from '../../../components/charts/GameArt.astro';
+
+[Days seven to eleven](/projects/2026/10/21/diablo_ii_days_seven_to_eleven/) stopped at 12:11 on 21 October with 36 rows on the research map, 35 of them reviewed, and the first end-to-end run of the core specs short of its bar by about sixteen sessions. This post runs to 18:44 on 27 October. The map has 42 rows now and 38 are reviewed. The chain from the game seed to the item on the floor passed its bar that same afternoon. The skills phase, the third of the simulation, has a reviewed spec. The fourth, animation and frame timing, has findings and its first run. The fifth, monster AI, is approved, and a sixth was added behind it.
+
+Six days, and three of them worked. The lanes ran on the 21st until a little after half past seven in the evening, on the 25th for about an hour and a half in the evening, and on the 27th from 06:42 to the cut-off. On the 22nd, 23rd, 24th and 26th nothing was committed: my weekly usage limit had run out. Most of what follows happened on the 27th: of the 146 rows the review ledger gained in the window, 117 are dated that day. Summer time ended in between, at three in the morning of the 25th, so the times on the 21st are UTC+2 and the rest UTC+1.
+
+I did not play this time either. What I did, from the records: on the 21st I asked for the lanes to be paused, six times after the last post's cut-off, because the weekly limit was running out. On the 25th I approved two plans and the order of the work, held a third, and dropped one of the sessions set aside for me to play, an entry left over from plan 0042. That evening my usage limit stopped the lanes. On the 27th I wrote one note into the run order, asked for the commit gate to be made fast, approved the monster AI plan and its scope decision, accepted a trial of a new review scheme, and approved the plan that fixed the gate.
+
+## The map of the work
+
+<ResearchMap
+  snapshots={['d1', 'd6', 'd11', 'd17']}
+  title="The research map at each cut-off"
+  note="The arrow marks a row that moved since the previous snapshot. Source: docs/specs/README.md at commits 8faba4f2, 33dc648, 483728e and a2d31a99. The six new rows are all in the Simulation band."
+/>
+
+One row moved and six are new. `chain` went from findings to reviewed. Two skills rows, dispatch and missiles, are new and already reviewed: they were added during the skills phase and their spec was reviewed on the 27th. The third, the catalogue of every numbered skill function, has its findings complete and no spec yet. The animation phase has two rows with findings, timing and movement. And `monsters/ai` is on the map as planned: an approved plan, a first phase reviewed, no findings.
+
+## Seed to world, run 2
+
+The previous post left plan 0048 with 1,222 room populations against a bar of 2,000, two mismatches in the objects model, and a review's reading of them: monsters re-created after their room was released and returned, with no logged mark. Run 2 settled both. The re-creations go through `RoomInactiveUnitsRestore` and mark the collision map through the same `UNIT_CollMark` calls as a first creation; the logger had missed them because they run outside its window. Once it caught them, the run on the 21st finished at 37 logs and zero failed checks:
+
+<BarChart
+  title="The end-to-end run against its bar, runs 1 and 2"
+  sub="What phase 2 asked for, predicted from the game seed with no seed read from the game, and what each run's passing logs delivered."
+  series={[{ name: 'asked' }, { name: 'run 1' }, { name: 'run 2' }]}
+  rows={[
+    { label: 'Room populations', values: [2000, 1222, 2189] },
+    { label: 'Monster drops predicted to the item', values: [500, 849, 1314] },
+    { label: 'Champion and unique packs', values: [100, 154, 225] },
+  ]}
+  note="docs/plans/done/0048-seed-to-world.md, the Phase 2 done-when and the two runs' review counts. Run 2 also built 176 levels and 13,056 objects, against a bar of 300 objects."
+/>
+
+Of the 7,290 re-creations, 1,903 were compared line for line with the game's own: 1,729 alive, 174 dead. The control: run with `--cf recreation-off`, the model _"restores exactly run 1's"_ two mismatches, and switching off a different mechanism, the monster equipment, breaks two new cases, both Blood Raven. The review closed the phase at 13:11 and ruled how far the unchecked part counts: the 5,284 re-creations applied on run 1's logs without a line to compare are _"admissible for 0 mismatches and populations, not as mark evidence."_
+
+The spec, `specs/chain/README.md`, was reviewed at 13:51 with 89 confirmed claims, `[C]`, read in the code and confirmed by a run, against 7 inferred, `[I]`, read in the code only, and the wiki page at 14:19. The wiki review's first fix took out the phrase I had used in the last post's chart: _"from the game seed alone."_ The page says now that 37 games were rebuilt with zero mismatches _"given the recording's walk and fight results and a few counted values still read from it."_ So: the chain predicts the world from the seed, and takes what the player did in it, the walk and the fights, from the recording. Plan 0048 closed at 14:23 on the 21st.
+
+## Skills
+
+Plan 0045 is the machinery of skills and missiles: dispatch, packets, missiles, event handlers. The previous post had its static phase done and five community claims contradicted on paper. Phase 2 started on the 21st, was paused twice at my request, and ran on the 25th: 18 sessions with eight characters, 335,618 checks, zero mismatches. A second part on the 27th added 15 sessions, also zero, and re-checked the first part's 18 logs. The sessions are played by the pilot, the project's script that drives the game from screenshots, and a skill shows up in the logs as two functions: a start function, run when the cast begins, and a do function, run on its action frame.
+
+<BarChart
+  title="What the two skills runs logged"
+  sub="Events over both parts, 33 sessions."
+  series={[{ name: 'events' }]}
+  rows={[
+    { label: 'Skill do functions', values: [3183] },
+    { label: 'Skill start functions', values: [2985] },
+    { label: 'Can-use checks', values: [1340] },
+    { label: 'Event handler fires', values: [1303] },
+    { label: 'Missiles ended at a unit', values: [276] },
+    { label: 'Summons', values: [219] },
+    { label: 'Pierce rolls', values: [130] },
+    { label: 'Prevent-heal applied', values: [86] },
+  ]}
+  note="docs/findings/skills/experiments.md, run:2026-10-25-skills and run:2026-10-27-skills. The first part also counted 31,391 missile creations and 21,860 chained game-seed pairs."
+/>
+
+The five contradictions, as the runs met them:
+
+- **Raise Skeleton's level.** The community says a skeleton is raised at the caster's level. The code gives `min(max(L × 3/4 + skill level, 1), L)`. A caster of level 86 with the skill at 20 raised every skeleton at 84.
+- **Missile range.** The community adds `LevRange` for each level beyond the first; the code multiplies it by the level. The case was Blaze, whose `LevRange` is 25, and the first part could not get it: _"the pilot teleports"_, so no walking trail of fire was logged. The second part walked: 271 Blaze creations at skill level 2, each with the code's range and not the community's, which counts from level two and would give one `LevRange` less.
+- **Acceleration** is added on every fifth step of a missile's path, not on every frame: 1,657 accelerating steps, 278 of them fifth steps, 60 at the cap.
+- **A piercing missile that misses its to-hit** keeps flying and does no damage, the community says. The code ends it at that unit.
+- **Missile velocity**, `((VelLev × lvl) / 8 + Vel) << 8`, is the one the runs could not show. The monsters that fire the right missile were all met at level one, where the level term is zero: _"22 `spike2` creations … all at level 1."_ The ruling was not to send the pilot to Nightmare for quill rats; the Blood Moor ones stay an opportunistic check.
+
+The run also corrected the reading in one place. The static spec had said that Raise Skeleton draws nothing from the caster's seed. The first dev sessions on the 21st saw the seed step once after the spawn, three times out of three, and the run on the 25th located the draw at `0x005C4430`.
+
+<GameArt
+  title="The Barbarian's hands in the second skills run"
+  images={[
+    {
+      src: '/images/diablo-ii/item-fleshripper',
+      alt: 'Fleshripper, a unique fanged knife: the inventory picture, its drop frames and a character holding it',
+      caption: 'Fleshripper',
+      width: 142,
+      height: 88,
+    },
+    {
+      src: '/images/diablo-ii/item-lacerator',
+      alt: 'Lacerator, a unique throwing axe: the inventory picture, its drop frames and a Barbarian holding it',
+      caption: 'Lacerator',
+      width: 172,
+      height: 88,
+    },
+  ]}
+  note="From the project's tools/item_art.py. The recipe SkillsBarH dual-wields the two, with a unique at its best roll in every other slot."
+/>
+
+_Fleshripper_ was the knife that broke the combat model a week earlier, 101 mismatches in a kill handler nobody had read. The handler model now replays all 3,461 old fires, that session's log included, and the second skills run gave a Barbarian the knife in one hand and _Lacerator_ in the other. The prevent-heal state was applied 86 times.
+
+One finding is about the client. A refused skill never reaches the server: _"the client runs the same `SKILLS_CanUse` on its own copy of the player every frame (`0x004D9FC5`) and sends no request for a refused skill"_, so the refusal cases are a shortfall that cannot be closed from the server's side. Another is about Kick. The stock Kick row has a minimum and maximum damage of zero, so its own hit does zero physical damage: 25 deliveries reached `COMBAT_ApplyDamage` _"with result 9, physical 0 … where `GetPhysMin`'s `Kick` branch would give at least 49 920."_ The strength-and-dexterity branch for kicks is real, but it is reached by the Assassin's Dragon Talon, Dragon Tail and Dragon Flight, and among monsters only the Shadow Warrior and the Shadow Master hold a skill with the kick bit.
+
+The phase closed on the 27th: the specs at 09:30, with nine fixes, among them that the pet limit removes _"the first of its list"_, not _"the oldest"_, and the wiki page at 09:58, with nine more, among them _"Kick 'builds a fixed hit'"_ as an overclaim.
+
+## The catalogue, 310 of 310
+
+Plan 0046, the catalogue of every numbered skill function, runs them one by one in Ghidra's processor emulator, as the previous post described. The last four batches ran on the 21st, 42,600 cases, zero mismatches, and Phase 1 closed at 310 of 310 entries. What the emulator showed:
+
+- A monster function, do 152, _"is do 95 … instruction for instruction"_: 147 instructions, none different.
+- Do 112 casts one of five fixed curses, chosen by the caster's seed modulo five. One of the five, Lower Resist, has a resistance branch that cannot be reached.
+- The exploding and poison shrines drop five to nine potions. "Five to ten" is only the text of the shrines' editor column.
+- Baal's tentacle draws two or three times, and which one depends on a local variable that its function _"never writes before the call … No emulation can give the value the game leaves there; only a logged cast can."_ The claim stays inferred and goes to the harness phase, which needs Baal.
+
+## Animation and frame timing
+
+Phase four was approved on the 25th, in the order I had set on the 20th: animation and frame timing before monster AI, _"since skill and combat timing need frame counts first."_ Plan 0050's first phase read the animation data: `animdata.d2` is 256 hash blocks of 160-byte records, and the expansion's file wins. Another file, `eanimdata.d2`, is named by no string in the binary at all. Monster sequence events agree with their animation record in only 81 of 805 steps.
+
+The reading of the code says something about how the game runs: _"most server modes are not advanced frame by frame; `SUNIT_ScheduleModeEvents` queues the frame events (codes 1–4) and the mode end at the start."_ The rates are one function with nine branches, and the bonus of faster cast, hit recovery, block and so on is the diminishing formula `B = k·s / (k + s)`, with k 120, and 150 for run and walk, confirmed over 3,413 emulated cases. And an edge case: _"a negative factor (FCR ≤ −55, FHR or FBR ≤ −36) wraps to the maximum rate."_
+
+The community has a lot to say about breakpoints, so the comparison was large: 61 claims from the Maxroll and Basin pages, the old run and walk thread for 1.09, the 1.13 movement clarification and PureDiablo's tables. They were filed blind, before the lane read the code.
+
+<BarChart
+  title="Sixty-one community claims about frames and speeds, against the code"
+  series={[
+    { name: 'held' },
+    { name: 'held with refinement' },
+    { name: 'contradicted' },
+    { name: 'not covered' },
+  ]}
+  stacked
+  rows={[{ label: 'animation and timing', values: [7, 33, 19, 2] }]}
+  note="docs/findings/anim/, plan 0050 P1b part 2. Of the 19 contradicted, 7 come from Resurrected sources only and 3 from 1.09 only; 9 are plain contradictions of 1.14d."
+/>
+
+The breakpoint tables themselves came out right: _"every change point equal (78/78)."_ The frame count in 76 of them is one less than the code's, and the review ruled that a counting difference: the code's count is one more than the tables'. What was contradicted, among others. Against claims about 1.14d itself: the attack factor is clamped between 15 and 175, while hit recovery and block are not capped at all; a knockback on a player ends in neutral with no hit recovery; and the block gate is a cooldown, `frame − last block > ⌊stat102 / 8⌋ + 15`, where the community says there is none. Against Resurrected sources: Double Swing's base is 70, not the 120 Maxroll gives, and the cast frames of the Druid, the Necromancer, the Werewolf and the Werebear all differ. Against the 1.09 thread: Charge moves at 2.5 times the base speed, not 1.5, and the run factor of "65" _"matches only read as hex"_. 0x65 is 101.
+
+The first run of the phase, on the 27th: 55 sessions, zero mismatches, 298,373 rate calls, 99,241 movement steps. The Fallen showed the classic monster's special modes taking the moving rate, 1,266 calls. Blood Raven in Hell knocked the player back 13 times and 12 left him in neutral in the same frame. Frozen Orb's next cast came at the do frame plus the delay, 72 of 73. The shortfall is get-hits: _"every fragile character died after 2–9: a get-hit needs a hit of a sixteenth of life."_
+
+## Monster AI, and a sixth phase
+
+Plan 0052 was drafted on the 25th, held, re-drafted on the 27th, and approved by me at 17:34. It covers _"the 331 monster gaps"_ the skills runs left, around the AI table at `0x0073CA18`, 148 rows of 16 bytes. It put eight questions to me. Seven I answered as recommended: pathing becomes a plan of its own, hirelings and summons are in scope, one harness slot, and so on. The eighth I answered against the recommendation, which the plan records as such: _"Catalogue coverage: the whole AI table (differs from the recommendation). Every row of the AI table gets a catalogue entry, whether or not a stock MonStats, PetType or Hireling row names it."_
+
+Phase 0 ran within the hour. Of the 148 rows, 146 are named by a stock monster; 63 are reached through the level pools, 44 through superuniques, 16 through summons, one through hirelings. The `aidist` field is set only on Mephisto and his Uber copy. And the review found something the phase had not looked for: a second AI table at `0x0073D358`, eighteen rows of four words, ten of them holding functions no row of the first table has.
+
+The same approval accepted ADR-0022. The project's phases end at monster AI, and the ADR adds one after it, the server frame: _"the game tick (`GameTick` and every pass it makes), the per-unit update order … the event queue … the timers … and the room activation order within a frame."_ Its evidence is new too, a frame window: _"a stated run of consecutive frames in a small scene … in which every in-scope event of every unit is logged and every entry seed is asserted, none resynchronised."_ Everything so far has checked a function's output from its logged inputs; a frame window checks that nothing in between was missed. The ADR names its risk: _"The order may be partly non-deterministic under wine."_ My note of the morning had said that phase five is the last of the old scope and anything beyond needs a scope ADR. ADR-0022 is that ADR.
+
+## The sweep
+
+Plan 0038 sorted the 1,526 inferred statements of the reviewed specs into batches. Eleven harness batches ran in the window, ten on the 27th.
+
+<BarChart
+  title="What each harness batch raised, 21 to 27 October"
+  sub="A statement is raised when the batch's evidence covers it whole, in part when it covers some of its cases; a shortfall is one the batch set out to reach and did not."
+  series={[
+    { name: 'raised' },
+    { name: 'raised in part' },
+    { name: 'shortfall' },
+  ]}
+  stacked
+  rows={[
+    { label: 'H1a, loading saves', values: [32, 4, 8] },
+    { label: 'H1b, saves in play', values: [25, 14, 7] },
+    { label: 'H6a, the Cube', values: [18, 8, 1] },
+    { label: 'H3b, data loading', values: [16, 9, 0] },
+    { label: 'H4a, monsters', values: [15, 9, 8] },
+    { label: 'H6f, hirelings', values: [12, 8, 1] },
+    { label: 'H6e1, quest NPCs', values: [11, 11, 0] },
+    { label: 'H5d, collision', values: [10, 4, 2] },
+    { label: 'H6b, sockets', values: [9, 9, 3] },
+    { label: 'H6c, vendors', values: [7, 2, 2] },
+    { label: 'H6e2, quest items, with its follow-up', values: [3, 15, 6] },
+  ]}
+  note="docs/plans/0038-inferred-claims-sweep.md and the batch reviews. H4a ran on the 21st and was reviewed on the 25th; the rest ran on the 27th."
+/>
+
+Some of what the batches found is visible to a player:
+
+- **Single player saves on death.** H1b found the call. The autosave timer never saved anything in the run.
+- **The gold cap is enforced at load by zeroing.** A character with 900,000 gold on him, over the cap of 800,000, loads with none; a stash of 3,000,000, over 2,500,000, loads empty.
+- **A character of class 7**, one past the last class in a save file, halts the game at load with an internal error.
+- **A crafted item can crash the game.** When the Cube's craft picks an affix from an empty list at a low item level, the game faults with an access violation. H6a kept it as evidence.
+- **The cow portal** tests quest word 26 in the classic game and word 40 in the expansion.
+- **Khalim's chests** drop their gold first and the part after it: five piles before the eye, seven before the brain, eight from the heart's. The level of the brain is built twice on the server, and the pilot had listed the objects of only one copy until a fix on the 27th.
+- **Malah** offers her potion only in one quest state, 4. **Kashya**'s free mercenary is given with no payment. A mercenary gains twice the experience, and only while below his owner's level.
+
+<GameArt
+  title="The three parts the quest-items batch opened chests for"
+  images={[
+    {
+      src: '/images/diablo-ii/item-khalims-eye',
+      alt: "Khalim's Eye: a small round eye, its inventory picture and its drop frames",
+      caption: "Khalim's Eye",
+      width: 56,
+      height: 32,
+    },
+    {
+      src: '/images/diablo-ii/item-khalims-brain',
+      alt: "Khalim's Brain: a grey brain, its inventory picture and its drop frames",
+      caption: "Khalim's Brain",
+      width: 61,
+      height: 32,
+    },
+    {
+      src: '/images/diablo-ii/item-khalims-heart',
+      alt: "Khalim's Heart: a red heart, its inventory picture and its drop frames",
+      caption: "Khalim's Heart",
+      width: 54,
+      height: 32,
+    },
+  ]}
+  note="From tools/item_art.py. The follow-up batch opened all three chests and the order, gold before the part, is confirmed for each."
+/>
+
+H4a, the monsters batch, opened four of the five seals of the Chaos Sanctuary in one session and logged the Infector of Souls and the Grand Vizier of Chaos. The fifth seal was never reached, so no Lord De Seis and no Diablo; the review ruled those rows _"not routed to the owner now"_, since I had dropped the comparable session on the 25th.
+
+Two reviews checked the batches' own summaries and say so in a line: _"'Shortfall 0' is honest"_ for the quest NPCs, and _"'Fewer than half raised' is honest (9 of 25)"_ for the sockets. And one batch broke a rule the project did not have yet. H3b's probe runs crashed the game on purpose and wrote their crash files into the shared game directory, and _"neither the probe runs' logs nor the removed crash files were kept."_ The rule now: probes that may crash run in a game directory of their own, and crash folders are kept.
+
+The re-tags recount the specs after their batches:
+
+<BarChart
+  title="Confirmed claims in the re-tagged specs, before and after"
+  series={[{ name: 'before' }, { name: 'after' }]}
+  rows={[
+    { label: 'save/d2s', values: [91, 240] },
+    { label: 'objects', values: [139, 189] },
+    { label: 'items/cube', values: [119, 167] },
+    { label: 'items/quest-drops', values: [86, 159] },
+    { label: 'drlg/collision', values: [111, 157] },
+    { label: 'monsters/special', values: [107, 149] },
+    { label: 'data/excel', values: [42, 144] },
+    { label: 'hirelings', values: [95, 137] },
+    { label: 'monsters/spawn', values: [112, 136] },
+    { label: 'monsters/stats', values: [110, 130] },
+    { label: 'items/sockets-runewords', values: [80, 129] },
+    { label: 'items/vendors', values: [77, 113] },
+    { label: 'items/uniques-sets', values: [71, 100] },
+    { label: 'monsters/pool', values: [81, 99] },
+    { label: 'data/strings', values: [60, 88] },
+  ]}
+  note="The front-matter counts each Phase 3 re-tag records, before and after. save/d2s went from 149 inferred to 68."
+/>
+
+The inventory at the cut-off: 567 statements in static batches, 509 in harness batches, 431 blocked. The blocked count grew, from 414, because batches that look closely find that some statements have nothing to observe: dead code, or a guard the stock data never fails. Those now number 302. Left in the plan: two batches, two re-tags, and at its close a list for me of what only I can play.
+
+Plan 0047, the simulation's shortfalls, closed on the 25th. One line from it about the harness: the waits of its expiry checks _"were sized at 25 frames a second and the game runs at about 17 under the stats logger."_ And one about the game: the succubi of the Crystalline Passage cast Defense Curse on a character under Fade, which gives 84 percent curse resistance, and of the 275 frames the curse asked for it got 44.
+
+## The gate that stopped guarding
+
+The project has a gate, `tools/gate.py`, that checks the documents against each other on every commit: a spec's tag counts, cross-references, symbols nobody mentions. The commit hook runs it with a timeout of 20 seconds, and the hook is deliberately lenient: _"A broken gate never blocks work … a timeout … passes with a one-line warning."_ I asked for the gate to be made fast, and plan 0053 found what the leniency had meant in practice: _"the fast tier took 153 to 183 s, of which 151 s was the W3 loop (about 50 000 `re.search` calls over the joined corpus), so the commit hook's 20 s timeout failed open."_ W3 is the check for a symbol of `re/symbols.csv` that no spec or finding names. With 3,666 symbols it ran each one as a regular expression over everything. Every commit had been passing with a one-line warning, for how long the records do not say. With a word set instead, the staged gate takes 5.6 s and W3 gives the same zero warnings, and the hook enforces again. It also added rules for things the reviews kept fixing by hand: a table row with more cells than its header, a map status that does not match the spec's front matter, a plans index that does not match the plan.
+
+<BarChart
+  title="The commit gate against the hook's timeout"
+  sub="Seconds for the gate's fast tier on a commit, before and after plan 0053 replaced the W3 loop."
+  series={[{ name: 'seconds' }]}
+  unit=" s"
+  rows={[
+    { label: 'The hook waits, then lets the commit through', values: [20] },
+    { label: 'Gate before, the slowest reading', values: [183] },
+    { label: 'Gate after, staged files', values: [5.6] },
+  ]}
+  note="The plan 0053 log and .claude/hooks/gate-on-commit.js. Before the fix the fast tier read 153 to 183 s, of which 151 s were W3."
+/>
+
+<BarChart
+  title="What the reviews fixed, 21 to 27 October"
+  sub="Each fix counted once, in the first category that fits, in the order the ledger lists them."
+  series={[{ name: 'fixes' }]}
+  rows={[
+    {
+      label: 'Overclaim: a tag or wording stronger than the evidence',
+      values: [86],
+    },
+    { label: 'Omission', values: [84] },
+    {
+      label: 'Misread: a statement the code or data contradicts',
+      values: [49],
+    },
+    { label: 'Stale cross-reference', values: [20] },
+    { label: 'Under-claim', values: [19] },
+    { label: 'Miscount: a count not recounted', values: [15] },
+    { label: 'Other', values: [14] },
+    { label: 'Wrong anchor', values: [13] },
+    { label: 'Tool not kept', values: [6] },
+    { label: 'Symbol clash', values: [1] },
+  ]}
+  note="docs/plans/metrics.md, the 68 reviews added after 21 Oct 12:11: 64 accepted with fixes, 4 accepted, none rejected. One under-claim is filed as 'under-tag'. The file's warning stands: a review that reads more finds more."
+/>
+
+Plan 0053 came with ADR-0023, accepted the same minute, about what the reviews cost. Its context is one sentence: _"The owner's weekly token limit runs out in about a day while several lanes run."_ The ledger's snapshot in it: 362 runs, 83.6 million tokens, of which the architect's reviews are 172 runs and 30.9 percent of the tokens; 708 fixes, 19 percent of them mechanical, the kind a gate can catch. So there are two tiers now. Tier A is the full review, for spec lanes, ADR changes and audits. Tier B _"runs on Sonnet and reads only `git diff main...<lane>`"_, and _"every fifth Tier B lane also gets a Tier A review."_ The ADR names what it gives up: _"A finding's `[C]` is weaker between lanes."_ I accepted it at 18:19 as a trial, which the plan's fourth phase will settle after ten lanes. And a new tool, `tools/metrics.py`, summarises the ledger _"without reading it into an agent's context"_, which by now is about 100 KB.
+
+## How it was run
+
+The lanes ran as before: harness lanes on slots 1 and 2, slot 0 mine and unused, static lanes in Ghidra beside them, every lane on its own copy of the repository and every close reviewed. The ledger has 78 lane rows and 68 reviews for the window. The lanes spent 22.8 million tokens and the reviews 10.5 million, about 52 and 13 hours of wall clock. On the 27th three long harness lanes, the save batch, the quest items and the animation run, were rotated after about four hours each: the lane stops, writes a resume note, and a fresh one picks up from it. The records show no suspend and no out-of-memory kill in the window. What stopped the work each time was my weekly usage limit: the pauses on the 21st, the stop on the 25th, and the empty days in between.
+
+## The numbers
+
+<ProgressMultiples
+  snapshots={['d1', 'd6', 'd11', 'd17']}
+  title="Where it is now, against day one, day six and day eleven"
+  note="Each measure has its own scale. Sources: the research map, docs/findings, re/symbols.csv, tools/ and docs/plans/done at each cut-off."
+/>
+
+<TagTimeline
+  title="Confirmed and inferred claims in the findings"
+  sub="[C]: read in the code and confirmed by something independent, usually a run. [I]: read in the code only. Nights, and the days nothing changed, are cut out."
+  note="The 25th has one point, the evening's monster batch. On the 27th the inferred line climbs faster: the animation and AI readings land as [I], and the re-tags of that day move claims in the specs, not in the findings."
+/>
+
+On day eleven the findings held 2,540 confirmed claims against 2,667 inferred; now 3,032 against 3,221, and the confirmed share is 48.5 percent against 48.8. The specs, which are what a reimplementer would read, moved more: from 3,791 confirmed and 2,322 inferred to 4,857 and 2,451, because this was a week of re-tags, and a re-tag raises a spec's claims without touching the findings. The named addresses in `Game.exe` went from 3,373 to 3,666, the tools from 170 to 215, the save recipes from 233 to 435, the closed plans from 44 to 48.
+
+## What is open
+
+- **Animation, the second part of its run** (get-hits by hit recovery, blocks, throws, the rate tiers) and its spec, which run side by side.
+- **Monster AI**, plan 0052, from its catalogue phase, with the second table routed to it. Then the server frame, which gets a map row when its plan is drafted.
+- **The catalogue's harness phase**, after the animation run, with Baal's tentacle in it.
+- **The sweep's tail**: two batches, two re-tags, and the list for me.
+- **The things only I can play**, all optional: Uber Mephisto and Baal, the Countess and the Cow King in their quest states, the Hell Hellforge, where the pilot reached the room in none of four tries, and the Diablo pair, where its hunt timed out.
+- **Review tiers**: the next ten non-spec lanes through the Tier B check, the fifth and the tenth audited at Tier A.
+
+The [voxel engine](/projects/2026/10/27/voxel_engine_days_seven_to_twelve/) had its own window over the same days, and got lighting.
