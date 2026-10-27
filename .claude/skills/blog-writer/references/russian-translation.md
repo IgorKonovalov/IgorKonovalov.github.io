@@ -133,6 +133,7 @@ Pick one Russian term per concept, use it everywhere, including Mermaid labels a
 | spend cap            | лимит трат           | потолок трат                     |
 | allowlist            | список разрешений    | —                                |
 | fast-forward         | перемотать вперёд    | —                                |
+| lane (agent lane)    | линия                | лейн (author, 2026-10-27)        |
 
 Keep untranslated: code identifiers, CLI flags, park reasons (`plan_wrong`), section names quoted
 from files (`Needs you`, `## Close review`), git/CLI jargon a Russian dev uses in English
