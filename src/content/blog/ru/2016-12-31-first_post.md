@@ -1,6 +1,7 @@
 ---
 title: 'Hello World!'
 date: 2016-12-31
+section: 'personal'
 tags: ['personal']
 description: 'Первый пост в блоге — Hello World!'
 ---

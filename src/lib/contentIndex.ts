@@ -37,7 +37,7 @@ function parseFrontmatter(src: string, file: string): PostLike['data'] {
   if (!(data?.date instanceof Date)) {
     throw new Error(`${file}: frontmatter needs a date`);
   }
-  return { date: data.date, tags: data.tags };
+  return { date: data.date, section: data.section, tags: data.tags };
 }
 
 /** Every post in both locales, URL derived exactly as the pages derive it. */

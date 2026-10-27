@@ -6,10 +6,19 @@
  */
 export interface PostLike {
   id: string;
-  data: { date: Date; tags?: string[] };
+  data: { date: Date; section?: Section; tags?: readonly string[] };
 }
 
 export type Locale = 'en' | 'ru';
+
+/**
+ * The URL's first segment. Jekyll derived it from the post's category and
+ * every post kept `projects` (one kept `personal`) as its first tag so its
+ * address would not move. The segment now has its own field, which leaves the
+ * tags free to describe the post.
+ */
+export const SECTIONS = ['projects', 'personal'] as const;
+export type Section = (typeof SECTIONS)[number];
 
 export const DEFAULT_LOCALE: Locale = 'en';
 export const LOCALES: Locale[] = ['en', 'ru'];
@@ -22,9 +31,9 @@ export function getLocale(post: PostLike): Locale {
   return post.id.startsWith('ru/') ? 'ru' : 'en';
 }
 
-/** Category is the post's first tag, defaulting to `personal`. */
-export function getCategory(post: PostLike): string {
-  return post.data.tags?.[0] || 'personal';
+/** The post's URL section, defaulting to `projects`. */
+export function getCategory(post: PostLike): Section {
+  return post.data.section ?? 'projects';
 }
 
 /**
