@@ -1,0 +1,8 @@
+---
+import TagView from '../../../components/TagView.astro';
+import { tagStaticPaths } from '../../../lib/tagPaths';
+
+export const getStaticPaths = () => tagStaticPaths('ru');
+---
+
+<TagView {...Astro.props} />

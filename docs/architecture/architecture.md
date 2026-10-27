@@ -104,12 +104,17 @@ const blog = defineCollection({
   schema: z.object({
     title: z.string(),
     date: z.date(),
-    tags: z.array(z.string()).optional(),
+    section: z.enum(SECTIONS).optional(),
+    tags: z.array(z.enum(TAG_SLUGS)).optional(),
     description: z.string().optional(),
     demo: z.string().optional(),
+    image: z.string().optional(),
   }),
 });
 ```
+
+- **Tags** are a closed vocabulary in `src/lib/tags.ts`: each slug is a `series` (one project across posts) or a `topic`, with an EN/RU label and description. Every tag that a locale's posts carry gets a page at `/tags/<slug>/` (`/ru/tags/<slug>/`), linked from the post header chips and the archive. The listing card shows the series, else the first tag.
+- **`section`** is the URL's first segment (`/projects/2026/…`), default `projects`. Under Jekyll it was the first tag, which is why every post once carried `projects`; it is a separate field so the tags can change without moving a URL.
 
 - Posts without demos are plain `.md` files
 - Posts with embedded demos are `.mdx` files that import Astro demo components

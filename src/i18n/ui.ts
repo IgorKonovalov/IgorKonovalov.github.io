@@ -16,6 +16,7 @@ export const ui = {
     'home.tagline':
       'Igor Konovalov — a fullstack developer in Belgrade. Experiments and notes on software, AI agents, and generative art.',
     'archive.title': 'Archive',
+    'tags.title': 'Topics',
     'card.read': 'Read',
     'post.postedOn': 'Posted on',
     noPosts: 'No posts yet.',
@@ -31,6 +32,7 @@ export const ui = {
     'home.tagline':
       'Игорь Коновалов — fullstack-разработчик из Белграда. Эксперименты и заметки о разработке, AI-агентах и генеративном искусстве.',
     'archive.title': 'Архив',
+    'tags.title': 'Темы',
     'card.read': 'Читать',
     'post.postedOn': 'Опубликовано',
     noPosts: 'Пока нет записей.',

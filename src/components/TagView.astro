@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import type { CollectionEntry } from 'astro:content';
+import { postHref } from '../lib/postUrl';
+import { TAGS, tagHref, type Tag } from '../lib/tags';
+import { localizePath, otherLocale, t, type Locale } from '../i18n/ui';
+
+interface Props {
+  tag: Tag;
+  locale: Locale;
+  /** This locale's posts carrying the tag, newest first. */
+  posts: CollectionEntry<'blog'>[];
+  /** Whether the other locale has a page for this tag too. */
+  translated: boolean;
+}
+
+const { tag, locale, posts, translated } = Astro.props;
+const { label, description } = TAGS[tag];
+const dateLocale = locale === 'ru' ? 'ru-RU' : 'en-GB';
+const other = otherLocale(locale);
+// Without a translated page the switcher falls back to the other home, and
+// hreflang is left out, as for an untranslated post.
+const switchHref = translated ? tagHref(tag, other) : localizePath('/', other);
+const alternates = translated
+  ? { [locale]: tagHref(tag, locale), [other]: tagHref(tag, other) }
+  : undefined;
+---
+
+<BaseLayout
+  title={label[locale]}
+  description={description[locale]}
+  switchHref={switchHref}
+  alternates={alternates}
+>
+  <article class="post">
+    <header class="post-header">
+      <p class="post-meta">
+        <a href={localizePath('/archive/', locale)}>
+          {t(locale, 'tags.title')}
+        </a>
+      </p>
+      <h1 class="post-title">{label[locale]}</h1>
+      <p class="tag-description">{description[locale]}</p>
+    </header>
+
+    <div class="post-content">
+      <ul>
+        {
+          posts.map((post) => (
+            <li class="tag-item">
+              {post.data.date.toLocaleDateString(dateLocale, {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}{' '}
+              &middot; <a href={postHref(post)}>{post.data.title}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .tag-description {
+    color: var(--color-text-secondary);
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    margin: var(--space-3) 0 0;
+  }
+
+  .tag-item {
+    line-height: var(--leading-normal);
+    margin-bottom: var(--space-1);
+  }
+</style>

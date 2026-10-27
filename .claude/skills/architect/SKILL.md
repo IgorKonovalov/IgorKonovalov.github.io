@@ -31,7 +31,7 @@ docs/architecture/    architecture.md (current state), migration-plan.md (histor
 
 **Key patterns**:
 
-- **Content collections**: `glob` loader with Zod validation (`title`, `date`, `tags?`, `description?`, `demo?`)
+- **Content collections**: `glob` loader with Zod validation (`title`, `date`, `section?`, `tags?`, `description?`, `demo?`); tags are a closed vocabulary in `src/lib/tags.ts`, with a page each at `/tags/<slug>/`, and the URL segment is `section`, not the first tag
 - **Demo integration**: Two-file pattern — `.astro` wrapper renders HTML structure, `<script>` imports `.js` logic
 - **Styling**: CSS custom properties in `tokens.css`, auto dark mode via `prefers-color-scheme`, mobile-first breakpoints
 - **Deployment**: GitHub Actions → GitHub Pages (Node 20, Yarn, no LFS)

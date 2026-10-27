@@ -2,11 +2,12 @@
 import BaseLayout from './BaseLayout.astro';
 import { DATE_LOCALE, getLocaleFromPath, t, type Locale } from '../i18n/ui';
 import { DEFAULT_OG_IMAGE, blogPostingSchema } from '../lib/seo';
+import { tagHref, type Tag } from '../lib/tags';
 
 interface Props {
   title: string;
   date: Date;
-  tags?: string[];
+  tags?: Tag[];
   description?: string;
   switchHref?: string;
   alternates?: Partial<Record<Locale, string>>;
@@ -58,7 +59,9 @@ const schema = [
         tags && tags.length > 0 && (
           <div class="post-tags">
             {tags.map((tag) => (
-              <span class="tag">{tag}</span>
+              <a class="tag" href={tagHref(tag, locale)}>
+                {tag}
+              </a>
             ))}
           </div>
         )

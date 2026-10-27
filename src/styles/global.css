@@ -451,6 +451,19 @@ th code {
   white-space: nowrap;
 }
 
+a.tag {
+  text-decoration: none;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+a.tag:hover,
+a.tag:focus-visible {
+  color: var(--color-bg-primary);
+  background-color: var(--color-accent);
+}
+
 @media screen and (max-width: 640px) {
   .wrapper {
     padding-right: var(--space-4);

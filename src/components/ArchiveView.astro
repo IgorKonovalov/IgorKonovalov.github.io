@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { getLocale, postHref } from '../lib/postUrl';
 import { getLocaleFromPath, pageI18n, t } from '../i18n/ui';
+import { TAG_SLUGS, TAGS, tagHref } from '../lib/tags';
 
 const locale = getLocaleFromPath(Astro.url.pathname);
 const { switchHref, alternates } = pageI18n(Astro.url.pathname);
@@ -20,6 +21,18 @@ for (const post of sortedPosts) {
 }
 
 const years = [...postsByYear.keys()].sort((a, b) => b - a);
+
+// Series first, then topics, each by how many posts carry them.
+const tagCounts = TAG_SLUGS.map((tag) => ({
+  tag,
+  count: sortedPosts.filter((post) => post.data.tags?.includes(tag)).length,
+}))
+  .filter(({ count }) => count > 0)
+  .sort(
+    (a, b) =>
+      Number(TAGS[a.tag].kind === 'topic') -
+        Number(TAGS[b.tag].kind === 'topic') || b.count - a.count,
+  );
 ---
 
 <BaseLayout
@@ -31,6 +44,23 @@ const years = [...postsByYear.keys()].sort((a, b) => b - a);
     <header class="post-header">
       <h1 class="post-title">{t(locale, 'archive.title')}</h1>
     </header>
+
+    {
+      tagCounts.length > 0 && (
+        <nav class="archive-tags" aria-label={t(locale, 'tags.title')}>
+          <h2 class="archive-tags__title">{t(locale, 'tags.title')}</h2>
+          <ul class="archive-tags__list">
+            {tagCounts.map(({ tag, count }) => (
+              <li>
+                <a class="tag" href={tagHref(tag, locale)}>
+                  {tag} <span class="archive-tags__count">{count}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
 
     <div class="post-content">
       {
@@ -57,6 +87,32 @@ const years = [...postsByYear.keys()].sort((a, b) => b - a);
 </BaseLayout>
 
 <style>
+  .archive-tags {
+    margin-bottom: var(--space-8);
+  }
+
+  .archive-tags__title {
+    font-size: var(--text-lg);
+    margin: 0 0 var(--space-3);
+  }
+
+  .archive-tags__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .archive-tags__list > li {
+    margin: 0;
+  }
+
+  .archive-tags__count {
+    opacity: 0.7;
+  }
+
   .archive-item {
     line-height: var(--leading-normal);
     margin-bottom: var(--space-1);

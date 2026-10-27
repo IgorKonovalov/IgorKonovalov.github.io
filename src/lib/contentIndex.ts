@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { getLocale, postHref, type PostLike } from './postUrl';
+import { tagHref } from './tags';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const CONTENT_DIR = 'src/content/blog';
@@ -123,9 +124,9 @@ function gitLastCommitDates(): Map<string, string> {
 }
 
 /**
- * Sitemap `lastmod` per site path. Posts take their file's last commit; the
- * home and archive pages take the newest post, since that is what changes
- * them; the about pages take their own file's last commit.
+ * Sitemap `lastmod` per site path. Posts take their file's last commit; tag
+ * pages and the home and archive pages take the newest of their posts, since
+ * that is what changes them; the about pages take their own file's last commit.
  */
 export function lastmodIndex(posts = scanPosts()): Map<string, string> {
   const commits = gitLastCommitDates();
@@ -135,6 +136,11 @@ export function lastmodIndex(posts = scanPosts()): Map<string, string> {
     const lastmod = commits.get(post.file) ?? post.data.date.toISOString();
     index.set(post.href, lastmod);
     if (lastmod > newest) newest = lastmod;
+    // A tag page changes when any post on it does.
+    for (const tag of post.data.tags ?? []) {
+      const href = tagHref(tag, getLocale(post));
+      if (lastmod > (index.get(href) ?? '')) index.set(href, lastmod);
+    }
   }
   for (const home of ['/', '/archive/', '/ru/', '/ru/archive/']) {
     index.set(home, newest);
