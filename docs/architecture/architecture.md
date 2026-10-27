@@ -113,7 +113,7 @@ const blog = defineCollection({
 });
 ```
 
-- **Tags** are a closed vocabulary in `src/lib/tags.ts`: each slug is a `series` (one project across posts) or a `topic`, with an EN/RU label and description. Every tag that a locale's posts carry gets a page at `/tags/<slug>/` (`/ru/tags/<slug>/`), linked from the post header chips and the archive. The listing card shows the series, else the first tag.
+- **Tags** are a closed vocabulary in `src/lib/tags.ts`: each slug is a `series` (one project across posts) or a `topic`, with an EN/RU label and description. Every tag that a locale's posts carry gets a page at `/tags/<slug>/` (`/ru/tags/<slug>/`), linked from the post header chips and the archive; `/tags/` (`/ru/tags/`), in the header nav as Topics, lists every tag with its description and count. The listing card shows the series, else the first tag.
 - **`section`** is the URL's first segment (`/projects/2026/…`), default `projects`. Under Jekyll it was the first tag, which is why every post once carried `projects`; it is a separate field so the tags can change without moving a URL.
 
 - Posts without demos are plain `.md` files

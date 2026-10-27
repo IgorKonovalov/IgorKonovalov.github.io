@@ -125,8 +125,9 @@ function gitLastCommitDates(): Map<string, string> {
 
 /**
  * Sitemap `lastmod` per site path. Posts take their file's last commit; tag
- * pages and the home and archive pages take the newest of their posts, since
- * that is what changes them; the about pages take their own file's last commit.
+ * pages and the home, archive and tag index pages take the newest of their
+ * posts, since that is what changes them; the about pages take their own
+ * file's last commit.
  */
 export function lastmodIndex(posts = scanPosts()): Map<string, string> {
   const commits = gitLastCommitDates();
@@ -142,7 +143,14 @@ export function lastmodIndex(posts = scanPosts()): Map<string, string> {
       if (lastmod > (index.get(href) ?? '')) index.set(href, lastmod);
     }
   }
-  for (const home of ['/', '/archive/', '/ru/', '/ru/archive/']) {
+  for (const home of [
+    '/',
+    '/archive/',
+    '/tags/',
+    '/ru/',
+    '/ru/archive/',
+    '/ru/tags/',
+  ]) {
     index.set(home, newest);
   }
   for (const [href, file] of [

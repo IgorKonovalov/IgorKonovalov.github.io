@@ -1,0 +1,104 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { getLocale } from '../lib/postUrl';
+import { TAGS, tagCounts, tagHref, type TagKind } from '../lib/tags';
+import { getLocaleFromPath, pageI18n, t } from '../i18n/ui';
+
+const locale = getLocaleFromPath(Astro.url.pathname);
+const { switchHref, alternates } = pageI18n(Astro.url.pathname);
+const posts = (await getCollection('blog')).filter(
+  (post) => getLocale(post) === locale,
+);
+const counts = tagCounts(posts);
+const groups: { kind: TagKind; title: string }[] = [
+  { kind: 'series', title: t(locale, 'tags.series') },
+  { kind: 'topic', title: t(locale, 'tags.topics') },
+];
+---
+
+<BaseLayout
+  title={t(locale, 'tags.title')}
+  description={t(locale, 'tags.intro')}
+  switchHref={switchHref}
+  alternates={alternates}
+>
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">{t(locale, 'tags.title')}</h1>
+      <p class="tags-intro">{t(locale, 'tags.intro')}</p>
+    </header>
+
+    {
+      groups.map(({ kind, title }) => {
+        const entries = counts.filter(({ tag }) => TAGS[tag].kind === kind);
+        return (
+          entries.length > 0 && (
+            <section class="tags-group">
+              <h2 class="tags-group__title">{title}</h2>
+              <ul class="tags-list">
+                {entries.map(({ tag, count }) => (
+                  <li class="tags-entry">
+                    <a class="tags-entry__name" href={tagHref(tag, locale)}>
+                      {TAGS[tag].label[locale]}
+                    </a>
+                    <span class="tags-entry__count">{count}</span>
+                    <p class="tags-entry__desc">
+                      {TAGS[tag].description[locale]}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        );
+      })
+    }
+    {counts.length === 0 && <p>{t(locale, 'noPosts')}</p>}
+  </article>
+</BaseLayout>
+
+<style>
+  .tags-intro {
+    color: var(--color-text-secondary);
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    margin: var(--space-3) 0 0;
+  }
+
+  .tags-group {
+    margin-bottom: var(--space-8);
+  }
+
+  .tags-group__title {
+    font-size: var(--text-xl);
+    margin: 0 0 var(--space-4);
+  }
+
+  .tags-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .tags-entry {
+    margin: 0 0 var(--space-4);
+  }
+
+  .tags-entry__name {
+    font-weight: 600;
+  }
+
+  .tags-entry__count {
+    margin-left: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .tags-entry__desc {
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+  }
+</style>

@@ -2,8 +2,8 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { getLocale, postHref } from '../lib/postUrl';
-import { getLocaleFromPath, pageI18n, t } from '../i18n/ui';
-import { TAG_SLUGS, TAGS, tagHref } from '../lib/tags';
+import { getLocaleFromPath, localizePath, pageI18n, t } from '../i18n/ui';
+import { tagCounts, tagHref } from '../lib/tags';
 
 const locale = getLocaleFromPath(Astro.url.pathname);
 const { switchHref, alternates } = pageI18n(Astro.url.pathname);
@@ -21,18 +21,7 @@ for (const post of sortedPosts) {
 }
 
 const years = [...postsByYear.keys()].sort((a, b) => b - a);
-
-// Series first, then topics, each by how many posts carry them.
-const tagCounts = TAG_SLUGS.map((tag) => ({
-  tag,
-  count: sortedPosts.filter((post) => post.data.tags?.includes(tag)).length,
-}))
-  .filter(({ count }) => count > 0)
-  .sort(
-    (a, b) =>
-      Number(TAGS[a.tag].kind === 'topic') -
-        Number(TAGS[b.tag].kind === 'topic') || b.count - a.count,
-  );
+const tags = tagCounts(sortedPosts);
 ---
 
 <BaseLayout
@@ -46,11 +35,15 @@ const tagCounts = TAG_SLUGS.map((tag) => ({
     </header>
 
     {
-      tagCounts.length > 0 && (
+      tags.length > 0 && (
         <nav class="archive-tags" aria-label={t(locale, 'tags.title')}>
-          <h2 class="archive-tags__title">{t(locale, 'tags.title')}</h2>
+          <h2 class="archive-tags__title">
+            <a href={localizePath('/tags/', locale)}>
+              {t(locale, 'tags.title')}
+            </a>
+          </h2>
           <ul class="archive-tags__list">
-            {tagCounts.map(({ tag, count }) => (
+            {tags.map(({ tag, count }) => (
               <li>
                 <a class="tag" href={tagHref(tag, locale)}>
                   {tag} <span class="archive-tags__count">{count}</span>

@@ -145,6 +145,25 @@ export function primaryTag(tags: readonly Tag[] | undefined): Tag | undefined {
   return tags?.find((tag) => TAGS[tag].kind === 'series') ?? tags?.[0];
 }
 
+/**
+ * Every tag the given posts carry with its post count: series first, then
+ * topics, each by count. Tags no post carries are left out.
+ */
+export function tagCounts(
+  posts: readonly { data: { tags?: readonly Tag[] } }[],
+): { tag: Tag; count: number }[] {
+  return TAG_SLUGS.map((tag) => ({
+    tag,
+    count: posts.filter((post) => post.data.tags?.includes(tag)).length,
+  }))
+    .filter(({ count }) => count > 0)
+    .sort(
+      (a, b) =>
+        Number(TAGS[a.tag].kind === 'topic') -
+          Number(TAGS[b.tag].kind === 'topic') || b.count - a.count,
+    );
+}
+
 /** The tag's listing page, e.g. `/tags/agents/` or `/ru/tags/agents/`. */
 export function tagHref(tag: string, locale: Locale): string {
   return `${locale === 'en' ? '' : `/${locale}`}/tags/${tag}/`;

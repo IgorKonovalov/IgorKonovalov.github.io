@@ -12,11 +12,16 @@ export const ui = {
   en: {
     'nav.about': 'About',
     'nav.archive': 'Archive',
+    'nav.tags': 'Topics',
     'home.title': 'Notes on programming',
     'home.tagline':
       'Igor Konovalov — a fullstack developer in Belgrade. Experiments and notes on software, AI agents, and generative art.',
     'archive.title': 'Archive',
     'tags.title': 'Topics',
+    'tags.series': 'Series',
+    'tags.topics': 'Topics',
+    'tags.intro':
+      'A series follows one project from post to post; a topic cuts across projects and years.',
     'card.read': 'Read',
     'post.postedOn': 'Posted on',
     noPosts: 'No posts yet.',
@@ -28,11 +33,16 @@ export const ui = {
   ru: {
     'nav.about': 'Обо мне',
     'nav.archive': 'Архив',
+    'nav.tags': 'Темы',
     'home.title': 'Заметки о программировании',
     'home.tagline':
       'Игорь Коновалов — fullstack-разработчик из Белграда. Эксперименты и заметки о разработке, AI-агентах и генеративном искусстве.',
     'archive.title': 'Архив',
     'tags.title': 'Темы',
+    'tags.series': 'Серии',
+    'tags.topics': 'Темы',
+    'tags.intro':
+      'Серия ведёт один проект от записи к записи; тема проходит через проекты и годы.',
     'card.read': 'Читать',
     'post.postedOn': 'Опубликовано',
     noPosts: 'Пока нет записей.',
