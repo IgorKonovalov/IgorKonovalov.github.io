@@ -77,7 +77,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
    ```yaml
    title: 'Post Title'
    date: 2026-01-15 # ISO format
-   tags: [javascript, canvas]
+   tags: [rust, graphics] # slugs from src/lib/tags.ts
    description: 'Brief description for SEO and previews'
    demo: 'game-of-life' # optional: slug of related demo
    ```
@@ -203,7 +203,8 @@ const blog = defineCollection({
   schema: z.object({
     title: z.string(),
     date: z.date(),
-    tags: z.array(z.string()).optional(),
+    section: z.enum(SECTIONS).optional(), // URL segment, default 'projects'
+    tags: z.array(z.enum(TAG_SLUGS)).optional(), // src/lib/tags.ts
     description: z.string().optional(),
     demo: z.string().optional(),
   }),

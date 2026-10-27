@@ -6,11 +6,20 @@
 ---
 title: 'Post Title' # required, single-quoted
 date: YYYY-MM-DD # required, no quotes
-tags: ['projects'] # optional, values: 'projects' or 'personal'
+tags: ['d2-recon', 'reverse-engineering', 'agents'] # series first, then topics; slugs from src/lib/tags.ts
 description: 'SEO summary' # optional, single-quoted, one sentence
 demo: 'demo-slug' # optional, only if post has interactive demo component
 ---
 ```
+
+Tags come from the closed vocabulary in `src/lib/tags.ts`; the build rejects
+any other slug. Give a post its series (`d2-recon`, `voxel-engine`) when it has
+one, then one to two topics. A new tag is an edit to `tags.ts` with an EN and
+RU label and description, and earns its place when a second post will carry it.
+Both locales of a post carry the same tags.
+
+The URL segment (`/projects/2026/…`) is not a tag: it is `section`, which
+defaults to `projects` and is left out of new posts.
 
 ## File Naming
 

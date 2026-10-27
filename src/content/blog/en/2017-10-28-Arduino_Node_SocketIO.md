@@ -1,7 +1,7 @@
 ---
 title: 'Arduino Node SocketIO Setup Tutorial'
 date: 2017-10-28
-tags: ['projects']
+tags: ['javascript', 'hardware']
 description: 'Tutorial on connecting Arduino to a webpage through Node.js and Socket.IO'
 ---
 

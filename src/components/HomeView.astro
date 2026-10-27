@@ -4,6 +4,7 @@ import { getCollection } from 'astro:content';
 import { getLocale, postHref } from '../lib/postUrl';
 import { DATE_LOCALE, getLocaleFromPath, pageI18n, t } from '../i18n/ui';
 import { personSchema, websiteSchema } from '../lib/seo';
+import { primaryTag } from '../lib/tags';
 
 const locale = getLocaleFromPath(Astro.url.pathname);
 const { switchHref, alternates } = pageI18n(Astro.url.pathname);
@@ -31,8 +32,8 @@ const sortedPosts = posts
         <li>
           <a class="post-card" href={postHref(post)}>
             <div class="post-card__head">
-              {post.data.tags?.[0] && (
-                <span class="tag">{post.data.tags[0]}</span>
+              {primaryTag(post.data.tags) && (
+                <span class="tag">{primaryTag(post.data.tags)}</span>
               )}
               <time
                 class="post-card__date"

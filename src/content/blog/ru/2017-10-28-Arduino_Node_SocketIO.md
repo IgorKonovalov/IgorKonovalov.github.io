@@ -1,7 +1,7 @@
 ---
 title: 'Подключение Arduino к веб-странице через Node.js и Socket.IO'
 date: 2017-10-28
-tags: ['projects']
+tags: ['javascript', 'hardware']
 description: 'Руководство по подключению Arduino к веб-странице через Node.js и Socket.IO'
 ---
 
