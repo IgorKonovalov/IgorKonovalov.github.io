@@ -1,0 +1,331 @@
+---
+title: 'Voxel engine, days seven to twelve'
+date: 2026-10-27
+tags: ['voxel-engine', 'rust', 'graphics']
+description: 'Version 0.24 to 0.32 of the voxel engine: direct light from glowing rock with a denoiser, light that bounces through a probe volume, the mirror half of the packed brick that brought full detail back to 100 m, the edit line met at half of itself, our own upscaler and an FSR 2 port side by side, a generated gothic castle, and a shader compiler swap that took Windows from 76 seconds to 2.5.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+import Screenshots from '../../../components/charts/Screenshots.astro';
+
+[Days two to six](/projects/2026/10/21/voxel_engine_days_two_to_six/) stopped at 11:31 on 21 October at version 0.24.0, with lighting as the next plan and the largest risk in the roadmap. This post runs to 18:52 on 27 October and version 0.32.0. Ten plans closed in between. The engine now lights the cave from the rock that glows in it and lets that light bounce. It holds full detail to 100 m again in the default look. And it has a castle in it.
+
+The calendar of the window is short. Work happened on the afternoon of the 21st, the whole of the 22nd, and the 27th. Between 22:30 on the 22nd and 07:03 on the 27th nothing was committed in the repository: my weekly usage limit had run out. Every frame and CPU number below is again from my laptop, the dev reference of the budgets file: an RTX 3080 Laptop GPU and a Ryzen 9. The Windows numbers are from the CI runner. The engine is built alongside a first game, and this post again does not describe it.
+
+The way of working is the one from day one. Each plan runs in phases on a lane, an agent with its own copy of the repository; a phase marked `human` stops until I have looked at the result in the window; a fresh agent reviews every close; and GPU timings wait for a quiet box, with no other lane loading the machine. Two words from earlier posts: the mirror is the GPU's copy of the world, and the sync is the step that brings it up to date.
+
+One change of plan came first. On the 21st, in the commit that drafted the next five plans, I dropped the baseline card: the GTX 1660-class GPU the frame budget is written against is _"not acquired"_, the roadmap says now, and _"the floor stays the gate on paper, read as a projection from two readings taken on the dev box."_ Instead, the budgets file has a second column, the slow adapter, which is the integrated AMD graphics of the same laptop on the RADV driver. From plan 0028 on, every render plan reads both.
+
+## Light
+
+Plan 0024 was approved on day six and not started. It started at 14:03 on the 21st and closed at 08:35 on the 22nd as version 0.27.0, after two close reviews.
+
+The marcher stopped shading. Until 0.24 one compute pass walked the ray, found the hit, and lit it with the headlamp in the same breath. Now the frame is a chain of passes, each with its own target and its own line in the budget.
+
+<Mermaid
+  code={`
+flowchart TB
+  hit["hit pass: per-pixel position, normal, material, translucent layer"] --> light["light pass: the headlamp, plus one glowing voxel face picked from 8 candidates; one shadow ray"]
+  samples["mirror sync extracts glowing voxels into light samples, 16 bytes each"] --> light
+  light --> temporal["temporal pass: reproject by hit position, forget history inside the frame's edit boxes"]
+  probes["probe volume: 32 x 32 x 32 probes, 1/8 refreshed per frame"] --> gather["gather: indirect light per pixel"]
+  temporal --> atrous["variance, then four a-trous filter steps"]
+  gather --> comp
+  atrous --> comp["composite and tone map"]
+`}
+/>
+
+The hit pass alone takes 1.235 ms where the old single march took 1.73 to 1.75, because the kernel without the shading uses 64 registers on the AMD side and spills nothing, where the old one needed 84 and spilled.
+
+The light pass is next-event estimation, the standard trick of a path tracer that aims a ray at a light instead of hoping to hit one: the headlamp is sampled directly, and of the glowing ore one face is chosen per pixel by resampled importance sampling: eight glowing faces are drawn at random, and one is kept with a chance that follows how much it would light this pixel. With reservoir reuse, the pick of the last frame takes part too. Then one shadow ray goes to the chosen face. The glowing voxels become light samples when the mirror syncs, sixteen bytes each, in a buffer of 2²⁰. The first flight filled it: 997,740 of 1,048,576. The level alone has 417,388 glowing faces, and extracting them took 25.9 ms. Phase 6 stopped on three bars, the ghosting, the far field and 3.0 ms. The amendment at 15:39 also inserted a phase for a fourth problem: far candidates made the light pass cost 5.3 to 12.2 ms against the 6.0 ms line. ADR-0025 came out of that phase: a table per frame of the emitter chunks within four chunks of the eye, weighted by power over distance. It puts the cost in two sentences: _"Bias by construction. An emitter beyond the radius contributes nothing."_ With it, the flight's peak fell to 18,522 samples, none evicted, none refused.
+
+The check of the arithmetic is a closed box with a glowing ceiling, where the irradiance on the floor can be computed by hand: 1.7408. The engine reads 1.7388, 0.11 percent low. With the near-emitter table instead of a uniform pick it reads 1.7914, 2.9 percent high, and the error per pixel falls from 1.14 to 0.40.
+
+Then Phase 12, mine, on the evening of the 21st. The log keeps what I said:
+
+> now is the picture I like the most, however there is a slight problem - light on shadow is constantly moving, without me doing anything. Its an interesting effect in case I would see a fire light, that is moving by itself, or ashes. but for a constant light emitted by veins it looks strange. but effect by itself is beautiful
+
+And, shorter: _"f5 doesnt do anything"_, _"shadow walk coarse is darker, but there is no significant change in quality"_, and _"I should be seeing what mode we have at the moment, or at least a change."_ The close review refused to close and added three phases. The shimmer had a plain cause, in the review's words: _"the blend never falls below ALPHA = 0.2, so a still pixel averages about nine frames of a one-sample estimate forever."_ The fix gives the glowing light its own history, 32 frames by default, and leaves the lamp's part on the 0.2 blend. The mean step of a still pixel fell from 0.57–1.04 to 0.15–0.18 across the four configurations. ADR-0018's outcome: _"Two histories, not one. The owner saw static emissive light shimmer on a still camera under a single 0.2 blend."_ The mode now prints on screen when a key changes it.
+
+On the morning of the 22nd I flew it again and reported: _"lighting half, shadow walk coarse, sampler reuse, history edits, lamp off, filter on, ore pulse off, emissive history 32 - are fine. pressing f5 doesnt change anything"_. F5, which switches to the gradient history, still showed me nothing, and that history's miss was accepted as it is. Those settings became the defaults: lighting at half resolution, the coarse shadow walk over 2 × 2 × 2 blocks, reservoir reuse. The coarse walk became the default only at that last phase, after I had said I saw no significant change in quality.
+
+<Screenshots
+  title="The README's pose at version 0.32.0"
+  sub="The bounded level, seed 1, from voxel (148, 280, 484), yaw 135, pitch −10, exposure 0.08, at the lighting defaults and the contour-sharp look, 64 frames, 1280 × 720 on the RTX 3080."
+  images={[
+    {
+      src: '/images/voxel-engine/vein-lamp.webp',
+      alt: 'A cave wall under a headlamp, a vein of warm yellow glowing ore running down it, grey rock blocks below lit by the lamp and faintly by the ore',
+      caption: 'The headlamp and a vein of glowing ore',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  note="Rendered with a throwaway example built on the engine's own hero still, deleted afterwards; every flag is the README's."
+/>
+
+<BarChart
+  title="Lighting and denoise at the two resolution tiers"
+  sub="Milliseconds at 1920 × 1080 on the RTX 3080, the upper end of each quiet-box range over the bounded level and the streaming cave. Bounce light is in the budgets chart at the end."
+  series={[{ name: 'line' }, { name: 'measured' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Light + temporal, half tier', values: [6.0, 2.95] },
+    { label: 'Light pass alone, half tier', values: [4.0, 2.81] },
+    { label: 'Light pass alone, full tier', values: [4.0, 14.53] },
+    { label: 'Denoise, half tier', values: [3.0, 1.15] },
+    { label: 'Denoise, full tier', values: [3.0, 5.27] },
+  ]}
+  note="docs/nfr.md §2. The half-tier rows are the final defaults with the coarse shadow walk; the full-tier rows were read with the full walk. The light pass's own bar is 4.0 ms inside the 6.0 lighting line."
+/>
+
+One line is still missed: extracting the light samples on a sync has a p99 of 2.21 ms against 1.0, and a worst frame of 6.1. I flew the streamed world for it and wrote _"3 is all good"_, so it is recorded as a miss with my reading next to it.
+
+## The staging belt
+
+Day six ended with the streaming line missed and its cause measured: 41.8 percent of the sync was the copy into the GPU buffer. The fix had been rejected once, in ADR-0017's alternative B, so plan 0027 started with ADR-0022 to supersede that rejection. It takes wgpu's own `StagingBelt`, persistently mapped chunks of 4 MiB, every upload a write into a belt slice and a buffer-to-buffer copy in the frame's encoder. A ring of our own, which day six had planned, is described in the plan as _"the belt is that ring with wgpu's own recall."_ The ADR's outcome line: _"'One memcpy into mapped memory' is not free."_
+
+Phase 2 stopped at 14:25 on the 21st, because the belt's own share of the sync was 28.9 percent against a bar of five. I chose to record it as a miss and read again on a quiet box. Quiet, the plain sync's median fell from 3.3–3.7 ms to 1.4–1.7, and `Queue::write_buffer` disappeared from the profile, but the whole update with its poll was still 1.7 to 2.0 against the 1.0 line. I flew it at 1440p at 19:11: _"flight 1 went fine but fps were around 30"_. The overlay's timer readback was serialising the CPU and the GPU, so the thirty frames per second were not the belt's. The plan closed at 19:42 as version 0.26.0, with two recorded misses.
+
+## The mirror's half of the brick
+
+Day six's packed brick shrank the CPU side by four and left the GPU mirror as it was. ADR-0012 had three steps; plan 0028 was the last one, on the 22nd. A full brick's slot in the mirror now holds the same packed bytes as on the CPU, in 64-byte units: two units for a brick of one material, three for two, up to eighteen for a brick of more than sixteen. Slots come in ten size classes over 256 KiB pages, and only 0.10 percent of the units are spare. The contour attribute, which on day six cost 1,168 bytes per brick, is stored now only for surface voxels, addressed by counting bits: 197 bytes per brick on average.
+
+Phase 3 stopped at 10:35. The attribute pass on the GPU read a p99 of 5.77 ms against 1.0, and a brick waited 7.6 seconds in the queue at the 99th percentile. I amended it at 10:59: drop the clear items, put four bricks in each workgroup, and add a bar of 250 ms on how long a brick waits. The pass that shipped reads 0.71 to 0.75 ms at p99, and a brick waits 25 ms.
+
+<BarChart
+  title="The GPU mirror before and after plan 0028"
+  sub="Megabytes on the dev reference."
+  series={[{ name: 'before' }, { name: 'after' }]}
+  unit=" MB"
+  rows={[
+    { label: 'Streaming cave, default look, live', values: [2864, 872] },
+    { label: 'Bounded level, contour look', values: [680.5, 157.9] },
+    { label: 'Bounded level, plain look', values: [232.4, 62.8] },
+  ]}
+  note="docs/plans/done/0028-size-classed-mirror-slots-and-surface-only-attributes.md and docs/nfr.md §3. The streaming row is at the full-detail radius each version settled at: 13 chunks before, 16 after."
+/>
+
+The streaming row is the one that matters. On day six the pressure rule, which drops full-detail chunks when the mirror fills past 90 percent of its 3 GB, held the default look to 12 or 13 chunks of full detail, 77 to 83 m, against the roadmap's _"about 100 m"_, and the budgets file called it a finding. At 0.29.0 the default holds 16 chunks, 102 m, at 0.87 GB live, 65 percent of the budget. And the plain look's sync fell from 4.9 ms at the median to 0.17, under the 1.0 line for the first time. The default look's sync is still 3.1 ms, because the surface masks are computed on the render thread, and that is now the open part of the streaming line. My two flights: _"run 1 feels fine"_ and _"2 are fine"_.
+
+## The edit line, third pass
+
+Plan 0031 ran on the 21st. Its first phase was a stage profile of the 100 carves: clipping 34 percent, spans 27, writing the words 15. It built the shape's words straight from the row spans and solved each span row once per op instead of once per brick. One of its phases cut the time by six to eight percent where it had expected 24. Two quiet-box runs were aborted because the box was not quiet, _"a `kworker` at 63 %, `chromium` at 78 %, an `omarchy` script at 100 %"_, and the phase waited about an hour and a half for a window. Then the bench read 1.00, 0.99 and 0.99 ms.
+
+<BarChart
+  title="100 carves of one metre, across the five plans that worked on it"
+  sub="CPU milliseconds, the warm reading where the plan recorded one."
+  series={[{ name: 'line' }, { name: 'measured' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Plan 0001, day one', values: [2.0, 4.92] },
+    { label: 'Plan 0003, row spans', values: [2.0, 3.56] },
+    { label: 'Plan 0014, pool and capsule row', values: [2.0, 3.03] },
+    { label: 'Plan 0021, the packed brick', values: [2.0, 1.49] },
+    { label: 'Plan 0031, third pass', values: [2.0, 0.99] },
+  ]}
+  note="docs/nfr.md §4 and the plans' close readings. Day six raised the line to 2.2 ms after a loaded re-read; with this plan I put it back to 2.0."
+/>
+
+The replay bench fell from 103 ms to 61.3. On day one the carve line was the budget the engine missed by two and a half times; now it is met at half of itself.
+
+## Bounce light
+
+Indirect light came with plan 0029 and ADR-0023 as a volume of 32 × 32 × 32 irradiance probes, 1.6 m apart, that scrolls with the camera. Every frame, one probe in eight, plus every probe an edit touched, traces 64 rays through the full walk, 262,144 rays a frame, and stores what it sees in every direction, unfolded into a 6 × 6 map of light and a 14 × 14 map of distance. Each pixel then gathers from the probes around it, and the distance maps keep a probe behind a wall from lighting it. The rejected alternatives are a list of the usual names: ReSTIR GI, voxel cone tracing, a per-voxel irradiance cache, radiance cascades.
+
+This plan had more of my sessions than any other in the window, four, and each one changed it. Session 7, on the 22nd: _"bounce light makes it better, bit costs performance"_; _"same, looks better but performance is bad - i've got 10fps"_, which was the streaming sync's spikes; and _"this is much better. but when I turn off the light I still see a bit of it on the walls for a while."_ With the probes eight voxels apart: _"feels off - it takes a lot of time to settle."_ Session 8:
+
+> there is still some delay and it feels very unnatural really, in real situation I would be blinded at first seconds when high light is turned off, and gradually my eyes would be accustomed to darkness and I would see normally again
+
+That one became a plan of its own, 0040, eye adaptation, below. For this plan it meant the latency. The ADR admits its first estimate: _"Latency was the owner's finding, and the 'half a second' above was wrong for a light switch."_ A light change now opens a window of 16 frames in which one probe in four is refreshed and the history is not kept at all. Session 9: _"still a long time for light to fade"_, and the ore pulse _"is very bad, there is large flickering all around."_ After two more phases, session 11 at about ten in the evening: _"almost instant"_, _"instant"_, the pulse _"fine, no flicker."_ The plan closed at 22:10 as version 0.31.0. In the test scene a lamp that goes off now falls under ten percent of its bounce at frame 14, where it took 58.
+
+<Screenshots
+  title="The castle's dungeon corridor, without and with bounce light"
+  sub="The castle shot dungeon, headlamp on, the lighting defaults, 64 frames at 1280 × 720 on the RTX 3080; the second frame adds the probe volume."
+  images={[
+    {
+      src: '/images/voxel-engine/castle-dungeon.webp',
+      alt: 'A long stone corridor with barred cells on both sides, lit only inside the round cone of the headlamp; everything outside it black',
+      caption: 'Direct light only',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/castle-dungeon-gi.webp',
+      alt: 'The same corridor with bounce light: the walls and cell bars outside the lamp cone dimly visible in grey, a warm tint near the torches',
+      caption: 'With the probe volume',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  note="Outside the cone and away from the two torches, what the second frame shows is light that bounced."
+/>
+
+The cost at the streamed spawn: the update and the gather together are 1.63 to 1.66 ms against a bar of 1.7, and the whole lighting line with them is 4.42 to 4.48 against 6.0. On the AMD side the update alone is 7.8 ms. Indirect light is opt-in, `--indirect`, and my follow-up says how I want it used: _"leave indirect light only for certain sources, like fire on stick or fire in dungeon - and for simple lights it should be off."_
+
+## Upscaling, twice
+
+The upscaler of plan 0030 and ADR-0024 is our own: the rays are jittered over a 16-phase Halton sequence, the frame is rendered at an internal scale of 1, 1.5 or 2, and a pass reprojects the history by hit position and sharpens. At scale 1.5 the frame takes 2.73 to 2.78 ms where scale 1 takes 5.29 to 5.55, and the upscale with the sharpening and the composite is 0.76 ms against the 1.5 line.
+
+My first windowed check, session 7: _"everything is really blurry, esp with headlamp"_, _"looks a bit better, still blurry"_, _"looks very blurry even with no contours"_. The verdict was rework before close. The rework narrowed the kernel, fetched the history with a Catmull-Rom filter, blended by nearness and clipped on a light change. In the middle of it I asked the lane to stop at 14:19 with a checkpoint, because the laptop was on battery. Session 8: _"there is some ghosting on run 4, but not as bad. maybe it is fine as a part of visual style"_, _"5 is meh"_, _"6 is almost fine"_ (6 was the native frame), _"7 looked meh, too much shadow motion"_. So the native frame stayed the default and the upscaler shipped opt-in, as version 0.28.0, and an FSR 2 port became plan 0041.
+
+Plan 0041 ported FSR 2.2.1 to WGSL, nine passes. It is not merged: at the cut-off its close block is written and its review is owed. Phase 7 was mine on the 27th, between 17:25 and 17:36:
+
+> fsr 2 seems to be a bit softer, but not much difference with own
+
+and _"too much details on fsr i guess"_, and _"I'm for own 1.5 - there is not much difference with fsr anyways."_ Also: _"with upscaler own flicker seems to be minimal when I turn off the lamp."_ On the branch, the default becomes our upscaler at 1.5, jittered.
+
+<BarChart
+  title="The frame with each upscaler, on the plan 0041 branch"
+  sub="GPU milliseconds on the RTX 3080; both upscalers at internal scale 1.5. The branch's frame is heavier than plan 0030's, so compare within the chart only."
+  series={[{ name: 'ms' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Upscaler off', values: [6.88] },
+    { label: 'FSR 2.2.1 in WGSL', values: [5.81] },
+    { label: 'Our upscaler', values: [4.51] },
+  ]}
+  note="The upper end of each range in plan-0041:docs/nfr.md. FSR's nine passes alone read 1.89 to 1.91 ms against a bar of 1.2, a miss; on the AMD side, 10 ms."
+/>
+
+Here FSR 2 costs 1.3 ms more than ours, and I did not see much difference.
+
+## A castle
+
+I wanted something to show the engine to my colleagues at work. Plan 0042 was drafted at 18:13 on the 22nd, approved at 18:15, and closed at 21:30 as version 0.30.0, without a single stopped phase. It wrote a `.vox` writer for the engine and a castle generator in integer arithmetic only: walls, four towers, a gatehouse, a chapel keep with a nave, a rose window and a spire, a spiral stair, and a dungeon with cells and a crypt. It is 27 tiles, of which 21 are kept, stamped at generation time into a carved hall of 80 × 80 × 48 m, through the same prefab path that day six's vaults use. The determinism vector and the gate golden test it like everything else.
+
+My review, session 10, of the gate, the nave, the window and the dungeon: _"castle looks amazing"_.
+
+<Screenshots
+  title="The castle at version 0.32.0"
+  sub="The fly-through's castle shots, rendered headless at 1280 × 720 on the RTX 3080 with the lighting defaults and the contour-sharp look."
+  images={[
+    {
+      src: '/images/voxel-engine/castle-gate.webp',
+      alt: 'A pointed gothic gate with a portcullis in a tall pale wall, two small torches burning beside it, a cobbled floor lit by the headlamp',
+      caption: 'The gate, from the spawn',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/castle-nave-gi.webp',
+      alt: 'The inside of a gothic chapel: ribbed vaults overhead, tall narrow blue windows on both sides, a round blue rose window at the end, torches low on the walls',
+      caption: 'The nave and the rose window, with bounce light, exposure 3',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  note="The nave at the default exposure is nearly black under one headlamp; the probe volume and a raised exposure show what is there."
+/>
+
+The castle is not small. Its prefabs hold 343.6 MB, about 92 percent of it air, the `.vox` file is 52.6 MB, the process peaks about 0.3 GB higher, and a chunk generates in 424 to 428 µs against 186 to 189 for the hall alone. The first frame comes after 1.1 to 2.6 seconds, under the startup line of three. The gate shot renders in 7.2 to 8.0 ms on the RTX, and in 51 ms on the AMD side. The last commit of the window, at 18:52 on the 27th, gave the castle a home: `assets/architecture/`, for reusable buildings, the `.vox` files ignored by git and regenerated from the README's command.
+
+## Contour at arm's length
+
+In session 7 of the 22nd, looking at the upscaler, I said of the native frame that it _"looks somewhat better, looks totally fine without contours."_ Contour had been the default since day five, and up close it looked soft. Plan 0039 was drafted that afternoon to measure it. It built a sharpness harness, a carved wall at arm's length with a fine band, a mid band, the edge spread and two guardrails, and five candidates: a weighted 27-neighbour fit of the plane, a volume-matched offset, a mix with face normals, a finer octave of the rock noise, and the lamp's detail ratio applied after the lighting.
+
+The first phase found that the plane was not the main problem. Of the gap in the fine band between face mode and contour, 74.6 percent was the half-resolution lighting tier. ADR-0011 got an outcome line: _"The softness was the lighting path, not the fit."_ The edge spread, how many pixels a sharp edge of the wall is smeared over, said the same: 0.80 px in face mode, the plain look, against 13.6 in contour. The face-mix candidate failed the cavity guardrail, 12.1° and 21.9°, and was dropped.
+
+The plan stood still from the 22nd to the 27th with everything else. On the morning of the 27th I compared the presets and picked: _"`contour-sharp` becomes the default"_, which is the weighted fit plus the detail ratio after lighting, because _"contour-grain looked the most natural at first, but it puts too much dark speckle on the rock, worst where the lamp grazes a wall (hard black blobs)."_ Rechecking it with bounce light on, I found one more thing: _"contour sharp seems to be a pick, however on second scene I've seen artifacts with sharp corners of voxels on some smooth walls"_, which is a follow-up. The fix pass found that the detail ratio was also scaling the bounce light, so the composite now keeps direct and indirect apart. The cost is within a percent either way on both GPUs, and the mirror's bytes did not change. Version 0.32.0, at 17:27 on the 27th.
+
+<Screenshots
+  title="The sharpness test's wall in the four looks"
+  sub="The goldens of apps/flythrough/tests/sharpness.rs: a carved wall at arm's length under the headlamp, 320 × 180 on the lavapipe software driver, shown at twice the size."
+  images={[
+    {
+      src: '/images/voxel-engine/look-wall-face.webp',
+      alt: 'A rock wall close up under a bright lamp, drawn as hard-edged cubes with black gaps between them',
+      caption: 'Face normals',
+      width: 640,
+      height: 360,
+    },
+    {
+      src: '/images/voxel-engine/look-wall-contour.webp',
+      alt: 'The same wall with contour planes: the cubes smoothed into larger soft surfaces',
+      caption: 'Contour, the old default',
+      width: 640,
+      height: 360,
+    },
+    {
+      src: '/images/voxel-engine/look-wall-contour-sharp.webp',
+      alt: 'The same wall in contour-sharp: smooth surfaces with slightly crisper edges than contour',
+      caption: 'Contour-sharp, the default now',
+      width: 640,
+      height: 360,
+    },
+    {
+      src: '/images/voxel-engine/look-wall-contour-grain.webp',
+      alt: 'The same wall in contour-grain: a fine rock texture over the surfaces with many small dark speckles and black streaks',
+      caption: 'Contour-grain, with its dark speckle',
+      width: 640,
+      height: 360,
+    },
+  ]}
+  note="The lamp is close enough to burn the wall out; the test measures bands and edges, not a pleasant exposure."
+/>
+
+## Tests, and Windows
+
+On the evening of the 22nd I asked for a code review of the whole repository and said of the tests: _"it feels like its way larger than it was before and takes enormous time to run, we should optimize runs."_ Plan 0043 split them into three tiers: quick, 470 tests in 45.4 s with no GPU lock; gpu, 124 more, 201.5 s; full, 5 more, 327.1 s. The CI job on Linux went from 981 s to 827.
+
+Meanwhile the Windows job had failed on every run since plan 0028 rewrote the attribute shader, in one test: a headless fly-through that shuts down within 120 seconds. The suspicion was FXC, the old DirectX shader compiler, compiling the new attribute shader. Plan 0046 bundled the static DXC compiler and ADR-0035 says never FXC again, with its own caution: _"That FXC is the cause is an inference from CI logs; FXC was not run locally."_
+
+<BarChart
+  title="Creating eleven pipelines cold on WARP, the CI runner's software DirectX"
+  sub="Milliseconds, CI run 39843578678."
+  series={[{ name: 'FXC' }, { name: 'static DXC' }]}
+  unit=" ms"
+  rows={[
+    { label: 'All eleven pipelines', values: [76623.6, 2507.9] },
+    { label: 'The attribute pass alone', values: [42412.2, 596.0] },
+  ]}
+  note="docs/plans/done/0046-dx12-shaders-through-bundled-static-dxc.md. For comparison, on Linux: 1.4 s on the RTX, 0.46 s on RADV, 0.30 s on the lavapipe software driver."
+/>
+
+Thirty times faster, and the test still failed on the default look: 121.055 s against its 120, because the time was WARP running the attribute pass, not compiling it. The CI fix of 20:58 had already put that test on `--look plain` on Windows, and with it the job is green; that workaround stays. Version 0.31.1 at 22:30 on the 22nd was the last commit before the break.
+
+## The 27th
+
+Work started again at 07:03, with three lanes open beside plan 0039, and by evening each of them needed me.
+
+**Eye adaptation, plan 0040.** Born of session 8's sentence about being blinded when a strong light goes off. ADR-0033 is proposed; the exposure pass costs 0.07 ms. Four phases were done by 10:28, and my session at 17:37 found the next problem: _"slowest is the best, but flicker really gives it a strange look. when i close the lamp and scene gets brighter - it seems like multiple lights are opening on walls one after another within 10-15 sec, and it looks super strange and unnatural."_ The amendment has new timing constants for the adaptation and is not in the code yet.
+
+**The showcase cavern, plan 0038.** Its origin is my sentence of the 22nd: _"hero image is lame, we should make something more interesting and without a head lump, in a large cave."_ It builds a large cavern with four ores and fixed hero shots, 99,326 light samples, and frames of 10.7 to 13.5 ms on the RTX and 76 to 100 on the AMD side. Five phases are done; the sixth is me looking at it.
+
+**FSR 2, plan 0041**, above, waiting for its close review.
+
+The last change to the harness that day, at 18:11: dev lanes and close reviews run on Opus, chores that touch no code on Sonnet, and every lane gets a context budget.
+
+## The budgets at the cut-off
+
+<BarChart
+  title="Frame and CPU lines against the measurements, 27 October"
+  sub="Milliseconds on the dev reference at version 0.32.0; the upper end of a range where the file gives one."
+  series={[{ name: 'line' }, { name: 'measured' }]}
+  unit=" ms"
+  rows={[
+    { label: 'Primary rays (hit pass), streaming cave', values: [3.0, 1.78] },
+    { label: 'Lighting, half tier, with bounce light', values: [6.0, 4.48] },
+    { label: 'Denoise, half tier', values: [3.0, 1.15] },
+    { label: 'Upscale and post, opt-in upscaler at 1.5', values: [1.5, 0.77] },
+    { label: 'Streaming sync, plain look, p50', values: [1.0, 0.17] },
+    { label: 'Streaming sync, default look, p50', values: [1.0, 3.09] },
+    { label: 'Light extraction, p99', values: [1.0, 2.21] },
+    { label: 'Attribute pass, render thread, p99', values: [4.0, 3.73] },
+    { label: '100 carves of 1 m', values: [2.0, 1.0] },
+  ]}
+  note="docs/nfr.md §2 and §4 at 04d3bea. The frame table's lines did not change in the window."
+/>
+
+On day six the lighting, denoise and upscale lines had nothing to compare against. Now every line of the frame table has a reading except the headroom, and the misses are all on the CPU's way into the mirror: the default look's sync and the light extraction, and through them the streaming line. The memory lines are all met: 0.87 GB of the 3 GB world budget at 16 chunks, the RAM well under 4 GB, and the frame's own targets at 254 MB with the probes, against 1.5 GB. No audio or collision code changed in the window, so those sections did not move, and the mixer's two misses from day six stand.
+
+## What is next, and what is open
+
+The next milestone, M10, is outdoors, drafted and approved on the morning of the 22nd: plan 0032, sun and sky, with its own testbed and a forest at low sun that I asked for; 0033, a far field to one kilometre; 0034, liquids; 0035, aerial perspective and clouds; 0036, weather, with ADR-0031's rule _"a cave stays dry"_; 0037, the night sky. ADR-0027, for the sun's shadow, puts its priority in one sentence: _"We prefer a short dark flicker to sunlight leaking into a cave."_ None of the six is started. After them, two code health plans from the review of the 22nd: six verified defects, among them a test that says the HUD allocates nothing when it does, and a structure pass for the files that grew, the fly-through's `main.rs` at 5,771 lines and the march shader at 1,383.
+
+Open besides: the three lanes of the 27th; the default look's sync; the light extraction; the sharp corners on smooth walls; the castle's materials, which give the audio no acoustic values, so under `--audio` the castle's stone does not reflect; and the DualSense on the sofa, which I have still not done.
+
+## How it was run
+
+The harness is the same, and since the 22nd it has been written down: `.claude/skills/orchestrate/` describes one orchestrating session that runs several plan lanes at once, each a dev agent with its own git worktree. Lanes take turns on the GPU through one exclusive lock, every command runs under a 6 GB memory cap, a lane stops at every phase marked `human` and waits for me at a runner script that opens the windowed build with the right flags, and a fresh architect agent reviews every close.
