@@ -15,13 +15,22 @@ export interface MapRow {
   state: Partial<Record<SnapshotId, MapState>>;
 }
 
-export type SnapshotId = 'd1' | 'd3' | 'd4' | 'd6' | 'd8' | 'd11';
+export type SnapshotId = 'd1' | 'd3' | 'd4' | 'd6' | 'd8' | 'd11' | 'd17';
 
 /**
  * Cut-off commits: 8faba4f2 (11 Oct 20:39), c8753c82 (13 Oct 19:46), 2c8eb42 (14 Oct 20:50),
- * 33dc648 (16 Oct 17:53), 02d790d (18 Oct 20:10), 483728e (21 Oct 12:11).
+ * 33dc648 (16 Oct 17:53), 02d790d (18 Oct 20:10), 483728e (21 Oct 12:11),
+ * a2d31a99 (27 Oct 18:44, +0100).
  */
-export const snapshots: SnapshotId[] = ['d1', 'd3', 'd4', 'd6', 'd8', 'd11'];
+export const snapshots: SnapshotId[] = [
+  'd1',
+  'd3',
+  'd4',
+  'd6',
+  'd8',
+  'd11',
+  'd17',
+];
 
 /** States from the first snapshot the row was on the map, in snapshot order. */
 const s = (...states: MapState[]): Partial<Record<SnapshotId, MapState>> =>
@@ -34,53 +43,69 @@ const s = (...states: MapState[]): Partial<Record<SnapshotId, MapState>> =>
 // docs/specs/README.md at each cut-off. "findings" = findings written, no spec yet;
 // "planned" = an approved plan and no findings.
 export const researchMap: MapRow[] = [
-  { id: 'rng', band: 'core', state: s(4, 4, 4, 4, 4, 4) },
-  { id: 'items/tc', band: 'core', state: s(2, 4, 4, 4, 4, 4) },
-  { id: 'items/quality', band: 'core', state: s(0, 2, 4, 4, 4, 4) },
-  { id: 'items/affixes', band: 'core', state: s(0, 0, 2, 4, 4, 4) },
-  { id: 'items/uniques-sets', band: 'core', state: s(0, 0, 4, 4, 4, 4) },
-  { id: 'items/properties', band: 'core', state: s(0, 0, 2, 4, 4, 4) },
-  { id: 'monsters/pool', band: 'core', state: s(0, 4, 4, 4, 4, 4) },
-  { id: 'monsters/spawn', band: 'core', state: s(0, 2, 4, 4, 4, 4) },
-  { id: 'monsters/special', band: 'core', state: s(0, 0, 4, 4, 4, 4) },
-  { id: 'drlg/overview', band: 'core', state: s(1, 4, 4, 4, 4, 4) },
-  { id: 'drlg/preset', band: 'core', state: s(0, 4, 4, 4, 4, 4) },
-  { id: 'drlg/maze', band: 'core', state: s(0, 0, 2, 4, 4, 4) },
-  { id: 'drlg/outdoor', band: 'core', state: s(0, 0, 2, 4, 4, 4) },
-  { id: 'drlg/warps', band: 'core', state: s(0, 0, 2, 4, 4, 4) },
-  { id: 'objects', band: 'core', state: s(0, 0, 1, 4, 4, 4) },
+  { id: 'rng', band: 'core', state: s(4, 4, 4, 4, 4, 4, 4) },
+  { id: 'items/tc', band: 'core', state: s(2, 4, 4, 4, 4, 4, 4) },
+  { id: 'items/quality', band: 'core', state: s(0, 2, 4, 4, 4, 4, 4) },
+  { id: 'items/affixes', band: 'core', state: s(0, 0, 2, 4, 4, 4, 4) },
+  { id: 'items/uniques-sets', band: 'core', state: s(0, 0, 4, 4, 4, 4, 4) },
+  { id: 'items/properties', band: 'core', state: s(0, 0, 2, 4, 4, 4, 4) },
+  { id: 'monsters/pool', band: 'core', state: s(0, 4, 4, 4, 4, 4, 4) },
+  { id: 'monsters/spawn', band: 'core', state: s(0, 2, 4, 4, 4, 4, 4) },
+  { id: 'monsters/special', band: 'core', state: s(0, 0, 4, 4, 4, 4, 4) },
+  { id: 'drlg/overview', band: 'core', state: s(1, 4, 4, 4, 4, 4, 4) },
+  { id: 'drlg/preset', band: 'core', state: s(0, 4, 4, 4, 4, 4, 4) },
+  { id: 'drlg/maze', band: 'core', state: s(0, 0, 2, 4, 4, 4, 4) },
+  { id: 'drlg/outdoor', band: 'core', state: s(0, 0, 2, 4, 4, 4, 4) },
+  { id: 'drlg/warps', band: 'core', state: s(0, 0, 2, 4, 4, 4, 4) },
+  { id: 'objects', band: 'core', state: s(0, 0, 1, 4, 4, 4, 4) },
   // Plan 0048 (seed to world) added the Core row `chain` at its Phase 0 review on 20 Oct.
-  { id: 'chain', band: 'core', state: s(2) },
-  { id: 'data/excel', band: 'enablers', state: s(4, 4, 4, 4, 4, 4) },
-  { id: 'data/calc', band: 'enablers', state: s(0, 0, 0, 4, 4, 4) },
-  { id: 'data/strings', band: 'enablers', state: s(0, 2, 2, 4, 4, 4) },
-  { id: 'rng/seeds', band: 'enablers', state: s(4, 4, 4, 4, 4, 4) },
-  { id: 'drlg/collision', band: 'enablers', state: s(0, 0, 4, 4, 4, 4) },
-  { id: 'save/d2s', band: 'enablers', state: s(0, 3, 3, 4, 4, 4) },
+  // Plan 0048 Phase 3 reviewed the chain spec on 21 Oct; the plan closed the same day.
+  { id: 'chain', band: 'core', state: s(2, 4) },
+  { id: 'data/excel', band: 'enablers', state: s(4, 4, 4, 4, 4, 4, 4) },
+  { id: 'data/calc', band: 'enablers', state: s(0, 0, 0, 4, 4, 4, 4) },
+  { id: 'data/strings', band: 'enablers', state: s(0, 2, 2, 4, 4, 4, 4) },
+  { id: 'rng/seeds', band: 'enablers', state: s(4, 4, 4, 4, 4, 4, 4) },
+  { id: 'drlg/collision', band: 'enablers', state: s(0, 0, 4, 4, 4, 4, 4) },
+  { id: 'save/d2s', band: 'enablers', state: s(0, 3, 3, 4, 4, 4, 4) },
   // Plan 0040 (room lifecycle) was approved on 16 Oct after the day 6 cut and reviewed on 17 Oct.
-  { id: 'drlg/lifecycle', band: 'enablers', state: s(4, 4) },
-  { id: 'items/vendors', band: 'paths', state: s(0, 0, 0, 4, 4, 4) },
-  { id: 'items/cube', band: 'paths', state: s(0, 0, 0, 4, 4, 4) },
-  { id: 'items/sockets-runewords', band: 'paths', state: s(0, 0, 0, 4, 4, 4) },
-  { id: 'items/quest-drops', band: 'paths', state: s(0, 0, 0, 4, 4, 4) },
-  { id: 'monsters/stats', band: 'paths', state: s(0, 0, 1, 4, 4, 4) },
-  { id: 'hirelings', band: 'paths', state: s(0, 0, 0, 4, 4, 4) },
-  { id: 'player/creation', band: 'paths', state: s(0, 0, 0, 4, 4, 4) },
+  { id: 'drlg/lifecycle', band: 'enablers', state: s(4, 4, 4) },
+  { id: 'items/vendors', band: 'paths', state: s(0, 0, 0, 4, 4, 4, 4) },
+  { id: 'items/cube', band: 'paths', state: s(0, 0, 0, 4, 4, 4, 4) },
+  {
+    id: 'items/sockets-runewords',
+    band: 'paths',
+    state: s(0, 0, 0, 4, 4, 4, 4),
+  },
+  { id: 'items/quest-drops', band: 'paths', state: s(0, 0, 0, 4, 4, 4, 4) },
+  { id: 'monsters/stats', band: 'paths', state: s(0, 0, 1, 4, 4, 4, 4) },
+  { id: 'hirelings', band: 'paths', state: s(0, 0, 0, 4, 4, 4, 4) },
+  { id: 'player/creation', band: 'paths', state: s(0, 0, 0, 4, 4, 4, 4) },
   // The Simulation band was added by ADR-0014 on 16 Oct; plan 0037 closed on the 17th,
   // plan 0041 (stats and states) was approved after the day 6 cut and closed on the 17th.
-  { id: 'combat/formulas', band: 'sim', state: s(1, 4, 4) },
-  { id: 'stats/aggregate', band: 'sim', state: s(4, 4) },
-  { id: 'stats/states', band: 'sim', state: s(4, 4) },
+  { id: 'combat/formulas', band: 'sim', state: s(1, 4, 4, 4) },
+  { id: 'stats/aggregate', band: 'sim', state: s(4, 4, 4) },
+  { id: 'stats/states', band: 'sim', state: s(4, 4, 4) },
+  // Plan 0045 (skills machinery) added its rows when it started and had them reviewed on
+  // 27 Oct; plan 0046's catalogue has findings (Phase 1 closed 21 Oct) and no spec yet.
+  { id: 'skills/dispatch', band: 'sim', state: s(4) },
+  { id: 'skills/missiles', band: 'sim', state: s(4) },
+  { id: 'skills/catalogue', band: 'sim', state: s(2) },
+  // Phase (4), plan 0050 (approved 25 Oct): findings anim/0001-0003, no spec yet.
+  { id: 'anim/timing', band: 'sim', state: s(2) },
+  { id: 'anim/movement', band: 'sim', state: s(2) },
+  // Phase (5), plan 0052, approved 27 Oct 17:34; no findings yet.
+  { id: 'monsters/ai', band: 'sim', state: s(1) },
   // The Game rules band was added by ADR-0017 (accepted 16 Oct, after the day 6 cut);
   // plans 0042 and 0043 had findings at day 8 and reviewed specs by the 20th.
-  { id: 'quests/progression', band: 'rules', state: s(2, 4) },
-  { id: 'quests/travel', band: 'rules', state: s(2, 4) },
-  { id: 'items/economy', band: 'rules', state: s(2, 4) },
+  { id: 'quests/progression', band: 'rules', state: s(2, 4, 4) },
+  { id: 'quests/travel', band: 'rules', state: s(2, 4, 4) },
+  { id: 'items/economy', band: 'rules', state: s(2, 4, 4) },
 ];
 
 /**
  * Confirmed [C] and inferred [I] tags in docs/findings, sampled on the first-parent
- * history of main wherever either count changed. Time is "DD HH:MM", 2026-10, +0200.
+ * history of main wherever either count changed. Time is "DD HH:MM", 2026-10, local:
+ * +0200 to 25 Oct 03:00, +0100 after it. Days with no change (22-24, 26 Oct) have no points.
  */
 export type TagPoint = [time: string, confirmed: number, inferred: number];
 
@@ -248,31 +273,90 @@ export const tagSeries: TagPoint[] = [
   ['21 11:24', 2489, 2628],
   ['21 11:53', 2539, 2667],
   ['21 11:57', 2540, 2667],
+  ['21 13:01', 2579, 2697],
+  ['21 13:13', 2584, 2699],
+  ['21 13:57', 2626, 2739],
+  ['21 14:45', 2663, 2771],
+  ['21 15:18', 2667, 2779],
+  ['21 19:30', 2700, 2810],
+  ['25 21:38', 2718, 2820],
+  ['27 07:05', 2737, 2838],
+  ['27 07:46', 2750, 2844],
+  ['27 07:50', 2760, 2869],
+  ['27 08:11', 2760, 2925],
+  ['27 08:57', 2779, 2942],
+  ['27 09:14', 2810, 2959],
+  ['27 09:16', 2814, 3007],
+  ['27 09:41', 2817, 3014],
+  ['27 10:02', 2836, 3025],
+  ['27 10:04', 2836, 3078],
+  ['27 10:34', 2840, 3086],
+  ['27 10:45', 2840, 3087],
+  ['27 10:54', 2874, 3096],
+  ['27 11:22', 2877, 3102],
+  ['27 11:36', 2891, 3117],
+  ['27 11:51', 2891, 3119],
+  ['27 12:06', 2896, 3122],
+  ['27 13:03', 2897, 3159],
+  ['27 13:18', 2914, 3168],
+  ['27 13:45', 2920, 3173],
+  ['27 14:42', 2934, 3185],
+  ['27 15:21', 2956, 3193],
+  ['27 16:24', 2984, 3204],
+  ['27 17:28', 3005, 3211],
+  ['27 17:35', 3032, 3221],
 ];
 
 /** Headline counts at each cut-off (specs map, findings, re/symbols.csv, tools/, plans/done). */
 export const progress: { key: string; values: Record<SnapshotId, number> }[] = [
   {
     key: 'reviewed',
-    values: { d1: 3, d3: 7, d4: 12, d6: 28, d8: 32, d11: 35 },
+    values: { d1: 3, d3: 7, d4: 12, d6: 28, d8: 32, d11: 35, d17: 38 },
   },
   {
     key: 'confirmed',
-    values: { d1: 48, d3: 240, d4: 446, d6: 1150, d8: 1773, d11: 2540 },
+    values: {
+      d1: 48,
+      d3: 240,
+      d4: 446,
+      d6: 1150,
+      d8: 1773,
+      d11: 2540,
+      d17: 3032,
+    },
   },
   {
     key: 'inferred',
-    values: { d1: 175, d3: 455, d4: 721, d6: 1189, d8: 1896, d11: 2667 },
+    values: {
+      d1: 175,
+      d3: 455,
+      d4: 721,
+      d6: 1189,
+      d8: 1896,
+      d11: 2667,
+      d17: 3221,
+    },
   },
   {
     key: 'symbols',
-    values: { d1: 278, d3: 626, d4: 1143, d6: 1814, d8: 2772, d11: 3373 },
+    values: {
+      d1: 278,
+      d3: 626,
+      d4: 1143,
+      d6: 1814,
+      d8: 2772,
+      d11: 3373,
+      d17: 3666,
+    },
   },
   {
     key: 'tools',
-    values: { d1: 26, d3: 38, d4: 56, d6: 91, d8: 144, d11: 170 },
+    values: { d1: 26, d3: 38, d4: 56, d6: 91, d8: 144, d11: 170, d17: 215 },
   },
-  { key: 'plans', values: { d1: 5, d3: 14, d4: 19, d6: 36, d8: 39, d11: 44 } },
+  {
+    key: 'plans',
+    values: { d1: 5, d3: 14, d4: 19, d6: 36, d8: 39, d11: 44, d17: 48 },
+  },
 ];
 
 /**
