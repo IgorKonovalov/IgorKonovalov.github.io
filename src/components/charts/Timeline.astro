@@ -1,0 +1,144 @@
+---
+// A vertical timeline of dated events, in the same chrome as the charts.
+// Each event sits on one line with its date in a fixed column, so it reads
+// on a phone without the tiny boxes of Mermaid's timeline. Events can belong
+// to a group (a period of life, a phase of work), coloured --viz-N in order.
+import '../../styles/viz.css';
+
+interface Event {
+  when: string;
+  what: string;
+  detail?: string;
+  /** Index into `groups`, starting at 0. */
+  group?: number;
+}
+
+interface Props {
+  title: string;
+  sub?: string;
+  note?: string;
+  groups?: string[];
+  events: Event[];
+}
+
+const { title, sub, note, groups = [], events } = Astro.props;
+const colour = (g?: number) =>
+  g === undefined ? 'var(--viz-axis)' : `var(--viz-${(g % 4) + 1})`;
+---
+
+<figure class="viz timeline">
+  <p class="viz-title">{title}</p>
+  {sub && <p class="viz-sub">{sub}</p>}
+
+  {
+    groups.length > 0 && (
+      <ul class="viz-legend">
+        {groups.map((name, i) => (
+          <li>
+            <span class="viz-swatch" style={`background: ${colour(i)}`} />
+            {name}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  <ol class="tl-list">
+    {
+      events.map((e) => (
+        <li class="tl-item" style={`--tl-dot: ${colour(e.group)}`}>
+          <span class="tl-when">{e.when}</span>
+          <span class="tl-body">
+            <span class="tl-what">{e.what}</span>
+            {e.detail && <span class="tl-detail">{e.detail}</span>}
+          </span>
+        </li>
+      ))
+    }
+  </ol>
+
+  {note && <p class="viz-note">{note}</p>}
+</figure>
+
+<style>
+  .tl-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tl-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: var(--space-4);
+    padding: var(--space-2) 0;
+  }
+
+  /* The line runs down the gap between the date and the text. */
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(6.5rem + var(--space-4) / 2);
+    width: 2px;
+    background: var(--viz-grid);
+    transform: translateX(-50%);
+  }
+
+  .tl-item:first-child::before {
+    top: 50%;
+  }
+
+  .tl-item:last-child::before {
+    bottom: 50%;
+  }
+
+  .tl-item::after {
+    content: '';
+    position: absolute;
+    top: calc(var(--space-2) + 0.45em);
+    left: calc(6.5rem + var(--space-4) / 2);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--tl-dot);
+    transform: translateX(-50%);
+  }
+
+  .tl-when {
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  .tl-body {
+    display: flex;
+    flex-direction: column;
+    padding-left: var(--space-2);
+  }
+
+  .tl-what {
+    color: var(--color-text-primary);
+    line-height: 1.5;
+  }
+
+  .tl-detail {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 640px) {
+    .tl-item {
+      grid-template-columns: 8rem 1fr;
+    }
+
+    .tl-item::before,
+    .tl-item::after {
+      left: calc(8rem + var(--space-4) / 2);
+    }
+  }
+</style>

@@ -26,16 +26,17 @@ about how the work was organised is enough.
 All render at build time to HTML/SVG, use the `--viz-*` tokens from `src/styles/tokens.css`,
 take `lang="ru"` for the Russian twin, and repeat their numbers in a "Show the numbers" table.
 
-| Component           | Use for                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------- |
-| `ResearchMap`       | status grid of the d2-recon research map; `snapshots={['d1','d3','d4']}` gives day tabs |
-| `BarChart`          | categories: grouped (`series` > 1) or `stacked`; `unit`, `max` for a shared scale       |
-| `TagTimeline`       | confirmed vs inferred claims over time; `until="DD HH:MM"` for an older post's cut-off  |
-| `ProgressMultiples` | headline counts at several cut-offs as small multiples; `snapshots`, `keys`             |
-| `MagicFindCurve`    | the Diablo II magic find curve; `marks` for the MF values the text discusses            |
-| `BloodMoorMaps`     | level layouts as cell grids (one square per 8×8-tile cell)                              |
-| `GameArt`           | a row of pixel-art images with captions and the Blizzard credit                         |
-| `Mermaid`           | diagrams; keep long chains `flowchart TB`, use `LR` only for 3–5 short nodes            |
+| Component           | Use for                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `ResearchMap`       | status grid of the d2-recon research map; `snapshots={['d1','d3','d4']}` gives day tabs                                   |
+| `BarChart`          | categories: grouped (`series` > 1) or `stacked`; `unit`, `max` for a shared scale                                         |
+| `TagTimeline`       | confirmed vs inferred claims over time; `until="DD HH:MM"` for an older post's cut-off                                    |
+| `ProgressMultiples` | headline counts at several cut-offs as small multiples; `snapshots`, `keys`                                               |
+| `MagicFindCurve`    | the Diablo II magic find curve; `marks` for the MF values the text discusses                                              |
+| `BloodMoorMaps`     | level layouts as cell grids (one square per 8×8-tile cell)                                                                |
+| `Timeline`          | dated events of a life or a project, one per line, coloured by `groups`; readable on a phone, unlike Mermaid's `timeline` |
+| `GameArt`           | a row of pixel-art images with captions and the Blizzard credit                                                           |
+| `Mermaid`           | diagrams; keep long chains `flowchart TB`, use `LR` only for 3–5 short nodes                                              |
 
 A new kind of chart gets a new component in the same style. Load the `dataviz` skill first and
 run its palette validator on any new colours.
