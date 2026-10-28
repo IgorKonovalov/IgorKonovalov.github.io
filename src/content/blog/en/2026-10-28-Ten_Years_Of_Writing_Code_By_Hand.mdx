@@ -327,6 +327,10 @@ The dream team ended because the client ran out of money and decided to replace 
 
 That WYSIWYG editor was the last project where I wrote a big amount of code by hand. I did a lot of profiling there and dug around in the Redux store. It was a very complex project. After it there was a small one, software for scientific microscopes, where by hand I made only small edits and tests — and I moved to agents quickly. The last big thing I remember writing myself is that editor.
 
+And one task from it I really remember. Agents were only starting then. The application took a long time to load — up to three minutes for one page — and I had to analyse the performance from every side and understand why. I came at this task several times. Twice I retreated with nothing and said publicly that it couldn't be solved. A month and a half later, on the third try, it turned out to be very simple: take all the updates of a big Redux store over some period, a second for example, and merge them into one, instead of making a million small changes, each of which re-renders the whole application. The solution was very simple and even elegant, and I am still proud of it. I don't know whether an agent would have come up with the same; it is very specific, not described anywhere, completely non-standard.
+
+That is what I really remember, and that was the real thrill of programming: finding a solution that is smart, original, interesting. That thrill is gone now too. But even before, solutions like that came to me once a year.
+
 And then one more thing, which I understood only now. When I came up with some project of my own, what always stopped me was that I would really have to spend a lot of time writing that code myself. It was a kind of block that didn't let me start. So during the years at EPAM there were practically no pet projects. GitHub shows it better than I can say it:
 
 <BarChart
