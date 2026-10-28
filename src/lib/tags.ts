@@ -37,6 +37,14 @@ export const TAGS = {
       ru: 'Воксельный движок на Rust, не привязанный к игре, с ray marching в compute-шейдерах.',
     },
   },
+  'after-the-team': {
+    kind: 'series',
+    label: { en: 'After the team', ru: 'После команды' },
+    description: {
+      en: 'How my work changed from a scrum team to two developers with AI agents, and what it cost: a personal story in four posts.',
+      ru: 'Как моя работа изменилась от скрам-команды к двум разработчикам с AI-агентами и чего это стоило: личная история в четырёх постах.',
+    },
+  },
   agents: {
     kind: 'topic',
     label: { en: 'AI agents', ru: 'AI-агенты' },
