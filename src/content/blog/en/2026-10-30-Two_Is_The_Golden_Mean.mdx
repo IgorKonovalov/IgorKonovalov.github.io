@@ -1,0 +1,272 @@
+---
+title: 'Two is the golden mean'
+date: 2026-10-30
+section: 'personal'
+tags: ['after-the-team', 'personal', 'agents']
+description: 'The third of four posts about how my work changed with AI agents: why an ordinary scrum team will not get this speed even with the same agents, what is left of the ceremonies, and why I think the future belongs to small crews.'
+---
+
+import Timeline from '../../../components/charts/Timeline.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+
+Not long ago I met a friend, a former colleague from my dream team, from the time of the WYSIWYG editor. She works on another project now, also with agents; they don't write code by hand either. And she told me a story. There were four of them, and then management decided to hire three more developers, so there were seven. And after those three were hired, she said, their work became much slower than when they were four.
+
+I asked what that looked like in practice. More meetings, and longer ones. Too much communication. Approvals. A lead who approves every pull request himself, and who is very slow, so every change waits for him. People stepping on each other's toes. And a lot of planning — a lot. They don't really write that much code, she said. Mostly they sit in meetings and wait for each other. As far as I know, everyone there struggles, and the team's delivery slowed down. I haven't heard anything positive.
+
+This matches exactly what I see. In the [previous post](/personal/2026/10/29/half_a_year_of_work_in_a_week_and_a_half/) I wrote that two developers and an analyst did about half a year of work in a week and a half, and I promised to explain why an ordinary scrum team won't get this speed even with the same agents. This is that post. It is the most opinionated of the four: there is a forecast here, and a forecast can be wrong. But it is what I think.
+
+## Where the time went
+
+Why do I think scrum doesn't work anymore in its classic form? Because in reality we spent no more than 30–40% of our time writing code. Especially in the lead position, in the senior position. A huge amount of time went into passing information between the members of the team.
+
+I described my day as a lead in the [first post](/personal/2026/10/28/ten_years_of_writing_code_by_hand/): four or five hours of meetings back to back, code review and messages in between. Calls and approvals took up to 70% of my time. I didn't hate it — I liked talking to people. But the code was the smaller part of the job, and that was true for most of the people around me.
+
+This is not only my experience. In [Atlassian's 2025 survey](https://www.atlassian.com/blog/developer/developer-experience-report-2025) of 3,500 developers, half said they lose ten or more hours a week to friction that has nothing to do with writing code, and 63% said their leaders don't understand their pain points.
+
+Now look at what agents do. They take the part that was already the smaller one, writing code, and make it almost free. Everything else stays: the meetings, the approvals, the handovers, the waiting. If code was a third of your time, then even if it became infinitely fast, you could save only that third, never more. The other two thirds stay. The work cannot become ten times faster this way, and the big studies find twenty or thirty percent. I will come back to them.
+
+I don't see how you can make those meetings faster. I don't see how you can make those ceremonies faster if we also invite agents there. It all doesn't work.
+
+## The arithmetic of people
+
+My friend's story has simple arithmetic behind it, and it is not new. Every pair of people in a team is a channel through which information has to pass: something to agree, to explain, to wait for. With _n_ people there are _n_(_n_ − 1) / 2 such pairs. Fred Brooks wrote about this in 1975, in _The Mythical Man-Month_: adding people to a late project makes it later.
+
+<BarChart
+  title="Pairs of people who have to agree"
+  sub="Every pair in a team is one line of communication: n × (n − 1) / 2."
+  series={[{ name: 'pairs' }]}
+  rows={[
+    { label: '2 people — our team', values: [1] },
+    { label: '3 people', values: [3] },
+    { label: '4 people — my friend’s team before', values: [6] },
+    { label: '7 people — after three more were hired', values: [21] },
+    { label: '11 people — my biggest scrum team', values: [55] },
+  ]}
+  note="Arithmetic, not a measurement. Not every pair talks every day, but every pair can block the other."
+/>
+
+From four to seven people is less than twice the people and more than three times the lines between them. The agents don't change this number at all. Each of the seven developers now writes code faster, and so each of them produces more changes that the other six have to know about, review, merge with their own, and talk about in a meeting. The faster the code is written, the more the communication costs relative to it.
+
+When I look at our team, it is the opposite. Two people, one line. Everything I need to agree, I agree with one person. Everything he needs to know about my work, he can read in the summary that the agent wrote for my pull request.
+
+## What the research measures
+
+When I wrote in the previous post that we see a thousand percent and more, I put next to it the numbers from enterprise research: twenty or thirty percent. Here they are in more detail, because I think they say the same thing as my friend's story.
+
+<BarChart
+  title="How much faster with AI"
+  sub="What the studies measured, and my estimate for our team."
+  series={[{ name: 'faster' }]}
+  unit="%"
+  rows={[
+    { label: 'Bain 2025: typical companies (10–15%)', values: [15] },
+    { label: 'Google, 96 engineers: time on a task', values: [21] },
+    {
+      label: 'Microsoft, Accenture, a Fortune 100 company: completed tasks',
+      values: [26],
+    },
+    { label: 'Bain 2025: with the whole process redesigned', values: [30] },
+    {
+      label: 'Our team: my rough estimate, not in production yet (×17)',
+      values: [1600],
+    },
+  ]}
+  note="Upper ends of the ranges. METR’s −19% is not on the chart because it is below zero; it is in the list below. The studies are controlled measurements on many developers. The last bar is not: it is one team, one week and a half, and my own guess of how long the old way would take — read it as a claim, not a result. Sources are linked in the text."
+/>
+
+- [Google, 2024](https://arxiv.org/abs/2410.12944): a randomised experiment with 96 engineers; with AI they finished a task about 21% faster.
+- [Cui and colleagues, 2025](https://papers.ssrn.com/abstract=4945566): the experiments with almost five thousand developers from the previous post, 26% more completed tasks. This was code completion, the tools of the previous generation, not agents.
+- [METR, 2025](https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/): sixteen experienced open-source developers were 19% _slower_ with AI — and believed afterwards that they had been 20% faster. In a [rerun at the end of 2025](https://metr.org/blog/2026-02-24-uplift-update/) the picture changed toward a speed-up, but METR itself says the data is unreliable and the speed-up is likely underestimated: developers refused to work without AI, and the parallel agents broke the time logging.
+- [Bain, 2025](https://www.bain.com/insights/from-pilots-to-payoff-generative-ai-in-software-development-technology-report-2025/): typical companies get 10–15%. Writing code and testing are only 25–35% of the way from an idea to a launch. Companies that redesign the whole process get 25–30%.
+
+The Bain number is my 30–40% from the other side. If code is a third of the work, then even infinitely fast code saves you at most that third. Everything else is the process.
+
+And then there is what happens when you speed up only the code. [Faros](https://www.faros.ai/blog/ai-software-engineering) looked at more than ten thousand developers: with AI, 98% more pull requests were merged — and review time grew by 91%, pull requests became 154% bigger, and at the level of the company there was no significant effect on throughput or quality. More code went into the same pipe, and the pipe didn't get wider. That is the lead from my friend's story, who approves every pull request himself, only measured on ten thousand people.
+
+The sentence I like most is from the [DORA 2025 report](https://cloud.google.com/blog/products/ai-machine-learning/announcing-the-2025-dora-report): _"AI doesn't fix a team; it amplifies what's already there."_ A team that spends two thirds of its time in meetings gets agents and spends two thirds of its time in meetings. A team that can just take and do things gets agents and does them ten times faster.
+
+I want to be honest about my own number, too. Nobody has measured it. It is my estimate of what an old team would need for the same work, divided by a week and a half. And there is no controlled study of small teams that work with agents from the start; all I found about them are claims from investors — for example, Y Combinator said in March 2025 that for a quarter of its winter batch, 95% of the code was written by AI. So the last bar on the chart is not science. It is what I see with my own eyes, and there are good reasons not to trust it too much.
+
+The METR study showed that developers overestimate their own speed-up: they were slower and believed they were faster. I am a developer too. None of this code is in production yet; we are still waiting for access. It is one week and a half on one project. And it is a rewrite, from legacy to a modern stack, and with agents that is much easier: the old application already tells us what the right answer is, and we compare the result byte for byte. New features with unclear requirements will not go this fast. So read seventeen as what a rewrite gives, not as a promise for every project. But even if I am wrong several times over, it is still far more than thirty percent, and it does not come from the agents alone.
+
+I wanted at least one more check, so I took two of my pet projects, where git keeps the real days, and estimated how long one senior developer would need to build them by hand.
+
+The first is a Telegram bot for personal expenses, the one we use at home every day. You type a short line, an amount and a word, and it records the expense; it reads Serbian and Montenegrin fiscal receipts from a QR code, bank SMS and PDF statements, converts currencies at the central bank rate of the day, keeps budgets, recurring expenses, debts and shared ledgers for group chats, and draws charts in a Telegram Mini App. With agents it took 13 days of work in about two weeks, in three bursts, from the end of September to the middle of October. By hand, broken down feature by feature, with the tests and the decision records it has, I estimate it at 80–90 working days, about four months. That is about six to seven times.
+
+The second is the voxel engine, only the engine. With agents it took nine days, from the 16th to the 28th of October. By hand I think it is more than a year — and only if I knew Rust very well. That is twenty-five times or more, and that is an estimate for a specialist; for me as I am, it would be longer.
+
+It looks strange: the bot is much simpler, and it took more days than the engine. But the days are not the same. On the bot I spent much less than a full day each time. The engine already ran with full orchestration, so a day of work on it was a different kind of day.
+
+<BarChart
+  title="Two pet projects: by hand and with agents"
+  sub="Working days. By hand is my estimate; with agents is days on which git shows work."
+  series={[{ name: 'by hand, my estimate' }, { name: 'with agents' }]}
+  rows={[
+    { label: 'Expenses bot', values: [80, 13] },
+    { label: 'Voxel engine (the engine only)', values: [250, 9] },
+  ]}
+  note="The low ends of my estimates: 80–90 days for the bot, more than a year (about 250 working days) for the engine, for someone who knows Rust well. A day with agents is not always a full working day."
+/>
+
+So my own numbers are not one number. An ordinary product comes out around six or seven times, a hard and specialised one around twenty-five, and the rewrite at work, at seventeen, sits between them. All of it with a team of one or two people.
+
+Fred Brooks has a second text that fits here even better than _The Mythical Man-Month_. In 1986 he wrote [_No Silver Bullet_](https://en.wikipedia.org/wiki/No_Silver_Bullet): _"There is no single development, in either technology or management technique, which by itself promises even one order-of-magnitude improvement within a decade in productivity, in reliability, in simplicity."_ He split the difficulty of software into two parts. The accidental part comes from our tools: typing the code, the languages, the machines. The essential part is in the problem itself: understanding what to build, the specification, the design, agreeing about it.
+
+Agents are not the silver bullet either. They removed a big piece of the accidental part — writing code by hand. The essential part stayed exactly where it was, and in a big team a large share of it is people agreeing with each other. That is why a scrum team with agents gets its thirty percent. Where I see an order of magnitude, it did not come from one development. It came from two at once, in his own words: a technology, the agents, and a management technique, a team of two with complete freedom. Neither of them alone would do it.
+
+## Decisions that wait
+
+The biggest thing that slows a big team down is not code and not even meetings. It is decisions.
+
+There were many cases when we waited to show a UX design demo to the customer, the design wasn't approved, and we had to redo it, and then get it approved again. Once I worked on a project where every change in the code had to go through the customer's architect. And once he even asked me to send him the changes as a screenshot, in an email! Crazy. I left that project soon after. I can't work like that.
+
+In big bureaucratic machines a decision can stay for many months. I have seen such projects. And I think people there just don't know one thing: it is easier to implement a product and implement it again later, if something goes wrong, than to approve it for months.
+
+Here is what decisions look like now.
+
+The decision to move the backend from Java to TypeScript was one hour of talk. The decision to upgrade all the outdated packages and move from npm to pnpm as the package manager, I made myself, and only approved it through my colleague. The change was implemented within a couple of hours and tested with e2e tests and everything else, so it was easy to do and easy to roll back in case something failed. This is the important part: the ease of implementation gives you the freedom to roll back if needed. And then planning far ahead becomes unnecessary.
+
+Another example. The other developer made a dashboard with search facets. The customer didn't like it. I redid it from the feedback within an hour, end to end, and it was already on the dev stand for the customer and everyone else to see. In the past such work would take at least two weeks: a designer designs it, the design goes for approval, the work is planned, split into subtasks, delegated, implemented, tested, and eventually shipped. Now it was an hour, with no friction at all.
+
+<Timeline
+  title="Changing a dashboard after the customer’s feedback"
+  sub="The same change, before and now."
+  groups={['before: at least two weeks', 'now: about an hour']}
+  events={[
+    { when: 'Before', what: 'A designer designs the change', group: 0 },
+    { when: '', what: 'The design goes for approval', group: 0 },
+    { when: '', what: 'The work is planned and split into subtasks', group: 0 },
+    { when: '', what: 'The subtasks are delegated', group: 0 },
+    { when: '', what: 'Implemented, then tested', group: 0 },
+    { when: '', what: 'Eventually shipped', group: 0 },
+    {
+      when: 'Now',
+      what: 'I read the feedback and redo it with agents, end to end',
+      group: 1,
+    },
+    {
+      when: '',
+      what: 'It is on the dev stand for the customer to see',
+      group: 1,
+    },
+  ]}
+/>
+
+When a change costs an hour, you don't need to approve it before you make it. You make it, show it, and if it is wrong you make it again. Approval was a way to protect expensive work from being wasted. The work is not expensive anymore, but the approval is still there, and now it is the most expensive part.
+
+## Why our team is the exception
+
+Why does this work for us? Again, because the team is very small — only two developers. Both understand what they are doing. Both are full-stack and understand the backend and the frontend well. We work together, we want to work, and we want to work fast. And we have complete freedom: we can do whatever we want, and everyone understands what to do. If any of these things were missing, we couldn't work like this. If we had eight people now and scrum, we couldn't do anything even close to what we do.
+
+Where does the freedom come from? The client doesn't really care what we do; they care about a working product. EPAM doesn't care either. I would say this is a rare case.
+
+So what really works is a small, concrete team of developers who know what they are doing and want to do it well. Then we really can move ten times faster — not 20–30%, but ten times, a hundred times faster than without agents. But it needs a completely different approach to management and a very high level of trust in the team. Only like that.
+
+There is a harder question, too. My dream team, the people I loved working with: if we got today's agents but kept our old scrum, would we get there? I don't think so. Only if such a team were divided. We were too big, with too much communication overhead.
+
+## Two is the golden mean
+
+Why two and not one? Because there must be two, so that they can check each other. Several times the other developer saw something that was wrong. He has a different context. He reads the summary or the agent's review and understands that something is not right. Just today he caught that, under some circumstances, our login page was inaccessible for users who were not logged in — something I was not aware of. One developer with agents has no one to do that.
+
+Three is already a lot. Two is the golden mean between one and three. More than three is madness; it is never needed at all.
+
+We have no formal lead. But in practice the decisions are split. The other developer owns the decisions for the customer: what we build and how it looks to them. I own everything technical: the harness, the quality, the tests. So two is a magic number for me. Two people who can check each other, and each of whom owns his side.
+
+## What is left of the lead
+
+I was a lead for five years and I loved it. But I think the person who makes decisions and is responsible for them must be one concrete person. When a decision is spread over several people, no one is responsible. So some lead should exist, at least formally — exactly for these decisions and for the responsibility. I think that is now the main function of a lead: this person answers for what we do. They are the one who is asked.
+
+All the other functions of a lead — coordination and the rest — move into the background, because they are not really needed. There is no one to manage: the people are two, and the rest are agents. What is important is the responsibility — and in our team, without a formal lead, it is not spread either: for each kind of decision there is one concrete person.
+
+## What is left of scrum
+
+What is left of the ceremonies? Very high-level planning. We roughly understand what layer of work we need to do: we will rewrite the legacy on new technologies, we will do this and that. And we don't really estimate anything anymore, only very roughly. Almost anything can be done. We are still adjusting, because the work goes faster than we imagine. Even we don't really understand how fast we are moving — much faster than before. If in the past the problem was that we underestimated our work, now we overestimate it.
+
+And because we grow this bonsai — I wrote about it in the previous post — the real work becomes visible only when we start it. So the planning cannot be detailed anyway: the next step appears after the previous one is done.
+
+So I think sprints are not really needed in this context. We just do the work up to the moment when it is ready, show a demo to the customer, and then hold a retro. Our retro is more a little party where we just talk about everything, not a formal retro. But a retro is good, feedback is good. I like retros. If we had some problems, we need to say them out loud to each other, so that they can be solved. So I think a retro is needed.
+
+Dailies — probably not. Ad hoc messages and the Trello board replace the dailies quite well. Sometimes we had dailies and sometimes we didn't. Sometimes it was just a virtual office, and that suits me fine.
+
+<Timeline
+  title="A two-week sprint, before"
+  sub="The ceremonies of my old scrum teams."
+  events={[
+    {
+      when: 'Before it',
+      what: 'Refinement: splitting epics into features and tasks',
+    },
+    { when: 'Day 1', what: 'Sprint planning, estimates in story points' },
+    { when: 'Every day', what: 'The daily' },
+    { when: 'Every day', what: 'Code review, demos to the testers, approvals' },
+    { when: 'Mid-sprint', what: 'Urgent tasks land and break the plan' },
+    { when: 'Day 10', what: 'The demo to the client' },
+    { when: 'Day 10', what: 'The retro' },
+  ]}
+/>
+
+<Timeline
+  title="Now: no sprints"
+  sub="What is left."
+  groups={['kept', 'replaced']}
+  events={[
+    {
+      when: 'Start',
+      what: 'A high-level plan on a call, written down at once',
+      detail: 'Rough, no estimates: “we will rewrite this layer”',
+      group: 0,
+    },
+    {
+      when: 'Every day',
+      what: 'The Trello board, ad hoc messages, sometimes a virtual office',
+      detail: 'Instead of the daily',
+      group: 1,
+    },
+    {
+      when: 'Every change',
+      what: 'An agent review and one human approval',
+      detail: 'From the other developer',
+      group: 1,
+    },
+    { when: 'When it is ready', what: 'A demo to the customer', group: 0 },
+    {
+      when: 'Then',
+      what: 'A retro — more a little party than a formal one',
+      group: 0,
+    },
+  ]}
+/>
+
+## The bottleneck that is left
+
+What bottlenecks are left? Integration. Right now we are waiting for passwords, waiting for access. We have the code, but we can't deploy it.
+
+How does it feel? It doesn't feel like anything. I really don't care. As long as I have something to do, I'm happy. When I have nothing to do, I will sit and drink coffee. I have absolutely no reason to hurry or to hurry anyone — in the sense that I have no anxiety about it. Well, if they give it in a month, then they give it in a month, to hell with it. I have no feeling about it inside at all.
+
+I think this is worth saying, because it is the same thing from the other side. Inside our team every bottleneck is removed. Outside it, the world still works at the old speed: access, tickets, other teams. Our two-person team plugs into a big machine, and at the joint the machine's speed wins. Even inside the project the two worlds sit side by side: the client has Jira with formal stories, and we have our Trello board, which the client doesn't see.
+
+## Renovation crews
+
+How could teams like ours look in the future? Well, just like our team: two developers. Plus one person who removes obstacles, talks to the business, takes on the responsibility — maybe for exactly the business decisions. This person can help a lot to speed things up. He will not write code, but he will help the developers work so that they don't have to look back all the time and ask someone how to do this or that. You just take it and do it.
+
+I have a picture in my head for this, and it comes from my life before IT. In the first post I wrote about the gypsum stucco, about how our crew often came after other craftsmen who had done it badly, and redid it. We were a crew of three. We were seen and known as high-quality professionals, and we always had work to do. All of it came by word of mouth.
+
+I think programmers will go somewhere there. It will not be an impersonal company, a vendor, an outsourcer that does something — you just give it a task and forget. It will be a team with faces. A team with faces that advertises itself through social media, probably like this: here we are, such great guys, we make this kind of thing. Superstars with medals around their necks who come and do it, like a SWAT team.
+
+I have never seen this. It is only my prediction. There are some star developers on Twitter, but not crews. But here is the thing: in the right hands an LLM can speed up development enormously — only in the right hands. So those hands should be seen.
+
+And such a crew doesn't stay forever. It comes in, sets something up or builds it, and leaves for another project — like a crew on a renovation or construction job. I think teams that work together for years will be gone, and big teams too.
+
+## Who will ride the wave
+
+So I think the future belongs to small, concrete teams, and the companies that manage to ride this future will, of course, be on the crest of the wave. And unfortunately I don't think old companies are capable of it. Simply because their bureaucratic structure has become so rigid that it will never allow people that level of freedom.
+
+What will happen to companies that stay with big teams? Well, they will either die or break up into small ones. Something has to be done with this bureaucratic pyramid. If it stays the way it is now, such a company most likely won't survive.
+
+About EPAM I won't say anything here: EPAM is full of very smart people, after all, and I think they can come up with something. But in general, without critical changes in the approach to work — autonomous teams, a minimum of management, a minimum of constraints, high trust — such work is impossible. The question is how to make developers as free as possible, so that they can do creative work and, roughly speaking, sell their creative work, without heavy shackles on their legs that get in their way.
+
+Can what we have be repeated somewhere else? I think yes, but most likely not in a big bureaucratic company. More likely in some small startup. And these small startups will move at such a speed that everyone else's ears will pop and their eyes will flicker, because they will deliver something incredible.
+
+And again, it seems to me that I am lucky — like the previous times, when I was getting into this path, into this profession. I got lucky again with what is happening around me now, and I can work at a real velocity like this.
+
+But luck is only one side of it. Everything I wrote here about small teams, freedom and fast work has a price, and not only for companies. The next post, the last one, is about that: what it costs me, and what it may cost the people who are only starting.
