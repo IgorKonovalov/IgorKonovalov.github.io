@@ -181,3 +181,20 @@ Collisions added: **collapse** → «обрушение» (day one), never «о�
 **the owner's "go"** stays «go»; a "sweep batch" is «пакет», so network packets are «сетевые пакеты»;
 place names (Arreat Summit, Harrogath, the Ancients) stay in English like item and monster names;
 **the bless verb** «закрепить» is for goldens and hashes only, an ADR «фиксирует» a decision.
+
+## Dictated Russian in a written post (author, 2026-10-28)
+
+When a post reuses the author's dictated Russian, edit it into written speech — the author
+found the first draft of `2026-10-28-Ten_Years_Of_Writing_Code_By_Hand` ungrammatical in places
+and jumping in tone:
+
+- **No diminutives or reduplication**: «немножко» → «немного» or nothing; «очень-очень»,
+  «сильно-сильно», «совсем-совсем» → one word; «прям суперклассный» → «отличный».
+- **One register**: no slang next to bookish phrases. Drop «движуха», «тусили», «задолбал»,
+  «прикольно», «кушать», «шутили шутки»; drop «некое», «в принципе», «по сути», «на тот момент».
+- **Fillers** («ну», «как бы», «на самом деле», «в общем-то», «вот эта») almost never survive
+  into text; keep one only where it carries the speaker's hesitation.
+- **One tense per scene**: a recalled day stays in the past («открывал ноутбук, работал
+  полчаса…»), the generic «ты» only for a deliberate general statement.
+- **Untangle spoken syntax**: «Я не планировал не возвращаться» → «Уезжать навсегда я не
+  собирался»; «Мы бежали быстро. Спешили…» → «Мы очень спешили».
