@@ -99,6 +99,14 @@ art, maps). Chart what was delivered, never process metrics such as commit count
 data rules, how to get Diablo II art and how to check the result are in
 [visuals.md](references/visuals.md).
 
+## Editorial Pass: From Dictation Order to Written Structure
+
+A polished dictation keeps the order the author spoke in, and that reads like a transcript.
+Before a dictation-based post is shown, restructure it — one thread, chronological or argument
+order, each thought in one place, the hook answered at the end — and write the Russian twin from
+the dictation's meaning, not back from the English. Remove repetition, never details. Rules and
+the reader feedback behind them: [editorial-pass.md](references/editorial-pass.md).
+
 ## Translating an English Post to Russian
 
 Most posts are now written in English first and get a Russian twin in `src/content/blog/ru/` with
