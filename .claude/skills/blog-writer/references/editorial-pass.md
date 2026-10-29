@@ -41,6 +41,30 @@ above all the structure: hard to keep the thread. It reads like a transcript of 
   dropped it — list every such restoration for the author.
 - Keep MDX components (charts, Screenshots, Mermaid) verbatim; move them with their text.
 
+## Tightening pass (second reader feedback, 2026-10-29)
+
+The reader, on the closing paragraph of post 3 («Но везение — только одна сторона. У всего,
+что я здесь написал про маленькие команды, свободу и быструю работу, есть цена… Следующий
+пост, последний, — об этом: чего это стоит мне и чего это может стоить тем, кто только
+начинает»): "this sentence broke me — and paragraphs like it, where the point is already made
+and then gets decoded once more. By feel, a third of the text would go."
+
+Cut:
+
+- recaps of what the post (or series) already said, and long announcements of the next post —
+  one short clause is enough («Но у этой скорости есть цена — о ней последний пост»);
+- a closing sentence that repeats the paragraph's opening («Только так», «Так что ретро нужно»,
+  «Поэтому двое — магическое число» after it was already said);
+- an explanation that decodes the previous sentence, or prose that lists the same steps a chart
+  right next to it shows;
+- the same point made two or three times in one section — keep the strongest one.
+
+Keep: every fact, number, link, anecdote, and the author's live phrases and feelings («мне
+нравилось говорить с людьми», «я люблю ретро», «закладывать уши и рябить в глазах»). The author
+tried a one-third cut and found it too harsh; the accepted level is **about 20%** of body words
+(post 3 RU: 3,441 → 2,745). Dropping below the length floor is fine here — the floor warns, and
+padding back is forbidden.
+
 ## English twin
 
 Mirror the new section order and merges in the English version, and remove the same

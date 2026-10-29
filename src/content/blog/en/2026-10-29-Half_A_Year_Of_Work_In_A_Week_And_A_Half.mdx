@@ -11,47 +11,43 @@ import Timeline from '../../../components/charts/Timeline.astro';
 import BarChart from '../../../components/charts/BarChart.astro';
 import Screenshots from '../../../components/charts/Screenshots.astro';
 
-The other developer and I get on a call. We sketch a high-level plan of what has to be done, and we write it down right away. While we are still talking, I am already reading that plan and telling the architect agent to break it into tasks. When the call ends, there is a batch of tasks in Trello, several plans and decision records in the repository, and work on one of them has already started.
+The other developer and I get on a call. We sketch a high-level plan and write it down right away. While we are still talking, I am already reading that plan and telling the architect agent to break it into tasks. When the call ends, there is a batch of tasks in Trello, several plans and decision records in the repository, and work on one of them has already started.
 
-That is a normal morning now. The [previous post](/personal/2026/10/28/ten_years_of_writing_code_by_hand/) was about the years when I wrote code by hand, and it ended in January 2026, with my last scrum team leaving one by one and me going to the bench. This one is about what came after: how a skeptic learned to work with agents, why I didn't quit after all, and what a day looks like when the team is two developers and an analyst.
+That is a normal morning now. The [previous post](/personal/2026/10/28/ten_years_of_writing_code_by_hand/) ended in January 2026, with my last scrum team leaving one by one and me going to the bench. This one is about what came after.
 
 ## The skeptic on the bench
 
 All of last year I hesitated. I barely used agents while the project with the normal team was still running, and the first idea of them came only in December 2025.
 
-When I was leaving that project for the bench, I already saw some of my colleagues using agents. And on Twitter, where I spend a lot of time, there were more of them every day. I was a super skeptic. But I understood that I couldn't avoid it in the future. And if I can't avoid it and I can't fight it, then I need to master it. So I decided to give myself some time, while I was on the bench, and try to understand it properly.
+By then some of my colleagues were already using agents. And on Twitter, where I spend a lot of time, there were more of them every day. I was a super skeptic. But I understood that I couldn't avoid it, and if I can't fight it, then I need to master it. I decided to give my time on the bench to understanding it properly.
 
 The bench itself was short, two or three weeks in January, and then a new project started. The real start with agents came in February, with the pet projects. In the plan for my talk, which comes up below, I wrote one sentence that I still agree with: _"I didn't fall in love with AI. I made a pragmatic decision to learn it."_
 
 ### What git remembers
 
-The story of those first months is in git: I write commit messages in detail, and git keeps the dates.
+The story of those first months is in git.
 
 **22 February.** The first repository of the agent era, a Serbian learning app, got two skills and a placeholder instead of project rules, and nothing else, ever: the first abandoned project, on the first day. The same afternoon this blog got four skills — designer, business analyst, architect, developer — a file with rules for agents, and a plan in nine phases for moving from Jekyll to Astro. By the evening the new site was live, and Git LFS had gone in and come out again half an hour later.
 
-**End of February – March.** A site for a friend's car-electrics business. The first decision record, about the package manager, reversed three days later. The first chain of skills that hand work to each other: the analyst writes a feature description, the architect writes a plan, the developer implements it. And the first rule I wrote because of how an agent behaved: the developer skill eagerly loaded context instead of waiting to be told what to do, so the rule says it must wait for instructions. From the middle of March my friend edited the content himself, through the CMS.
+**End of February – March.** A site for a friend's car-electrics business. The first decision record, about the package manager, reversed three days later. The first chain of skills: the analyst writes a feature description, the architect a plan, the developer implements it. And the first rule written because of how an agent behaved: the developer skill eagerly loaded context instead of waiting for instructions. From the middle of March my friend edited the content himself, through the CMS.
 
 **End of March – April.** Bots. The property bot went from an empty repository through seven phases in one evening; some tests didn't run because of a mocking problem in the bot library, and I skipped them to unblock CI. The channel statistics bot had its MVP working on the first evening and a deploy pipeline two days later; one feature I removed, because the Telegram API simply doesn't give those numbers.
 
-The Serbian language bot started with plans and decision records before any code, and on its second day it got the first review gate: a phase is approved only after the architect has reviewed it. Two weeks later I wrote down the lessons that kept repeating, and one of them says it plainly: _"Plans must be reviewed before being moved to done/ — never auto-move."_
+The Serbian language bot started with plans and decision records, and on its second day got the first review gate: a phase is approved only after the architect has reviewed it. Two weeks later I wrote down the recurring lessons, and one of them says it plainly: _"Plans must be reviewed before being moved to done/ — never auto-move."_
 
-**Early April.** At the beginning of April I gave a talk about all this for developers inside EPAM. It was called _"From Skeptic to Agent Coder: A Practical Guide"_, and the description I wrote for it starts like this: _"A year ago I thought LLMs were overhyped autocomplete. Today I delegate entire coding tasks to AI agents."_ In the live part an agent built a small NES-style 2.5D platformer in Three.js from an empty repository, while people watched — literally from one prompt, with the right preparation. It went great. There were so many questions that we had to stay fifteen minutes longer to answer them all. They were mostly technical: do I use libraries, how fast do the tokens run out, how do I set the harness up on a new project.
+**Early April.** Six weeks after my first repository with agents, I was giving a talk about all this for developers inside EPAM. It was called _"From Skeptic to Agent Coder: A Practical Guide"_, and its description starts like this: _"A year ago I thought LLMs were overhyped autocomplete. Today I delegate entire coding tasks to AI agents."_ In the live part an agent built a small NES-style 2.5D platformer in Three.js from an empty repository, while people watched — literally from one prompt, with the right preparation. It went great. There were so many questions that we had to stay fifteen minutes longer to answer them all. They were mostly technical: do I use libraries, how fast do the tokens run out, how do I set the harness up on a new project.
 
-So about six weeks after my first repository with agents, I was explaining to others how to do it. That is how fast it went. The last slide of that talk said what I still think is the main limit: _"An LLM is only as good as the understanding of the human who operates it. You cannot effectively delegate what you don't understand."_
+The last slide of that talk said what I still think is the main limit: _"An LLM is only as good as the understanding of the human who operates it. You cannot effectively delegate what you don't understand."_
 
-**May – June.** The market analyzer. The architect wrote eight decision records before the first line of code, and one of them was soon replaced by another. In June the market analyzer got the first guard hook, which refuses broad staging in git, and the first worktrees, so that several agents could implement in parallel without stepping on each other.
+**May – June.** The market analyzer. The architect wrote eight decision records before the first line of code, and one of them was soon replaced by another. In June the market analyzer got the first guard hook, which refuses broad staging in git, and the first worktrees, so that agents could implement in parallel.
 
 **July.** Ritmolux started from a harness copied from the market analyzer, and within the first hour I collapsed several implementer skills into one boundary between architect and developer. The same day I published [an article on this blog](/projects/2026/07/21/running_a_real_project_as_a_team_of_agents/) about how I work with agents. The orchestrator came later, in September.
 
-Looking at it now, the pattern is simple: each project took what worked in the previous one, and each mistake became a rule.
+The pattern is simple: each project took what worked in the previous one, and each mistake became a rule.
 
 ## Three stages
 
-Looking at the whole year, I divide my work with agents into three big stages.
-
-The first stage is simply learning to work with agents. That was the bench, and the pet projects of the first half of the year described above.
-
-The second stage is making the agents able to work through orchestration — independently. That was [Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/), the music visualizer. I was surprised it was possible at all, and that it wasn't even that hard. The orchestrator is a tricky thing, but it works.
+The year divides into three stages. The first is learning to work with agents: the bench and the pet projects of the first half of the year. The second is making the agents work independently, through orchestration: [Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/), the music visualizer. I was surprised it was possible at all, and that it wasn't even that hard. The orchestrator is a tricky thing, but it works.
 
 And now the third stage is going on, with the [voxel engine](/projects/2026/10/16/voxel_engine_day_one/) and the [Diablo II recompilation](/projects/2026/10/11/diablo_ii_day_one/): doing with agents what I most likely could never have done on my own. And it seems that it works.
 
@@ -145,7 +141,7 @@ And now the third stage is going on, with the [voxel engine](/projects/2026/10/1
   note="Repository dates from GitHub; versions and plan counts read from the repositories on 28 October 2026."
 />
 
-In the previous post there was a chart of the repositories I created on GitHub by year: nineteen in the year I learned, then for eight years almost nothing, then sixteen in 2026. These are the ones that became something.
+Of the sixteen repositories of 2026, these are the ones that became something.
 
 <Screenshots
   title="Stage two and stage three"
@@ -177,31 +173,31 @@ In the previous post there was a chart of the repositories I created on GitHub b
 
 ## Why the joy came back
 
-The joy of work came back together with the pet projects. I loved them at the start of my career, but once the big enterprise work began, there was no time or strength left for my own ideas. Programming turned into code for money. I thought all that was long gone. In the [previous post](/personal/2026/10/28/ten_years_of_writing_code_by_hand/) I said I was going to quit last winter: I was so fed up that I couldn't imagine going to work any more.
+The joy of work came back together with the pet projects. I loved them at the start of my career, but once the big enterprise work began, there was no time or strength left for my own ideas. Programming turned into code for money. I thought all that was long gone, and last winter I was even [going to quit](/personal/2026/10/28/ten_years_of_writing_code_by_hand/): I was so fed up that I couldn't imagine going to work any more.
 
-And then I understood that now I can not write code at all, but just do creative work, and this creative work turns into real projects — at that moment something changed inside. I understood that I really want to do this again. I started wanting to sit down at the computer and build something again. I always saw code more as a barrier, and creativity for me was something else — turning thoughts and ideas into a product. With agents, creativity broke free: writing code no longer held it back.
+And then I understood that now I can not write code at all, but just do creative work, and this creative work turns into real projects — at that moment something changed inside. I started wanting to sit down at the computer and build something again. I always saw code more as a barrier, and creativity for me was turning thoughts and ideas into a product. With agents, the barrier was gone.
 
 ## The first month in production
 
-Meanwhile, at my day job, the new project that started right after the bench was under way — software for scientific microscopes. I tried moving over the harness I had used on the pet projects, and I understood that it works, that I almost don't need to change anything. And it worked faster and better than I expected.
+Meanwhile, at my day job, the new project that started right after the bench was under way — software for scientific microscopes. I moved over the harness from the pet projects, and it worked almost unchanged — faster and better than I expected.
 
-I brought the agents in little by little. First simple code and a small feature, then more and more. The agent writes code faster, and its quality is not just acceptable — it can even be better. After about a month, once I was sure they work with good enough quality, I understood that there is simply no point in writing code by hand any more, and I stopped.
+I brought the agents in little by little. First simple code and a small feature, then more. The agent writes code faster, and its quality is not just acceptable — it can even be better. After about a month I understood that there is simply no point in writing code by hand any more, and I stopped.
 
-I think I remember where the last line was. The application had a built-in instruction for one of the tools, and some pictures in it had to be replaced with others. It was as boring as it gets. I gave it to the agent and saw that instead of fixing the indents by hand, I can say the same thing right in the agent's interface — and that is closer to me. Writing in English is simply easier for me than writing in JavaScript. And if the result is the same, why strain? Somewhere there, in those indents, I think, was my last line of code. It was a routine, most ordinary task that I had done a million times, and one of those times was the last.
+I think I remember where the last line was. The application had a built-in instruction for one of the tools, and some pictures in it had to be replaced with others. It was as boring as it gets. I gave it to the agent and saw that instead of fixing the indents by hand, I can say the same thing right in the agent's interface: writing in English is simply easier for me than writing in JavaScript. And if the result is the same, why strain? Somewhere there, in those indents, I think, was my last line of code — in a task I had done a million times, and one of those times was the last.
 
 I have been working like this since spring, and it keeps getting faster: better agents, a better harness, my own skills, and the change in the team.
 
 ## Two developers and an analyst
 
-Since June I have been at another client, again in life sciences, one of EPAM's regular clients. It just happened that way; we tried it and liked it. I liked working with scientists more than with business. Scientists are more polite, more concrete, they know the value of time and they don't push too hard. Business wants results very fast, but is often bureaucratic: it is hard to get through a pile of approvals from every level. Strangely, scientists give more freedom.
+Since June I have been at another client, again in life sciences, one of EPAM's regular clients. It just happened that way; we tried it and liked it. I liked working with scientists more than with business. Scientists are more polite, more concrete, they know the value of time and they don't push too hard. Business wants results very fast, but is often bureaucratic, and, strangely, it is scientists who give more freedom.
 
 The system is old. The backend was in Java, and we are rewriting it in TypeScript. The frontend is Next.js, as it was. AWS, and the environment is now described in Terraform; before, it was built by hand.
 
-The team is three people: the other developer and the analyst are in London, I am in Serbia. The other developer is about as senior as me, also a former frontend developer, now full-stack with agents. He does more design and more client contact: he has worked at this client for a long time and knows everyone. He moves very fast and implements features. I do code too, but I own the agent harness and the setup of the system, and I care most about architecture, resilience, operability, testability.
+The team is three people: the other developer and the analyst are in London, I am in Serbia. The other developer is about as senior as me, also a former frontend developer, now full-stack with agents. He does more design and more client contact: he has worked at this client for a long time and knows everyone. He moves very fast and implements features. I do code too, but I own the harness and the setup of the system, and I care most about architecture, resilience, operability, testability.
 
-Long ago I went through EPAM's architecture school. I finished it with difficulty, in the burnout year. But the school itself gave me a lot of good insights, especially at the beginning, when I wasn't burned out yet. It gave me a very good foundation for understanding how to build reliable applications. That is what I do.
+Long ago I went through EPAM's architecture school. I finished it with difficulty, in the burnout year, but it gave me a good foundation: how to build reliable applications. That is what I do.
 
-The business analyst works as a normal business analyst for now: talks to the client, collects requirements. We push him to use agents, and it is going slowly. Partly habit, partly it is not clear how to set the agents up properly for his work, and partly the uncertainty is very high: almost no documentation is left from the old system. Design is barely needed; it is an internal portal, and the design agent is enough. Testing is automated test coverage, visual regression and unit tests.
+The business analyst works as a normal business analyst for now: talks to the client, collects requirements. We push him to use agents, and it is going slowly: habit, no clear way to set the agents up for his work, and very high uncertainty — almost no documentation is left from the old system. Design is barely needed; it is an internal portal, and the design agent is enough.
 
 <Mermaid
   code={`
@@ -221,13 +217,13 @@ flowchart TB
 `}
 />
 
-In the [previous post](/personal/2026/10/28/ten_years_of_writing_code_by_hand/) there was a diagram of a typical team: a client, a project manager, an analyst, a scrum master, a lead, four or five developers, a DevOps engineer, two testers. This is the whole team now.
+In the [previous post](/personal/2026/10/28/ten_years_of_writing_code_by_hand/) the diagram of a typical team had a project manager, a scrum master, a lead, four or five developers, a DevOps engineer and two testers. This is the whole team now.
 
 We don't clash. If something is wrong, one of us writes a big review comment through an agent, and everything gets fixed. We are both professionals who have worked a very long time; there is no need to show off ego.
 
 ## A day
 
-The easiest way to see how the work changed is one day, next to the lead's day from the previous post.
+Here is one day, next to the lead's day from the previous post.
 
 <Timeline
   title="A lead's day at the peak"
@@ -282,17 +278,17 @@ The easiest way to see how the work changed is one day, next to the lead's day f
   ]}
 />
 
-There are almost no meetings. I come to work the same way: open the laptop, check the mail, check the messages in Teams, look at the situation in Trello. Maybe exchange a couple of words with the other developer. Sometimes we call and organise the work on the call, like at the beginning of this post; sometimes I just look at what we have and what can be taken, and write it as text. I don't have a special plan; I don't think about the work before I start it. I drink some coffee, answer the messages, and then give the agent a plan for the part of the work that seems most reasonable right now. Here I go more by feel.
+There are almost no meetings. Sometimes the other developer and I organise the work on a call, like at the beginning of this post; sometimes I just look at what can be taken and write it as text. I don't have a special plan; I don't think about the work before I start it, and then I give the agent a plan for the part that seems most reasonable right now. Here I go more by feel.
 
-The board is the centre of it. Agents fill in the tickets and move them themselves, so when I open Trello I see what is in which status, what can be taken, and extra context. Trello is our internal working board; the client has its own Jira with formal stories. Trello is for us, for fast organisation of a distributed team — we communicate through it, in tickets and chat rather than calls.
+The board is the centre of it. Agents fill in and move the tickets themselves, so Trello shows what is in which status and what can be taken. Trello is our internal working board; the client has its own Jira with formal stories. Trello is for us, for fast organisation of a distributed team — we communicate through it, in tickets and chat rather than calls.
 
-Then I actively watch the agents: check by hand, correct with prompts. I am involved quite actively. The agent writes the code, but you have to steer it yourself, especially when the uncertainty is high and the next step is only visible after the previous one is done.
+Then I actively watch the agents: check by hand, correct with prompts — especially when the uncertainty is high and the next step is only visible after the previous one is done.
 
-A normal day gives four or five pull requests, and some of them are large, because a rewrite moves whole parts of the system at once. Days like that add up to the week and a half in this post's title.
+A normal day gives four or five pull requests, and some of them are large, because a rewrite moves whole parts of the system at once.
 
 ## A week and a half
 
-In the previous post I wrote about the old team: one two-week sprint delivered one page, or one block on a page, and an infinite scroll with facets took three sprints. Here is what the two of us did in about a week and a half on the new application, which is also about access and documents:
+The old team delivered one page, or one block on a page, per two-week sprint, and an infinite scroll with facets took three sprints. Here is what the two of us did in about a week and a half on the new application, which is also about access and documents:
 
 - the database access API rewritten;
 - the whole application covered by end-to-end tests and visual regression;
@@ -302,9 +298,7 @@ In the previous post I wrote about the old team: one two-week sprint delivered o
 - five services and fifteen endpoints rewritten — all covered by every kind of test and absolutely rock-solid;
 - two repositories merged into one monorepo.
 
-No new functionality yet, but some bugs fixed on the way. The decision to rewrite was ours, shared by the team. We have complete freedom in decisions, and that is why we can move so fast.
-
-With the old team, I think, this would have been at least half a year. Half a year is twenty-six weeks, so that is about seventeen times.
+No new functionality yet, but some bugs fixed on the way. The decision to rewrite was ours, shared by the team: we have complete freedom in decisions. With the old team, I think, this would have been at least half a year — about seventeen times longer.
 
 <BarChart
   title="How many times faster"
@@ -322,17 +316,17 @@ With the old team, I think, this would have been at least half a year. Half a ye
   note="The rewrite: 26 calendar weeks against 1.5. Infinite scroll: a month and a half ≈ 30 working days against 1. Checkout tests: a month and a half ≈ 240 working hours against 2–3 hours, rounded."
 />
 
-And one honest note. None of this is in production yet. Everything works locally, but the new backend is waiting for infrastructure access: I have been waiting a week already for access to Kubernetes. In our team every bottleneck is removed except one — integration, waiting for other teams. There have been zero bugs in production from the new code. That is true, and it is also true that the code has not reached production.
+And one honest note. None of this is in production yet. Everything works locally, but I have been waiting a week already for Kubernetes access for the new backend. In our team every bottleneck is removed except one — waiting for other teams. There have been zero bugs in production from the new code — but only because it isn't there yet.
 
-Enterprise research on AI in development usually talks about twenty or thirty percent. Experiments with almost five thousand developers at Microsoft, Accenture and a Fortune 100 company measured [26% more completed tasks](https://papers.ssrn.com/abstract=4945566); [Bain's 2025 technology report](https://www.bain.com/insights/from-pilots-to-payoff-generative-ai-in-software-development-technology-report-2025/) sees 10–15%, and 25–30% for companies that redesign the whole process. We see a thousand percent and more, by my estimate, and I don't think it is the agents alone. It is the team. Why an ordinary scrum team won't get this even with the same agents — that is the next post.
+Enterprise research on AI in development finds twenty or thirty percent: [26% more completed tasks](https://papers.ssrn.com/abstract=4945566) in experiments with almost five thousand developers at Microsoft, Accenture and a Fortune 100 company; 10–15% from [Bain in 2025](https://www.bain.com/insights/from-pilots-to-payoff-generative-ai-in-software-development-technology-report-2025/), and 25–30% for companies that redesign the whole process. We see a thousand percent and more, by my estimate, and I don't think it is the agents alone — it is also the team, and that is the next post.
 
 ## The tools
 
-The harness is the same one I use on the pet projects. There are posts about it: the first one, from July, and [what changed](/projects/2026/09/11/the_harness_revised/); little has changed since. I set it up from scratch for each project, always by the same rules, depending on the context.
+The harness is the same one I use on the pet projects; there are posts about it: the first one, from July, and [what changed](/projects/2026/09/11/the_harness_revised/). I set it up from scratch for each project, always by the same rules.
 
-There is no big orchestrator any more. With Opus 5.5 I stopped using the one from Ritmolux: a very simple skill that sets the boundaries for the agents and the order of a plan's phases is enough. As soon as I can get rid of some complexity, I do it right away. The checks are still done by different agents with separate contexts. Five or six agents in parallel. Mostly Opus 5.5; Fable for hard planning.
+The big orchestrator from Ritmolux is gone: with Opus 5.5 a simple skill that sets the boundaries for the agents and the order of a plan's phases is enough. As soon as I can get rid of some complexity, I do it right away. The checks are still done by different agents with separate contexts. Five or six agents in parallel. Mostly Opus 5.5; Fable for hard planning.
 
-Trello through plain `curl`; MCP feels excessive. In general I prefer no third-party libraries for agent work. It is faster to write something custom for the project in half a day and be sure there is nothing extra in it. When an agent repeats the same action many times, I move it into a script and reference the script from the skill. Docs live in Confluence.
+Trello through plain `curl`; MCP feels excessive. In general I avoid third-party libraries: it is faster to write something custom in half a day and be sure there is nothing extra in it. An action an agent repeats many times goes into a script, referenced from the skill. Docs live in Confluence.
 
 It costs about thirty dollars a day in API tokens, on average.
 
@@ -342,32 +336,30 @@ One human approval is mandatory: the other developer approves my pull requests, 
 
 The agent review has caught serious things, security issues among them — before merge. So far nothing it missed has come back to us. The agents haven't broken anything serious.
 
-The old application must get zero regressions, so testing got special attention. The Java services are rewritten one by one and compared byte for byte: there is a database dump and the input data, so we compare what gets written to the database now with what was written before, for the same inputs. Contract tests on top of that; the result must be identical. So far everything matches perfectly, and I am very surprised by that.
+The old application must get zero regressions. The Java services are rewritten one by one and compared byte for byte: on the same database dump and the same inputs, what gets written to the database now is checked against what was written before. Contract tests on top of that. So far everything matches perfectly, and I am very surprised by that.
 
 Tech debt, the thing that was always underfoot in the old team, is a different story now. Refactoring and tests cost nothing. The rules and the orientation, the non-functional requirements, live in the architect part of the harness.
 
 ### A bonsai, not a tumour
 
-I treat development now as an evolutionary process, the natural growth of an application. Every branch I need to direct a little, so it grows the right way, like a bonsai. I don't just keep control, I shape it a little, so that it comes out beautiful. I like this analogy: growing a tree that you still shape. The tree seems to grow by itself, but you still have to water it, and look at it, and all that.
+I treat development now as the natural growth of an application. Every branch I need to direct a little, like a bonsai — not just to keep control, but so that it comes out beautiful. I like this analogy: the tree seems to grow by itself, but you still have to water it, and look at it, and all that.
 
-Code that grows like a tumour — that is when I don't steer it. When I don't really understand myself what I'm doing, and I have little attention, little resource. The agent just writes something, and then sometimes I see that far too much has been written, and things are complicated where they didn't need to be. Solutions could often be simpler and more direct; that is what we try to influence. Or an agent picks a solution that contradicts the architecture — usually that is caught by the architect agent in review. Those things have to be simplified back later.
+Code that grows like a tumour — that is when I don't steer it. When I don't really understand myself what I'm doing, and I have little attention, little resource. Then the agent writes far too much and complicates things where they didn't need to be, and that has to be simplified back later. Or an agent picks a solution that contradicts the architecture — usually that is caught by the architect agent in review.
 
-For example, so many tests get written that running them takes a very long time. Then I have to delete some tests — well, ask the agent to delete them and keep only the important ones. That happened: a mass of tests that checked nothing and ran on every tiny change, and slowed everything down. More tests is not always better. I noticed it, told the agent to keep only the necessary ones, and made a note in the harness. As on the pet projects, every time I find that an agent keeps making some mistake, I change the harness so that the mistake doesn't happen again.
+Tests are an example. We ended up with a mass of them that checked nothing, ran on every tiny change, and slowed everything down. More tests is not always better. I told the agent to keep only the necessary ones and made a note in the harness: as on the pet projects, when an agent keeps making the same mistake, I change the harness.
 
 ## What it costs me
 
-Even to give agents work, I first have to get into it myself. For that I need to read quite a lot of text, because I talk to agents only in text, never by voice. I try to see what we are doing at all, where we go next, what my colleague did. Exactly this is the problem: you need to read very much, think about it, and do it fast enough, because the agents generate code so fast that there is not much time left for me to think. And I have to keep my hand at the ready all the time, watching what the agent does, because if I don't, it will be hard.
+Even to give agents work, I first have to get into it myself: read quite a lot of text (I talk to agents only in text, never by voice), see what we are doing at all, where we go next, what my colleague did — and find time to think it over, while the agents generate code so fast that there is not much time left to think. And I have to keep my hand at the ready all the time, watching what the agent does, because if I don't, it will be hard.
 
-If anything, I am more tired than before. You have to pass a huge flow of information through yourself and understand everything. Otherwise the ship of the project drifts without a captain and quickly runs aground, and no agent will save it. I don't see any super-autonomy yet, and I don't believe fully autonomous "factories" can work effectively.
+If anything, I am more tired than before. You have to pass a huge flow of information through yourself. Otherwise the ship of the project drifts without a captain and quickly runs aground, and no agent will save it. I don't see any super-autonomy yet, and I don't believe fully autonomous "factories" can work effectively.
 
-And I never personify agents. It is a really dangerous road that leads to madness. I work with agents as with any other tool — nothing personal, nothing outside solving a real problem or digesting information. This is a hard rule.
+And I never personify agents. It is a really dangerous road that leads to madness. An agent is a tool like any other — nothing personal. This is a hard rule.
 
 ## Half an hour
 
-I have a rule: work only during working hours. At six I close the laptop. If I work from home, the laptop stays on and some work goes on in the evening, but I don't watch it.
-
-And then I sit with the pet projects in the evening, so I break the rule often. When I was dictating the notes for this post, it was late, and I should have been asleep an hour ago. But I kept working on the voxel engine: I really wanted to finish it, to look at it tomorrow with fresh eyes. Because I understand that in half an hour I can do a lot. I can write a whole article. I can implement a big piece of an application. Staying half an hour can do a week of the work of the past.
+I have a rule: work only during working hours; at six I close the laptop. But I sit with the pet projects in the evening, so I break it often. When I was dictating the notes for this post, it was late, and I should have been asleep an hour ago. But I kept working on the voxel engine: I really wanted to finish it, to look at it tomorrow with fresh eyes. In half an hour I can write a whole article or implement a big piece of an application — a week of the work of the past.
 
 On one side it is very cool, because you really see how the creativity in your head turns into code, into a product, very fast. But on the other side, I have to stop myself by force, otherwise I would just work twenty-four hours a day, and I am prone to that. I know it ends badly for my health. In the previous post I wrote about the slot machine. This is it.
 
-And one more thing I notice. Calls like the one this post opened with are most of the talking I do: I talk to the other developer and the analyst, and that is about it. Sometimes we have a "virtual office": we sit in silence with cameras on and work. It is our attempt to return to some kind of office work. It probably just calms you, when someone works next to you. I don't know. Sometimes I simply miss talking to people. When I was a lead, there was very much of it, and now it has become almost zero. And I like to talk.
+Calls like the one this post opened with are most of the talking I do: the other developer and the analyst, and that is about it. Sometimes we have a "virtual office": we sit in silence with cameras on and work. It is our attempt to return to some kind of office work. It probably just calms you, when someone works next to you. I don't know. Sometimes I simply miss talking to people. When I was a lead, there was very much of it, and now it has become almost zero. And I like to talk.
