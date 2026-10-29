@@ -1,0 +1,238 @@
+---
+title: 'What it costs'
+date: 2026-10-31
+section: 'personal'
+tags: ['after-the-team', 'personal', 'agents']
+description: 'The last of four posts about how my work changed with AI agents: the fear of losing the job, the ladder that brought me into programming and is now missing its lower rungs, the speed that cannot last, and the loneliness.'
+---
+
+import Timeline from '../../../components/charts/Timeline.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+
+Sometimes I dream that I don't work. That I am begging, or that I have to go back to the construction site. There was no one particular dream. It is just that a lot of anxiety comes out like that.
+
+This is the last post of four. The [first](/personal/2026/10/28/ten_years_of_writing_code_by_hand/) was about the ten years when I wrote code by hand, the [second](/personal/2026/10/29/half_a_year_of_work_in_a_week_and_a_half/) about half a year of work in a week and a half, and the [third](/personal/2026/10/30/two_is_the_golden_mean/) about why a team of two can do what a scrum team can't. The second and the third were mostly about what we gained. This one is about what it costs. It is the most personal of them, and it has more fear in it: I am more afraid now than I have ever been.
+
+## The fear
+
+I am 41, with ten years in the profession behind me. And still I don't feel there is any force that would keep me in it if agents one day learn to do everything fully autonomously. Honestly, I doubt they will. But a year ago I couldn't imagine what I do now, not even close. What will happen in a year? Rationally, I know I can't imagine that either.
+
+On LinkedIn, Twitter and Reddit people write that they can't find a job — people with 25 years of experience and huge achievements, from FAANG, Microsoft, Netflix. And I understand that I may be no exception. I can lose my job the same way, and no one will know that I do it really well. Maybe this job is simply not needed anymore.
+
+What does this fear look like? A thought somewhere at the edge of consciousness. Sometimes it comes in a dream, sometimes while I am walking somewhere. It doesn't go away; it sits nearby like a little devil, sometimes bigger, sometimes smaller, but always there.
+
+Was there one moment when it was strongest? I can't single one out. I watch a few bloggers on YouTube who only last year said that neural networks would never replace developers. Recently they changed their minds, and so did I: most of the code, maybe 99% of it, can now be written with neural networks. That is one part of the anxiety. The other is LinkedIn.
+
+People there literally write that they will work for food — and the person has twenty years of experience. Probably they messed up a lot themselves. But it is still a symptom of a big problem that is coming, and it feeds my fear. I can see what mistakes these people made, and I most likely won't make them. I am anxious anyway.
+
+Recently I saw a post from a guy who would take a job in Russia with a salary ceiling of 140 thousand roubles. That is what was paid ten years ago; now you would expect 400–500 thousand. It looks like that's it: the salaries are over, and it is not clear what comes next.
+
+Everyone I know still has a job. But projects need fewer people now; code is not a craft anymore, and it costs nothing. Everyone talks about it, the news talks about it.
+
+But an engineer was never paid for code. He is paid for the business value he brings to the company. Patrick McKenzie wrote this back in 2011, in [_Don't Call Yourself A Programmer, And Other Career Advice_](https://www.kalzumeus.com/2011/10/28/dont-call-yourself-a-programmer/): _"Engineers are hired to create business value, not to program things."_ And a little further: _"Add revenue. Reduce costs. Those are your only goals."_ He also wrote that you want to be attached to the profit centres of a company, the parts that bring in the money, and not to the cost centres — everybody else.
+
+In my own work the clearest case was the WYSIWYG editor from the first post. I reworked its rendering — batching the store updates was only one of many parts of that — and it became much faster. Before that, there was a decision to move it from old packages to new ones, and we had to fight a long time for the money for it. In the end the client agreed, we moved it, and now the application doesn't have to be rewritten; it can live on. That result was the value, not the lines. Its fate is still unknown, though: that depends more on business processes than on technical decisions.
+
+Fifteen years ago that was career advice. Now it is the line along which the profession splits. If code costs nothing, then it was never what the company was paying for, and whoever only typed it is left with nothing to sell. What is left is the value: understanding what the business needs, deciding, being responsible for the result. That calms me a little, and scares me a little too, because the value is much harder to show than code.
+
+## What surviving means
+
+What does it mean to survive? To keep a job in some form, so that my standard of living doesn't fall, or doesn't fall much. I already understand that most likely my dreams of earning enough for a pension, or of coming up with some IT business, won't come true. I won't have a pension at all, because I left Russia; I never really counted on it anyway. I counted on something else: earning more and living on the interest. Now it is clear I didn't make it in time.
+
+And there are many people who depend on me, on the money and on what I do. I don't want to let them down, and I really don't want to sink back into poverty. Physically I will survive, of course, and I will come up with something, but life will become noticeably poorer.
+
+I do have a plan B. I can teach yoga again. And I want to write my own game projects.
+
+Where do I see myself in five years? I have no idea. I don't even know where I will be in a year: every half a year my life turns upside down. I hope I will be alive and well, that I will have money, that I will be warm. Maybe kids, maybe a dog, if it goes well. If it goes badly, I will be alone, living from hand to mouth and teaching others: I still like that, and it can earn something. But if I can be neither a developer nor a businessman, I won't be able to support anyone but myself, and I will have to live in the forest, in a tent or a dugout, and save on everything. That is the bad option.
+
+## The ladder
+
+When I started, this ladder existed. A person with no connections, no relevant education, nothing at all, could climb into the middle class, roughly speaking. Besides me, I know quite a lot of such people. I was lucky, and I probably have some natural talent, but back then the way in was open to almost anyone. The internet was already there: you could find any information, download a book — the same _Eloquent JavaScript_ — and learn.
+
+And before my eyes two people I knew from construction became programmers.
+
+One was my partner in the gypsum workshop. He also did music. Soon after me he started learning too, and if I am not mistaken he went to the same startup where I had been. Then he got a job at a Japanese company, moved first to Thailand, and now he is in Japan. The other worked as an installer of low-voltage systems. I am not sure exactly where and how he found his first job, but soon a company from Riga hired him at a job fair, and he left quickly. Both are frontend developers now, and both started after I told them what to do and how to prepare.
+
+<Timeline
+  title="Three people from one construction site"
+  sub="How the ladder worked when it still had all its rungs."
+  groups={[
+    'me',
+    'my partner from the gypsum workshop',
+    'the low-voltage installer',
+  ]}
+  events={[
+    {
+      when: 'Sep 2016',
+      what: 'I start learning JavaScript from one book',
+      group: 0,
+    },
+    { when: 'Spring 2017', what: 'My first job, a small startup', group: 0 },
+    { when: 'Autumn 2017', what: 'EPAM', group: 0 },
+    {
+      when: 'After me',
+      what: 'Starts learning, after I tell him how to prepare',
+      group: 1,
+    },
+    {
+      when: 'Then',
+      what: 'The same startup, if I remember right; then a Japanese company',
+      detail: 'Thailand first, now Japan',
+      group: 1,
+    },
+    {
+      when: 'After me',
+      what: 'Starts learning the same way',
+      group: 2,
+    },
+    {
+      when: 'Then',
+      what: 'Hired at a job fair by a company from Riga, leaves quickly',
+      group: 2,
+    },
+  ]}
+/>
+
+So I knew it was possible not only from my own case. They were not young either, they started after thirty, and they got what they wanted: they left, they earned money. Back then companies took all the sensible guys.
+
+How did I teach them? The way I taught myself. I told them what I was doing and said what I kept telling myself: that it will work out, that you must not give up, that you need to be consistent, logical, rational, that the future is in this, and it can be done. But the main thing I told them was that there is a chance. That this possibility exists.
+
+What would I tell myself in 2016, on the construction site, with that book? Keep going, change nothing, everything is going as it should. I think I made the only right decision then: it put off poverty by ten years, let me live a normal life and help others. I would go the same way.
+
+Both are still in the profession. With the one in Riga we don't talk anymore. With the one in Tokyo we joke about how we will be working on a construction site while AGI takes over the world. But we talk about serious things too: a lot about practice, and even more about where and how to live. He doesn't want to stay in Japan and wants to move to Western Europe. We share what we know about the countries we have lived in. I don't think it is the best idea, but we don't argue: it is his choice, and I sincerely hope it works out for him.
+
+## The lower rungs
+
+Now it doesn't work like that. I look at my team, at the speed we are rushing at, and I don't see where a junior would fit. We have zero need for one.
+
+It is not about juniors being bad. In our team everything moves so fast that you need a lot of experience not to make a mess, and a junior would get underfoot. I wouldn't want to be a junior now.
+
+This is not only my impression. The numbers point the same way, although each of them has its limits.
+
+- At Stanford, Erik Brynjolfsson and his colleagues looked at payroll data for millions of American workers ([_Canaries in the Coal Mine?_](https://digitaleconomy.stanford.edu/publications/canaries-in-the-coal-mine/), revised in August 2026). For people aged 22–25 in the jobs most exposed to AI, employment fell by about 11% from November 2022 to June 2026, while the same age group in the least exposed jobs grew by about 10%. Experienced workers show no such gap. And the mechanism is not that young people get fired more; companies hire fewer of them. The authors themselves call it descriptive, not proof of cause.
+- [SignalFire](https://www.signalfire.com/blog/signalfire-state-of-talent-report-2025), a venture fund that tracks hiring, counted that in 2025 new graduates were 7% of hires at the fifteen biggest tech companies — less than half the share they had in 2019. At startups they were under 6%.
+- And the vacancies themselves. Indeed tracks job postings for software developers in the United States ([the series on FRED](https://fred.stlouisfed.org/series/IHLIDXUSTPSOFTDEVE)):
+
+<BarChart
+  title="Software developer job postings in the US"
+  sub="Indeed Hiring Lab index, seasonally adjusted. February 2020 = 100."
+  series={[{ name: 'index' }]}
+  rows={[
+    { label: 'February 2020, before the pandemic', values: [100] },
+    { label: 'February 2022, the peak', values: [234] },
+    { label: 'May 2025, the low', values: [61] },
+    { label: 'October 2026, now', values: [81] },
+  ]}
+  note="Postings on one site, not hires, and only in the US. It is also not only AI: the peak of 2022 was the hiring boom after the pandemic."
+/>
+
+I want to be careful here. The fall of 2022–2023 started before the agents could do anything serious, and the boom before it was not normal either. But the picture for juniors is the same in every source I found: the door at the bottom is narrower than it was when I came in.
+
+A junior may be needed only because a company like EPAM understands that one day the developers who exist now will run out: they will retire, die, get sick, anything can happen to them — and other developers need to be grown. So juniors get pushed into teams by force or, so that they don't get in the way, given separate projects — to grow a replacement for those who are already moving into the background. But it is hard for me to see why a company would do that while the market is full of people who want to work, and cheaply, because they have no other options.
+
+## What I would tell a junior
+
+Someone asked me once whether to go into programming. I answered reluctantly.
+
+If a junior really wants to be a programmer, to work with a computer, there are two options: make his own project, his own business, or go to a big outsourcer that hires juniors and trains them. Whoever wants it badly enough will find a loophole. But it is hard, very hard.
+
+But in general I would advise not going into programming at all, and trying something else: massage, guiding, construction, anything that needs hands. Everything done in front of a screen will be automated sooner or later. I think that out of a hundred programmers today, maybe five will be needed, if that. The rest will be out of work.
+
+And then they will take any money, and salaries will fall. This work is already very hard. If it is also paid little, it is not clear at all why anyone would do it.
+
+I feel sorry for those who are only starting. It was one of a small set of chances that would allow someone like me — born in a poor family, with no one to help — to live a decent life. I am self-taught; I have no formal education. And I don't know how one breaks in now.
+
+I still prepare people from the resource pool for the move to the next level; they are becoming seniors. We talk about the future only as a joke. And the jokes are not the brightest: that we will serve electronic masters and sit on universal basic income. Sometimes I tell them to save some money and be ready for anything, because the future is foggy.
+
+## A speed that cannot last
+
+I don't know how much longer I can pass such a flow of information through myself. The speed we are rushing at now can't be kept for long. In the [second post](/personal/2026/10/29/half_a_year_of_work_in_a_week_and_a_half/) I wrote about the captain without whom the ship runs aground, and about the half hour that can do a week of the old work. Not everyone can digest this. And I know from the first post what an unsustainable speed did to me once: after the crunch I couldn't open my laptop without a headache.
+
+So I see my work as shifts on small projects: you come, do it very fast, leave and rest. That seems realistic. You don't have to lower the speed; you have to recover — long holidays, weekends, whatever it takes. For me it would be about a month of work and a couple of weeks of rest.
+
+I have worked like that before — on construction, in the crew of three I wrote about in the [third post](/personal/2026/10/30/two_is_the_golden_mean/). Intensive work, and then a long rest. Big outsourcing is different: there is always work. I don't remember a time when I could really rest. Even on the bench I was either learning or running interviews, always on call. That is not rest.
+
+## Shaking a fist at the rain
+
+There are also people who can't adapt, and I wish them luck. I don't know any personally, but LinkedIn has thousands of them. I can hardly imagine what the guys will do who still don't learn agents, who fight this tsunami and shake their fist at the sky: "Rain, stop, I don't like that you are cold." I am afraid they will lose their jobs, and it will be hard for them to rebuild when their eyes finally open and they see that you can't work even the way people worked a year ago. The sooner a person sees it, the better their chance to survive. And survival is exactly what we will be doing in the near future, if tokens stay this cheap.
+
+Less than a year ago I was a super skeptic myself. But I understood I couldn't avoid it, and if I can't avoid it and can't fight it, I need to master it. That is the whole story of the second post.
+
+## What I lost
+
+I wrote in the third post what is left of a lead: the responsibility. For me personally it is a loss. Being a lead was hard work, but rewarding. Sometimes there was too much load, but mostly I loved it: I always liked working with people, helping and teaching other developers. Now it is not needed.
+
+Writing code by hand is a different story: I don't miss it — I never really liked it, and I know I am an exception here.
+
+## Loneliness
+
+There is a lot of loneliness, yes. After we came to Serbia, my marriage ended, and I moved to a village again — this time a Serbian one — and lived alone there for a year and a half. Now I have a partner.
+
+At work I talk to the other developer and the analyst, both in London, sometimes in the virtual office with cameras on and silence. No more team-buildings. It is not like the past, when we sat under one roof, held a scrum meeting in a real meeting room with a whiteboard, and drank beer together after work.
+
+My old team is spread around the world now: everyone left because of the war, everyone still works, not all of them at EPAM. There was no clear goodbye. We had a call, said some warm words and tried not to lose each other. But for a few months before that it had been clear that it was all inevitably ending. We are still good friends. Here in Serbia there are several people from St Petersburg, and we sometimes go to the office together. But the old closeness is gone.
+
+And I talk to the computer. But I never personify the agents — that is a hard rule, from the second post. A tool is a tool.
+
+<BarChart
+  title="Employees who felt lonely “a lot of yesterday”"
+  sub="Gallup, State of the Global Workplace 2024, by where people work."
+  series={[{ name: 'lonely' }]}
+  unit="%"
+  rows={[
+    { label: 'Fully remote', values: [25] },
+    { label: 'Hybrid', values: [21] },
+    { label: 'On-site only', values: [16] },
+  ]}
+  note="From Gallup’s article “1 in 5 Employees Worldwide Feel Lonely” (June 2024). The article does not say clearly which sample this split comes from, so read it as a direction, not a precise number."
+/>
+
+I am not the only one. [Gallup](https://www.gallup.com/workplace/645566/remote-workers-lonelier.aspx) found that a quarter of fully remote employees felt lonely a lot of the previous day, against 16% of those who work only on-site. And the [World Health Organization](https://www.who.int/news/item/30-06-2025-social-connection-linked-to-improved-heath-and-reduced-risk-of-early-death) wrote in 2025 that one person in six in the world is lonely.
+
+What holds me is practice: yoga, Buddhism, qigong. Yoga and qigong, one way or another, since I was 25, and for a while I taught yoga in Andrey Sidersky's system. They help a lot, if there is strength to practise. And tea: I love roasted oolongs and shu puer, and I have drunk Chinese tea every morning for about twenty years.
+
+My mornings are always the same, and the routine saves my head. I get up at six, before dawn. I wash my face, do exercises, drink a glass of warm water. I prepare tea and a breakfast for later and go out into the yard — I live in a house. If it is warm, I roll out a mat and sit with my tea, sometimes do qigong, then stretching and yoga. This hour alone gives the day a backbone: with it I am more enduring, calmer, and I worry less.
+
+I have got used to loneliness — so used that I hardly notice it. I am comfortable alone.
+
+Of course I remember the years in big teams with nostalgia, all that movement. Probably I would like to be among those people once more. But after a year and a half in an empty house, talking, roughly speaking, only to a computer, I am so used to being alone that going back would be hard. We'll live and see. If anything brought me back to a big team, it would be the company of good people I know.
+
+## Further apart
+
+So far I see the modern world only pulling people apart. We have millions of ways to be near each other: social networks, dating apps and all the rest. In reality we drift further apart, and every year faster. It started shortly before COVID, grew much stronger during it, and has kept going the same way since.
+
+And it is very sad, because a human being is, after all, a creature that needs other people. If we drift completely apart, we will probably lose part of what is human, and that is unlikely to do anyone good. Most likely we will see a wave of suicides, a wave of mental illness — to some extent we already see it — and a wave of violence connected with it. And I am afraid to look ahead.
+
+## The rain
+
+But still, I don't want to be that old man shaking his fist at the sky. We can only accept our fate and try to make our life as effective as possible and as pleasant as possible for ourselves, in the context in which we live this life.
+
+And I have a hope that new technologies will free people and bring creativity closer, as happened with me and my pet projects. I realise my ideas fast now, without much effort, and I like it very much.
+
+Finally I am making my own games. I always wanted to, but writing the code would take so much time that I never started. I have a lot of ideas, and at least two games are in the works now, one way or another. I think good computer games are a good thing; there is use in them for people, they are not just killing time.
+
+The project that gave me the most hope was [Ritmolux](/projects/2026/09/10/ritmolux_one_core_two_frontends/), the music visualiser. It was great to see that fairly simple prompts can make something truly interesting and beautiful. I enjoyed the maths and the generative art, and all of it came to life in Ritmolux. Please have a look at it, [try running it](https://igorkonovalov.github.io/Ritmolux/), and tell me whether you like it or not.
+
+I hope this becomes available to many people. But the fear of losing the job and the money, the fear of losing humanity to loneliness — of course it is very big. Only time will show what is ahead.
+
+## Thank you
+
+What did these ten years give me? A chance to leave for a country more to my heart. Freedom in decisions, reliance on myself, and a confidence in the future — which is exactly what is leaving now. And above all, people. People always come first for me, and meeting so many smart, good people in this profession is a bonus you could only dream of.
+
+Who am I grateful to? The crazy director of my first company, the startup. My first lead at EPAM, a motorcyclist who lives in Europe now: we drank a lot of beer and talked a lot. My other lead, a Java developer, who never minded explaining the internals of the application to me, although I, a frontend developer, barely understood him. He was a real engineer, grew into an architect, and later I followed in his footsteps; he inspired me to understand deeply what I do.
+
+My colleagues from all the projects. From the dream team I remember our project manager with special tenderness: she supported us all the way and sincerely wanted the application to succeed and us to bring the client that business value. She cared — as did everyone on that team.
+
+Thank you to everyone around me who fought and wanted something better. It didn't always work out; often the reason was bureaucracy or politics in the project or the company. But the people who sincerely wanted something better did, in the end, achieve it.
+
+And separately, my resource manager. She has supported me through almost all my ten years at EPAM, and in many ways it is because of her that I once didn't leave the company. She sincerely believes that for a company to prosper, developers must feel good, be satisfied and happy. You rarely hear that now: usually people in her position think about the company first and about developers second. With her it is the other way round. And that gives hope: if such people exist, not everything is lost yet. Thank you all.
+
+## The end of the run
+
+Why did I write these four posts? For me it is a way to put a full stop, to mark this stage of ten years. I wanted to look back at what I have been doing, where my life came from and where it has come to, and to think a little about a future more uncertain than ever.
+
+I would like the reader to take away my experience. The motivation that at least once it was possible to take your life into your own hands, change it sharply and make it much better. And the hope that it will all somehow turn out well, that there will be new work, and not just the destruction of the middle class and general poverty on a universal basic income. I wanted the reader to look at the future with optimism and believe in themselves. I am not sure it worked: I reread these posts, and they are rather sad.
+
+It was a good time, a great ride, and it seems to be coming to an end. I hope that I personally will get through it. We don't choose our fate, but we choose what we do with it.
+
+To my old team — I know you will read this: I love you very much, and I hug you. And to everyone: good luck, and let everything turn out well.
