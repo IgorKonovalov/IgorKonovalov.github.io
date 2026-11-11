@@ -36,6 +36,7 @@ take `lang="ru"` for the Russian twin, and repeat their numbers in a "Show the n
 | `BloodMoorMaps`     | level layouts as cell grids (one square per 8×8-tile cell)                                                                |
 | `Timeline`          | dated events of a life or a project, one per line, coloured by `groups`; readable on a phone, unlike Mermaid's `timeline` |
 | `GameArt`           | a row of pixel-art images with captions and the Blizzard credit                                                           |
+| `Clip`              | short looping video (MP4 + WebM, poster); plays only on screen, waits under reduced motion, has a pause button            |
 | `Mermaid`           | diagrams; keep long chains `flowchart TB`, use `LR` only for 3–5 short nodes                                              |
 
 A new kind of chart gets a new component in the same style. Load the `dataviz` skill first and
@@ -77,6 +78,29 @@ them. Publishing a few on the blog is the author's decision (made 2026-10-14). R
   lazy-loads.
 - **Alt text** describes what is visible ("green body armour, its drop frames and a character
   wearing it"), in the post's language.
+
+## Video clips (`Clip`)
+
+Use a clip when the thing to show is motion: flicker, a defect that appears on a camera turn,
+an animation. A still cannot show "it keeps changing". First used in
+`2026-11-11-Voxel_Engine_Days_Thirteen_To_Twenty_Seven` (the fast-turn before/after).
+
+- **Never GIF.** 256 colours band the gradients and a 5 s GIF is 10–20 MB. Ship H.264 MP4
+  (`-movflags +faststart`) plus VP9 WebM, and a WebP poster frame.
+- **Size: about 2 MB per file.** 3–6 s, 60 fps, cropped to the area that matters at full
+  resolution rather than a downscaled whole frame. Files go to `public/videos/<topic>/`.
+- **Keep the defect visible.** Encoders smooth fine noise away, which hides exactly the
+  speckle a light post wants to show. What kept it in the first clip: `libx264 -crf 18 -tune
+grain -preset slow` and `libvpx-vp9 -b:v 0 -crf 21`. Compare a frame of the encode with the
+  source PNG, zoomed, before using it.
+- **Before/after in one file.** Stack the two crops (`vstack`) so they can never play out of
+  sync, and burn a small label into each half with `drawtext`. The labels are in the file, so a
+  clip for both locales either carries neutral labels or gets one encode per language.
+- **Voxel engine frames:** copy `apps/flythrough/examples/hero.rs` to a throwaway example that
+  moves `cam.yaw` per frame and writes every frame after a settle; build it at each commit in a
+  detached worktree; record the second cycle of a back-and-forth motion so the loop has no seam.
+  Delete the example and the worktree afterwards.
+- **Alt text** describes the motion and the difference to watch for, not just the scene.
 
 ## Checking
 
