@@ -198,3 +198,36 @@ and jumping in tone:
   полчаса…»), the generic «ты» only for a deliberate general statement.
 - **Untangle spoken syntax**: «Я не планировал не возвращаться» → «Уезжать навсегда я не
   собирался»; «Мы бежали быстро. Спешили…» → «Мы очень спешили».
+
+### 9. Terms the critic caught in the 11 November voxel post
+
+From the Russian critique of `2026-11-11-Voxel_Engine_Days_Thirteen_To_Twenty_Seven` (agent critic,
+applied, not yet confirmed by the author).
+
+| English                               | Avoid                              | Use                                                  |
+| ------------------------------------- | ---------------------------------- | ---------------------------------------------------- |
+| pose (a camera position in a rig)     | точка (collides with "dots")       | ракурс                                               |
+| a still shot (hero image)             | кадр (collides with frames)        | снимок; «снимок, накопив 64 кадра»                   |
+| emissive light                        | свет от светящихся вокселей (×9)   | свет излучателей (introduce once)                    |
+| bounce light of the lamp              | отражение фонаря (a mirror image)  | отражённый свет фонаря                               |
+| harness (voxel and Diablo II diaries) | обвязка                            | харнесс; «обвязка» only in the after-the-team series |
+| cancel passed work                    | снятие пройденной работы           | отмена работы для пролетевших чанков                 |
+| fade (new light in)                   | растяжка                           | плавно проявляется, плавный переход                  |
+| a slow pan                            | проход камеры (проход = pass)      | панорама                                             |
+| ring buffers                          | кольца (collides with chunk rings) | кольцевые буферы                                     |
+| cuts (from a reference)               | срезы                              | урезания; «от этого вида и будем урезать»            |
+| fixed point (arithmetic)              | в фиксированной точке              | в арифметике с фиксированной запятой                 |
+| never arrives / never converges       | никуда не приходит                 | так и не сходится                                    |
+| feed (light into probes)              | кормить                            | попадать в                                           |
+
+The window session quotes the author wrote in English are translated into Russian in the RU
+twin (author, 2026-11-11); «чуть-чуть» counts as reduplication — use «немного», «слегка».
+
+**Author, 2026-11-11** (confirmed, overrides the earlier posts' usage):
+
+- **bake / baked light** → «считать заранее», «заранее посчитанный свет», «пересчитывать»,
+  «расчёт света» for the noun. Never «запекать», «запечённый», «запекание» — the author called
+  «запекается» a strange word.
+- **bar** (an acceptance threshold) → «порог» («порог приёмки» on first use, with a gloss: the
+  number a plan must reach to count as done); «пройти порог», «уложиться в порог». Never «планка»
+  («Каждая планка, которую предлагали агенты» — "what bar?").
