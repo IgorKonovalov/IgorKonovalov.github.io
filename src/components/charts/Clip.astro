@@ -1,0 +1,253 @@
+---
+// Short looping video clips (a GIF's job, at a tenth of the size), in the
+// same chrome as the charts and Screenshots. Each clip is muted and looped;
+// it plays only while on screen, waits for the reader when they prefer
+// reduced motion, and always has a pause button (WCAG 2.2.2). Nothing is
+// downloaded until the clip comes near the viewport: preload="none" and a
+// poster image carry the layout until then.
+import '../../styles/viz.css';
+
+interface ClipSource {
+  /** Site path of the WebM (VP9), tried first. */
+  webm?: string;
+  /** Site path of the MP4 (H.264), the fallback every browser plays. */
+  mp4: string;
+  /** Site path of a still frame shown before playback and to reduced-motion readers. */
+  poster: string;
+  /** What the clip shows, for screen readers. */
+  alt: string;
+  caption?: string;
+  /** Natural size in pixels, for the aspect ratio before load. */
+  width: number;
+  height: number;
+}
+
+interface Props {
+  title: string;
+  sub?: string;
+  clips: ClipSource[];
+  note?: string;
+  /** Columns on a wide screen; defaults to one for one clip, else the count up to 3. */
+  columns?: number;
+  wide?: boolean;
+  lang?: 'en' | 'ru';
+}
+
+const {
+  title,
+  sub,
+  clips,
+  note,
+  columns,
+  wide = false,
+  lang = 'en',
+} = Astro.props;
+const cols = columns ?? Math.min(clips.length, 3);
+const words =
+  lang === 'ru'
+    ? { pause: 'Пауза', play: 'Воспроизвести' }
+    : { pause: 'Pause', play: 'Play' };
+---
+
+<figure class:list={['viz', 'clips', { 'viz-wide': wide }]}>
+  <p class="viz-title">{title}</p>
+  {sub && <p class="viz-sub">{sub}</p>}
+  <div class="clips-grid" style={`--clips-cols: ${cols}`}>
+    {
+      clips.map((c) => (
+        <figure class="clip" data-clip>
+          <div class="clip-frame">
+            <video
+              muted
+              loop
+              playsinline
+              preload="none"
+              poster={c.poster}
+              width={c.width}
+              height={c.height}
+              aria-label={c.alt}
+            >
+              {c.webm && <source src={c.webm} type="video/webm" />}
+              <source src={c.mp4} type="video/mp4" />
+            </video>
+            <button
+              type="button"
+              class="clip-toggle"
+              data-pause={words.pause}
+              data-play={words.play}
+              aria-label={words.play}
+            >
+              <svg class="clip-icon" viewBox="0 0 16 16" aria-hidden="true">
+                <path class="icon-play" d="M5 3.5v9l7.5-4.5z" />
+                <path
+                  class="icon-pause"
+                  d="M4.5 3.5h2.5v9H4.5zM9 3.5h2.5v9H9z"
+                />
+              </svg>
+            </button>
+            <div class="clip-progress" aria-hidden="true">
+              <span />
+            </div>
+          </div>
+          {c.caption && <figcaption>{c.caption}</figcaption>}
+        </figure>
+      ))
+    }
+  </div>
+  {note && <p class="viz-note">{note}</p>}
+</figure>
+
+<script>
+  // Play while visible, pause when scrolled away; a reader's pause sticks.
+  // Reduced motion: never autoplay, the button starts the clip on request.
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  for (const box of document.querySelectorAll<HTMLElement>('[data-clip]')) {
+    const video = box.querySelector('video');
+    const button = box.querySelector<HTMLButtonElement>('.clip-toggle');
+    const bar = box.querySelector<HTMLElement>('.clip-progress span');
+    if (!video || !button || !bar) continue;
+    let heldByReader = still.matches;
+
+    const show = () => {
+      const playing = !video.paused;
+      box.classList.toggle('is-playing', playing);
+      button.setAttribute(
+        'aria-label',
+        (playing ? button.dataset.pause : button.dataset.play) ?? '',
+      );
+    };
+    const play = () => {
+      video.play().catch((err: unknown) => {
+        // Autoplay can be refused (e.g. data saver); leave the poster and the button.
+        console.warn('Clip did not start:', video.currentSrc, err);
+        show();
+      });
+    };
+
+    // The progress line follows the playhead every animation frame while
+    // playing; timeupdate fires only about four times a second, too coarse.
+    let raf = 0;
+    const tick = () => {
+      if (video.duration > 0) {
+        bar.style.transform = `scaleX(${video.currentTime / video.duration})`;
+      }
+      raf = video.paused ? 0 : requestAnimationFrame(tick);
+    };
+
+    video.addEventListener('play', () => {
+      show();
+      if (!raf) raf = requestAnimationFrame(tick);
+    });
+    video.addEventListener('pause', () => {
+      show();
+      cancelAnimationFrame(raf);
+      raf = 0;
+      tick();
+    });
+    button.addEventListener('click', () => {
+      if (video.paused) {
+        heldByReader = false;
+        play();
+      } else {
+        heldByReader = true;
+        video.pause();
+      }
+    });
+
+    new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !heldByReader) play();
+        else if (!entry.isIntersecting && !video.paused) video.pause();
+      },
+      { rootMargin: '200px 0px', threshold: 0.25 },
+    ).observe(video);
+    show();
+  }
+</script>
+
+<style>
+  .clips-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  @media (min-width: 640px) {
+    .clips-grid {
+      grid-template-columns: repeat(var(--clips-cols), 1fr);
+    }
+  }
+  .clip {
+    margin: 0;
+  }
+  .clip-frame {
+    position: relative;
+  }
+  .clip video {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    background: #000;
+  }
+  .clip-toggle {
+    position: absolute;
+    right: var(--space-2);
+    bottom: calc(var(--space-2) + 3px);
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 0.55);
+    color: #fff;
+    line-height: 0;
+    cursor: pointer;
+  }
+  .clip-toggle:hover {
+    background: rgb(0 0 0 / 0.75);
+  }
+  .clip-toggle:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .clip-icon {
+    width: 1rem;
+    height: 1rem;
+    fill: currentColor;
+  }
+  .icon-pause,
+  .is-playing .icon-play {
+    display: none;
+  }
+  .is-playing .icon-pause {
+    display: inline;
+  }
+  /* A thin playhead line along the bottom edge, inside the rounded corners. */
+  .clip-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: rgb(255 255 255 / 0.2);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .clip-progress span {
+    display: block;
+    height: 100%;
+    background: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  .clip figcaption {
+    margin-top: var(--space-1);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+  }
+</style>

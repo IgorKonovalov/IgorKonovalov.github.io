@@ -9,6 +9,7 @@ import Mermaid from '../../../components/Mermaid.astro';
 import BarChart from '../../../components/charts/BarChart.astro';
 import Screenshots from '../../../components/charts/Screenshots.astro';
 import Timeline from '../../../components/charts/Timeline.astro';
+import Clip from '../../../components/charts/Clip.astro';
 
 [Days seven to twelve](/projects/2026/10/27/voxel_engine_days_seven_to_twelve/) stopped at 18:52 on 27 October at version 0.32.0. The cave was lit by the rock glowing in it, the light bounced through a probe volume, and the next milestone was supposed to be outdoors: sun, sky, a far field to one kilometre, water, clouds, weather. This post runs to 19:34 on 11 November and version 0.46.0. None of the outdoor plans has started. For two weeks almost everything was about one thing. The light in the cave would not stand still.
 
@@ -168,6 +169,27 @@ What is left in the default look is jitter on silhouettes, and that is the next 
 ### The turn the rig never rendered
 
 A still shot is still not what I was looking at on 29 October. I saw the dots when the camera moved. So for this post I wrote a throwaway variant of the still renderer that does what the rig's turn apparently did not: it lets the shot settle for 512 frames looking 90 degrees to the side, turns the camera to the hall view over 10 frames, about a sixth of a second at 60 frames per second, and saves the frames right after the turn.
+
+Here is the same kind of turn as a clip, at 60 frames per second: the camera turns 90 degrees in a quarter of a second, holds for a second and a quarter, turns back and holds again. The old build is on top, today's below.
+
+<Clip
+  title="A fast turn, before and after"
+  sub="The left pillars of the hall shot at full resolution, 3 seconds, looped. Before (3 November) on top, after (11 November) below."
+  clips={[
+    {
+      webm: '/videos/voxel-engine/light-turn.webm',
+      mp4: '/videos/voxel-engine/light-turn.mp4',
+      poster: '/images/voxel-engine/light-turn-poster.webp',
+      alt: "Two stacked views of the same cave pillars while the camera turns back and forth. In the top one, the old build, bright speckles crawl over the stone after every turn and the glowing crystals light nothing. In the bottom one, today's build, the stone stays clean and each crystal sits in a steady warm glow.",
+      caption: 'Watch the stone on the left pillar right after each turn',
+      width: 640,
+      height: 720,
+    },
+  ]}
+  note="Rendered headless for this post, frame by frame, with a throwaway copy of the engine's hero example at both commits; encoded with x264 and VP9 at settings that keep the speckle."
+/>
+
+The stills below are single frames from the same kind of turn, for a closer look.
 
 <Screenshots
   title="Right after a fast turn"
