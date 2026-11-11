@@ -1,0 +1,508 @@
+---
+title: 'Voxel engine, days thirteen to twenty-seven: what the agents could not see'
+date: 2026-11-11
+tags: ['voxel-engine', 'agents', 'graphics']
+description: 'Version 0.32 to 0.46 of the voxel engine: two weeks spent on light that would not hold still, six plans that turned the same knob, and the place where the agents stopped and only a person looking at the window could move the work on. Ends with baked light that does not change by a single pixel when nothing moves.'
+---
+
+import Mermaid from '../../../components/Mermaid.astro';
+import BarChart from '../../../components/charts/BarChart.astro';
+import Screenshots from '../../../components/charts/Screenshots.astro';
+import Timeline from '../../../components/charts/Timeline.astro';
+
+[Days seven to twelve](/projects/2026/10/27/voxel_engine_days_seven_to_twelve/) stopped at 18:52 on 27 October at version 0.32.0. The cave was lit by the rock glowing in it, the light bounced through a probe volume, and the next milestone was supposed to be outdoors: sun, sky, a far field to one kilometre, water, clouds, weather. This post runs to 19:34 on 11 November and version 0.46.0. None of the outdoor plans has started. For two weeks almost everything was about one thing. The light in the cave would not stand still.
+
+In this project agents write every line, and I approve plans and look at results. I have been looking for the limit of modern agents, a place where they cannot go on without a person no matter how much time they get. On the lighting I hit one: a problem the agents could not move without me sitting at the window.
+
+As before, every frame and timing below is from my laptop, an RTX 3080 Laptop GPU with a Ryzen 9, unless it says Cezanne, which is the integrated Radeon of the same laptop. The engine is built alongside a first game, and this post does not describe it.
+
+## Where the light was on day twelve
+
+Most of the light in a cave is static: glowing ore and crystals don't move. Only the headlamp moves with the camera. The renderer did not use that. Every frame, for each pixel, the light pass picked a few glowing faces at random, shot a shadow ray at each and got a noisy estimate. Two mechanisms then calmed the noise down:
+
+- a **temporal history** in screen pixels, which blended each new estimate with the previous frames;
+- a **probe volume**, a grid of points in space that gathered bounced light. Each probe kept most of its old value every frame and mixed in a little of the new one, 3 percent for example. That is an exponential average.
+
+<Mermaid
+  code={`
+flowchart TB
+  rnd["every frame: pick glowing faces at random, one shadow ray each"] --> est["a noisy estimate per pixel"]
+  est --> hist["screen-space history: blend with the previous frames"]
+  hist --> den["denoiser: blur the remaining noise"]
+  probes["probe grid: gather bounced light, keep about 97% of the old value each frame"] --> comp
+  den --> comp["composite: what you see"]
+  turn["camera turns: pixels new to the screen have no history"] -.-> hist
+`}
+/>
+
+Two words that come up later. The world is stored in **chunks**, and each chunk is split into **bricks**, small cubes of voxels that the GPU walks through. And the upscaler, **FSR 2**, renders at two thirds of the resolution and shifts the camera by a fraction of a pixel every frame (the **jitter**) to rebuild the detail. That shift makes edges move a little from frame to frame.
+
+## 0047: the bar is met, and it is still bad
+
+The first plan after the last post, 0047, _"Emissive light holds still"_, made the screen history for the glowing-rock light longer: 256 frames instead of 32, at full float precision, with a check that drops the history only where that light really changed.
+
+By its own measurements it worked. On a still wall, the rig counted 74 to 78 flickering spots per measurement step before and 1.50 after. Light behind a removed plug of rock settled in one frame instead of 430. The bar I had chosen myself, at most 3 spots a step, was met. The plan closed as version 0.36.0 on 29 October.
+
+Then the phase marked `human`: I opened the build in a window and looked. _"It is much better, but still bad."_ With bounce light on, the light took seconds to settle. On fast turns and on digs, small bright dots appeared. Both went to the next plan.
+
+The plan had a number, the number was good, and the picture was not.
+
+## 29 October: ten steps at the window
+
+Plan 0049, _"light settles fast, young pixels hold no dots"_, started with a rig. Before trying any fix, measure the problem headless, with numbers, so that every candidate can be compared. The rig held the camera still at two poses in the level, turned it, dug, switched the lamp, and recorded per-pixel statistics over 8,192 frames per series.
+
+It confirmed that the light never settles with the camera still. At the vein pose, the probe gather owned 65 to 88 percent of the variance of the image. After a change, the gather took 1,064 to 2,012 frames to settle. And about the camera turn it said: _"The fast yaw showed no excess at these poses."_ No dots on a turn.
+
+The same day I sat at the window for a scripted session of ten steps. The orchestrating agent prepared a script that opened the build with the right flags for each step, and I wrote down what I saw. The notes are kept verbatim:
+
+- Step 1, the camera still: _"there is very subtle and small change, and i see that parameters are moving without me doing anything. I think this should not happen when user and all lights are stationed"_
+- Step 7, moving: _"flicker is quite heavy when I move camera around, with a lot of small bright dots at first, it is all gone in 5-7 sec"_
+- Step 9: _"i can count to 5 when light settles when lamp is off. when I move my camera, i see always these bright dots, and it breaks immersion a lot. dots settles eventually, but it looks really bad"_
+
+I saw dots every time I moved the camera. The rig turned the camera and saw none. The agents wrote it down plainly in the feedback file: _"The rig's turn misses the defect."_
+
+The session also turned up a second defect. In steps 3, 5 and 6 I saw dark wedges at ledge corners and small bright triangles where facets of the smoothed surface meet. Step 6 had bounce light off and they were still there, so they were not light but the surface itself. They got their own plan, 0050, a watertight contour surface, done on 31 October. The rig counted both as flicker. Telling them apart took one look.
+
+<Screenshots
+  title="What the eye separated on 29 October"
+  sub="My screenshot from step 5 of the session: the patch pose, lamp off, bounce light on."
+  images={[
+    {
+      src: '/images/voxel-engine/light-owner-0049-triangles.webp',
+      alt: 'A brown cave floor made of smooth faceted surfaces, with tiny bright triangles at the points where the facets meet and faint ring bands across the middle',
+      caption:
+        'Bright triangles at facet corners: the surface, not the light. Gone after plan 0050',
+      width: 1280,
+      height: 365,
+    },
+  ]}
+  note="From the session's archive in the engine repository; cropped."
+/>
+
+That evening I set the rule for the next two weeks: until the light is fixed, nothing else moves forward. The outdoor milestone, the far field and the water all waited. My words in the amendment: _"I want to concentrate on a real fix for the light flicker; without it it doesn't make sense to move forward."_
+
+### A bar that was never set
+
+The rig came with proposed bars. For the still camera it was a formula: with bounce light on, the light may wander at most 1.25 times as much as with it off, or the off value plus 0.010. A reasonable engineering bar. It says that bounce light may not make things much worse than they already are.
+
+My rule was simpler and stricter. When nothing moves, nothing changes. Zero, or so close to zero that a person sitting still does not see it. The agents wrote in the feedback file that my rule _"is stricter than the proposed"_ bar, and that the bar was _"to be re-derived near zero"_. It never was. Plan 0049 was dropped on 3 November, and its bars stayed proposals I never set.
+
+A proposed bar is always measured against what exists: better than before, not much worse than the other mode. Whether "better than before" is good enough is a different question, and the rig cannot answer it.
+
+## 3 November: the picture on the front page
+
+On 3 November I looked at the engine's README. Its hero image, the first thing anyone sees, is a frame of the hall cavern. I saw artifacts in it and wrote: _"it seems that shot was taken before every light settled, which is exactly the problem I'm talking about"_.
+
+The agents checked. The still renderer's default was 64 frames. They rendered the same shot at 64, 512, 2,048 and 8,192 frames with nothing moving, and compared every pixel with the 8,192-frame one. The 64-frame render was byte-identical to the README's image. In 53.5 percent of its pixels it was more than 2 brightness levels (of 255) away from the 8,192-frame image. And at 2,048 frames it was no closer to 8,192 than at 512. About a quarter of the pixels stayed more than 2 levels apart. The feedback file: _"It stops improving and never arrives."_ My answer on the readings: _"this is exactly what I'm talking about"_.
+
+The agents had rendered that image with the tool's default of 64 frames and put it on the front page. None of them asked whether 64 frames was enough for light that, by their own rig, needed thousands.
+
+For this post I rendered the same shot again with two builds, one from that afternoon (4bf567f) and one from today. Same pose, 1280 × 720, lamp off, exposure 8, the default look with FSR 2.
+
+<Screenshots
+  title="The hall, before and after"
+  sub="The showcase's hall shot, nothing moving, rendered for this post on the RTX 3080 with the engine's own still renderer."
+  images={[
+    {
+      src: '/images/voxel-engine/light-hall-before-64.webp',
+      alt: 'A cavern with tall brown pillars; small white glowing crystals on the pillars light nothing around them; the cyan back wall is speckled with noise and dark holes',
+      caption: 'Before: 4bf567f, 3 November, 64 frames, the README default',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/light-hall-after-2048.webp',
+      alt: 'The same cavern; the glowing crystals now cast warm light on the pillars around them; the cyan back wall is smooth with soft shading',
+      caption: 'After: 3c0897c, 11 November, 2,048 frames',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  columns={2}
+  note="The 3 November build at 2,048 frames looks like its 64-frame image with less speckle; the hard patches stay. Rendered with hero --source showcase --shot hall --lamp off --exposure 8."
+/>
+
+The white crystals on the pillars are the easiest place to see it. Before, they are bright blobs and the stone around them stays dark. After, each one sits in a warm halo of its own light.
+
+A single frame hides the part I was complaining about: how much the image keeps changing when nothing moves. So the next pair is the per-pixel difference between frame 64 and frame 2,048 of each build, times 8. Black means nothing changed.
+
+<Screenshots
+  title="What still changes with nothing moving"
+  sub="Frame 64 against frame 2,048 of the same still shot, the worst of three channels."
+  images={[
+    {
+      src: '/images/voxel-engine/light-hall-before-diff-x8.webp',
+      alt: 'A grey difference image in which the whole cavern is visible: the back wall bright with change, the pillars and floor mid-grey',
+      caption: 'Before: the whole scene drifts',
+      width: 1280,
+      height: 720,
+    },
+    {
+      src: '/images/voxel-engine/light-hall-after-diff-x8.webp',
+      alt: 'A mostly black difference image, with thin bright lines only along edges and on the far wall',
+      caption: 'After: only edges change',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  columns={2}
+/>
+
+To check that the edges are the upscaler's jitter and not the light, I rendered both builds once more at native resolution with the jitter off, and once at the vein pose in the level.
+
+<BarChart
+  title="Pixels that change between frame 64 and frame 2,048, nothing moving"
+  sub="1280 × 720, RTX 3080. A pixel counts when any channel differs by more than 2 levels of 255."
+  series={[{ name: 'before, 3 November' }, { name: 'after, 11 November' }]}
+  rows={[
+    { label: 'The hall, default look: FSR 2, jitter on', values: [55.3, 10.7] },
+    { label: 'The hall, native resolution, no jitter', values: [51.8, 0] },
+    { label: 'The vein pose in the level, default look', values: [37.1, 1.0] },
+  ]}
+  unit="%"
+  note="Measured for this post. At native resolution the new build's frames 64 and 2,048 are byte-identical. Mean difference per pixel in the hall: 5.39 and 1.37 levels in the default look, 5.12 and 0.00 at native; at the vein 3.94 and 0.12."
+/>
+
+What is left in the default look is jitter on silhouettes, and that is the next plan (0061, antialiasing).
+
+### The turn the rig never rendered
+
+A still shot is still not what I was looking at on 29 October. I saw the dots when the camera moved. So for this post I wrote a throwaway variant of the still renderer that does what the rig's turn apparently did not: it lets the shot settle for 512 frames looking 90 degrees to the side, turns the camera to the hall view over 10 frames, about a sixth of a second at 60 frames per second, and saves the frames right after the turn.
+
+<Screenshots
+  title="Right after a fast turn"
+  sub="The left pillars of the hall shot at full resolution, after a 90° turn over 10 frames. Frame 1 is the first frame after the turn ends; frame 1,024 is the settled reference."
+  images={[
+    {
+      src: '/images/voxel-engine/light-turn-before-t0001.webp',
+      alt: 'Dark brown pillars covered with small bright orange and cyan speckles, glowing crystals as flat white blobs',
+      caption: 'Before, frame 1',
+      width: 560,
+      height: 400,
+    },
+    {
+      src: '/images/voxel-engine/light-turn-before-t0016.webp',
+      alt: 'The same pillars, the bright speckles fewer but still scattered over the stone',
+      caption: 'Before, frame 16',
+      width: 560,
+      height: 400,
+    },
+    {
+      src: '/images/voxel-engine/light-turn-before-t1024.webp',
+      alt: 'The same pillars settled, smoother, the crystals still lighting nothing around them',
+      caption: 'Before, frame 1,024',
+      width: 560,
+      height: 400,
+    },
+    {
+      src: '/images/voxel-engine/light-turn-after-t0001.webp',
+      alt: 'Brown pillars with clean voxel steps, each glowing crystal in a warm halo, no speckles',
+      caption: 'After, frame 1',
+      width: 560,
+      height: 400,
+    },
+    {
+      src: '/images/voxel-engine/light-turn-after-t0016.webp',
+      alt: 'The same view, nearly identical to frame 1',
+      caption: 'After, frame 16',
+      width: 560,
+      height: 400,
+    },
+    {
+      src: '/images/voxel-engine/light-turn-after-t1024.webp',
+      alt: 'The same view settled, nearly identical to frame 1',
+      caption: 'After, frame 1,024',
+      width: 560,
+      height: 400,
+    },
+  ]}
+  columns={3}
+  note="Rendered for this post with a throwaway copy of the engine's hero example, deleted afterwards. The new build bakes the whole showcase before the first frame; in the window the bake streams in, so a part of the world never seen before can still arrive late."
+/>
+
+Those speckles on the left pillar are the bright dots I saw on every move. They are there on the first frame after the turn and still there on frame 16.
+
+<BarChart
+  title="How far each frame after the turn is from settled"
+  sub="The share of pixels more than 2 levels away from frame 1,024 of the same build, the full 1280 × 720 frame."
+  series={[{ name: 'before, 3 November' }, { name: 'after, 11 November' }]}
+  rows={[
+    { label: 'Frame 1', values: [59.2, 28.9] },
+    { label: 'Frame 4', values: [56.8, 24.0] },
+    { label: 'Frame 16', values: [51.3, 12.6] },
+    { label: 'Frame 64', values: [38.4, 11.4] },
+  ]}
+  unit="%"
+  note="The new build's floor of about 11% is the upscaler's jitter on edges, the same as in the still shot above."
+/>
+
+This is the strip I suggested to the agents on 5 November. More about that below.
+
+## Turning the same knob
+
+From 27 October to 5 November the light went through six plans, 0047 to 0057. Here they are with what happened to each.
+
+<Timeline
+  title="The light plans, 27 October to 11 November"
+  sub="Each plan with its outcome. Dates are when work started or the decision was made."
+  groups={[
+    'built and kept',
+    'built, then replaced',
+    'dropped',
+    'my words that changed the direction',
+  ]}
+  events={[
+    {
+      when: '27–29 Oct',
+      what: '0047: a 256-frame history for the glowing-rock light',
+      detail: 'Bar met. "It is much better, but still bad."',
+      group: 1,
+    },
+    {
+      when: '28 Oct',
+      what: '0048: fix a brightness clamp bias in the probe rays',
+      detail:
+        'Never built. Dropped on 4 Nov when the probes stopped carrying the glowing-rock light.',
+      group: 2,
+    },
+    {
+      when: '28 Oct–3 Nov',
+      what: '0049: a rig, then fixes for settling and dots',
+      detail: 'The rig was built; the fixes never were. Dropped.',
+      group: 2,
+    },
+    {
+      when: '29 Oct',
+      what: '"Until the light is fixed, nothing else moves forward"',
+      group: 3,
+    },
+    {
+      when: '29 Oct–4 Nov',
+      what: '0051: three experiments side by side',
+      detail:
+        'A world-space cache per voxel face picked; the probes shrink to the lamp bounce.',
+      group: 1,
+    },
+    {
+      when: '3–4 Nov',
+      what: '0056: what actually moves on the final image',
+      detail:
+        'Most frame-to-frame jumps are FSR 2 jitter. The emitter cap rejected.',
+      group: 0,
+    },
+    {
+      when: '4–5 Nov',
+      what: '0057: the per-face table as the only store',
+      detail:
+        'Holds still; dark patches everywhere in motion. "Feels like a wrong way."',
+      group: 1,
+    },
+    {
+      when: '5 Nov',
+      what: '"No matter performance, build something that looks really polished"',
+      group: 3,
+    },
+    {
+      when: '5–9 Nov',
+      what: '0059: light baked per chunk at load and at edit',
+      detail: '"I think the quality is finally there!"',
+      group: 0,
+    },
+    {
+      when: '10–11 Nov',
+      what: '0060: the bake queue follows the view',
+      detail:
+        'Cancelling passed work kept: "without it everything starts lagging".',
+      group: 0,
+    },
+  ]}
+  note="From the plans in docs/plans/done/ of the engine repository and their logs."
+/>
+
+Plan 0051, approved on 29 October, opens with a diagnosis by the architect agent, and it explains the whole week:
+
+> The flicker is structural. Everything on screen except the headlamp is static light, and the renderer re-estimates it with fresh random numbers every frame, then stores the estimate where it cannot hold still: in screen pixels, which lose it on every turn, and in probes blended by an exponential average, which never converges. "Still at rest" and "fast after a change" are the two ends of one knob, the history length, and every plan since 0024 turned that knob.
+
+Plan 0024 is the lighting plan from day six. A long history gives a still image that reacts slowly; a short one reacts fast and is noisy. For a week the agents had proposed, implemented, measured and closed plans that each moved the history length a bit, in a different place, with a different guard. Each plan was reasonable on its own, and each met its bar or came close. Then the next one turned the same knob again.
+
+So the agents could see the circle once it was drawn. They did not step off it on their own. The evidence was there earlier: the rig of 0049 already showed that the probe gather owned most of the variance, and the same plan's list of candidate fixes still had a probe that keeps 99 percent of its old value each update. That is a longer history again. In plan 0047 the same setting had lagged about 30 seconds behind a switch of the lamp.
+
+### 0051: "first real improvement!"
+
+Plan 0051 tested the way out as a spike: three experiments, each switched on by its own setting, read by the rig and then shown to me.
+
+- **A, converge and freeze:** probes and the screen history become running means that converge and then stop updating until something changes.
+- **B, a world-space cache:** the glowing-rock light accumulates per cube face in a hash table keyed by voxel and face, so a turn of the camera loses nothing.
+- **C:** the headlamp's light stops going into the probes.
+
+On 4 November, in the hall, with all three on, I wrote: _"first real improvement! there is no dots"_. With B alone and bounce light off: _"i think i like it… but problem of fast turn is back, also when i dig it takes some time for light to settle in hole"_. Then the runs in the level: _"same problem :("_.
+
+The rig still could not see the dots. The plan's follow-up section says so: _"The owner's dots are not reproduced headless."_ And the log: _"None of these is a dot on every camera move, which is what the owner reports… Phase 4 counts them by eye."_ Phase 4 was me.
+
+The verdict was B, with bounce light off for the glowing rock, and the probes reduced to carrying only the headlamp's bounce. I wrote that _"we clearly are doing something wrong and logic should be redone anyways"_.
+
+### 0056: the magenta blotches
+
+In parallel, plan 0056 asked which of the things that move on the final image are light. Most of the big frame-to-frame jumps turned out to be FSR 2's jitter on silhouettes and on bright emitters. The yellow dots were light on creases.
+
+One of its candidates was an emitter cap, a limit on how bright a glowing face can be in the estimate, a standard trick against bright outliers. The numbers said it reduced the jumps. In the window it painted magenta blotches over the cave:
+
+<Screenshots
+  title="The emitter cap in the window"
+  sub="My screenshot from plan 0056, step 7: the hall with the cap on. The HUD text is cropped."
+  images={[
+    {
+      src: '/images/voxel-engine/light-owner-0056-magenta.webp',
+      alt: 'A cyan and orange cave wall with stalactites, covered by flat pink-magenta blotches of different sizes scattered across the rock',
+      caption: 'The cap removed jumps and added blotches',
+      width: 1231,
+      height: 605,
+    },
+  ]}
+/>
+
+I rejected it: _"artifacts on high contrast voxels"_.
+
+The same plan compared two ranges for the far shading normal, the distance at which far surfaces switch to smoothed shading. Headless, the range [1, 2] had about seven times the still-camera jumps of [2, 6]. I picked [1, 2] in the window: _"i think that far normal 1..2 is the best"_. And about the slow scripted pan the agents used to compare them: _"if camera moves slowly like that, its enough time to settle the light, but real players won't be that slow"_.
+
+### 0057: the wrong way
+
+Plan 0057 built on 0051's B: a per-face table as the only store of the glowing-rock light, no screen history at all, a guard in world space and a preload of faces around the camera. It held still, and it met its bars in the hall. Then I flew through the caves:
+
+<Screenshots
+  title="The per-face table in the window"
+  sub="My screenshot from plan 0057, step 3a: the vein pose, moving fast. The HUD text is cropped."
+  images={[
+    {
+      src: '/images/voxel-engine/light-owner-0057-dark-patches.webp',
+      alt: 'A brown cave tunnel; the far wall around a glowing ore vein is covered with grainy dark patches where the light has not filled in yet',
+      caption: 'Faces seen for the first time start dark and fill in slowly',
+      width: 1280,
+      height: 545,
+    },
+  ]}
+/>
+
+_"when I move through caves, I see dark patches everywhere - it settles slowly"_. _"lamp adds nothing really, the picture is so bad it doesnt really matter"_. _"overall feels like a wrong way"_.
+
+In that session I also told the agents how to see it themselves: _"I suggest take a screenshot strip after multiple press of B button, you can do it - and compare each screen, you will easily see the problem"_. The plan's log records the suggestion and adds: _"recorded, not acted on."_ The agents could render frames and compare them pixel by pixel; they had done exactly that for the README image two days earlier. Nobody did it here. The suggestion stayed in the log, and the turn strip above is the first time it was rendered.
+
+By then I was rather frustrated and had almost lost hope.
+
+## 5 November: going the other way
+
+At the end of the 0057 session the orchestrator asked what to do next. My first answer was _"Both: fix now, design in parallel"_. Then, instead of a verdict, I asked a question:
+
+> what if we go differently - no matter performance, but build something that would look really polished, then we will see where we can cut performance?
+
+I asked it to stop going in circles. We had been trying to get the look and fit the budget at the same time, and it was not possible. The other way is sequential: first the look, then the budget.
+
+Plan 0059 did it in that order. First a reference: bake the glowing-rock light for every visible surface with as many samples as it takes, with no budget at all, and see whether that is the look. In Phase 1 the reference bake took 94 to 148 seconds before the first frame, depending on the pose, against 1.6 seconds for the table. The plan had priced a sample at 4.3 to 4.6 nanoseconds, a number read inside the old light pass; in a dispatch of its own a sample cost 36 to 64. Nobody would ship that.
+
+On 6 November I looked at it. The plan asked: _"is this the look to cut down from?"_ My answer: _"(j) yes, this is the look to cut down from"_. I don't remember now what that first look was like. I remember that before these last changes the light was flickering all the time.
+
+Then the cuts, each a scratch build shown to me: 512 independent samples instead of shared seeds; glass as a filter; rings of chunks against single bricks; the brick level with 8-voxel cells and 4,096 samples per brick direction (_"8/4096 is fine, others are too noisy"_); a live queue that bakes what the camera needs first, coarse and then refined; digs that re-bake the rings around them and fade the new light in. Several cuts were dropped on the way because they did not look right. Shared seeds failed their seam bar, and the filter, the per-face cells and the rings went too.
+
+On 8 November the agents wrote a process change into the plan's log: _"For the lighting work until Plan 0059's pick, the eye-gate is the owner's window."_ Bar readings and image tests were skipped in the exploring phases. On 10 November this became a general rule of the harness, called exploration mode: in a plan driven by the look, the phases before my window carry no image tests, and the tests are written after the pick, from the picked look.
+
+**Before: look and budget at once**
+
+<Mermaid
+  code={`
+flowchart TB
+  b1["agent drafts a plan with bars"] --> b2["a dev lane implements"]
+  b2 --> b3["headless rig: bar met"]
+  b3 --> b4["close review: clean"]
+  b4 --> b5["my window: still bad"]
+  b5 --> b1
+`}
+/>
+
+**After: look first, then budget**
+
+<Mermaid
+  code={`
+flowchart TB
+  a1["reference: no budget, as many samples as it takes"] --> a2["my window: is this the look?"]
+  a2 --> a3["cut one thing"]
+  a3 --> a4["my window: still the look?"]
+  a4 -- "yes" --> a3
+  a4 -- "picked" --> a5["tests and bars written from the picked look"]
+`}
+/>
+
+On 9 November, in the window, with digging: _"i think the quality is finally there! there is a slight change when flying fast, but its not too bad"_, and _"dig is fine"_. Phase 14 deleted the per-face table, the preload and everything that fed them. Version 0.44.0.
+
+## What the light is now
+
+The static light is no longer estimated every frame. It is computed once, when a chunk loads or changes, and stored.
+
+<Mermaid
+  code={`
+flowchart TB
+  load["a chunk loads, or a dig changes it"] --> queue["live queue: bake what the camera needs first, coarse, then refine; cancel work the flight has passed"]
+  queue --> store["per-chunk store: each 8-voxel cell keeps light from six directions, 4,096 samples a brick direction"]
+  store --> read["every frame: read the store, no random numbers"]
+  lamp["headlamp: shaded exactly per pixel"] --> den["denoiser: only the lamp's part"]
+  probes["probes: only the lamp's bounce"] --> comp
+  read --> comp["composite"]
+  den --> comp
+`}
+/>
+
+Against the first diagram: the random estimate per pixel per frame is gone for everything that does not move, and the screen history for the glowing rock is empty. The probes, which owned most of the flicker, carry only the headlamp's bounce now. The store is baked as if every glowing block had brightness 1 and scaled when it is read, so making a material glow brighter re-bakes nothing. The headlamp is still random every frame, because it moves, and its noise goes through the denoiser as before.
+
+On 29 October I could count to five while the light settled. Now a dig at the vein settles in 7 frames, 147 milliseconds, with no frame over 33 ms. The light baked on the RTX and on the Radeon is the same to within 0.204 of one brightness level. And the whole frame at rest got cheaper in the hall; at the far pose it stayed the same, 14.63 against 14.64 ms on the RTX.
+
+<BarChart
+  title="The whole frame at rest in the hall"
+  sub="The per-face table of plan 0057 against the baked bricks of plan 0059. Headless, native resolution, lamp off; the RTX at 2530 × 1378, the Cezanne at 1280 × 720."
+  series={[{ name: 'per-face table (0057)' }, { name: 'baked bricks (0059)' }]}
+  rows={[
+    { label: 'RTX 3080 Laptop', values: [27.311, 17.031] },
+    { label: 'Cezanne (integrated Radeon)', values: [91.145, 32.739] },
+  ]}
+  unit=" ms"
+  note="From plan 0059's log, Phase 7a."
+/>
+
+Not everything was met, and the plan says so. The target for the first frame was 3 seconds; in my window it was 2.2 to 11.6 seconds. The denoiser's line of 3.0 ms was missed. Both are written in the plan as misses. And a brick the queue has not reached yet still renders black, which on the slow adapter means _"after several seconds distant caves still black"_, as I wrote on 11 November. That is the next plan, 0067: a summary of light per block, so that a brick with no value yet takes its light from the block around it instead of showing black.
+
+### 0060: the queue by the view
+
+The last light plan of the period came from my window at the end of 0059: _"in long distance, light is not recalculated until I come closer"_, and _"We should be able to cancel it when camera passed"_. Plan 0060 did both. The queue orders work by where the camera looks, and it cancels work for chunks a flight has already passed.
+
+Ordering by view made no visible difference, in the readings or for me. Cancelling did: _"without it everything starts lagging, so keep it"_. Version 0.45.0 on 11 November.
+
+## The limit
+
+I was looking for the place where agents stop. In this work there were three parts to it.
+
+**They could not see it.** The agents judge a picture through the numbers they decide to compute and the frames they decide to render. The model can read an image. But it looks only at what a plan tells it to render, and no plan rendered a fast turn the way I fly. Twice the logs say it outright: _"not reproduced headless"_, _"counts them by eye"_. The strip above needed one throwaway example and a 10-frame turn, once someone decided to look.
+
+**They could not decide what is good.** Every bar the agents proposed was relative to what existed. "Nothing changes when nothing moves" is something I decided, and the rig had no way to measure its way to it. The magenta blotches, the far normal with seven times the jumps, the reference that took two and a half minutes to a first frame: each time the number and the picture disagreed, and I had to say which one wins.
+
+**They went in circles.** Six plans, each reasonable, each turning the history length. The architect agent's diagnosis was right, but it came after a week of work and after my rule that nothing else moves until the light is fixed. The change from "look and budget at once" to "look first, then budget" came from my question.
+
+The three feed each other. Without seeing the defect you can't judge a fix, and without judging a fix you try the next variant of the same fix, because each variant improves the number you can see.
+
+Everything else in these two weeks went the usual way. Once the look was picked, the cuts were implemented fast and measured honestly, and the misses were written down. The surface fix, the queue, the frame pacing and the test cost all went through plan, lanes, review and close. The limit is narrow. It is exactly where the answer depends on a person looking at a moving picture and deciding whether it is right.
+
+The harness has changed around it. Exploration mode is now a rule: for a plan driven by the look, my window comes before the tests, and the tests are written from what I picked.
+
+## The rest of the two weeks
+
+- **The surface (0050, 0053, 0054), 31 October and 3 November.** The dark wedges and bright triangles from the 29 October session were cracks in the contour surface. Plan 0050 found them with a spike and closed them; I saw them gone. Plan 0053 tried to melt features one voxel wide into the smooth surface, and in the window I saw _"same problem"_. Plan 0054 built a smoother surface from a voxel density field, which costs about three times the GPU frame and stays optional. Plain cubes became the default look.
+- **Clarity (0055), 3 November.** Procedural surface detail was removed from the default look, FSR 2 became the default upscaler (_"fsr2 stays"_), and the far shading normal was added.
+- **The window's frame (0064), 11 November.** The window now runs as fast as it can instead of following the compositor's pace, timers and counters are read through ring buffers so the CPU never waits for the GPU, and the world sync gets a time budget. Under Hyprland on the RTX the median frame went from 13.0–17.2 ms to 10.6–13.5 ms, and over 300 frames on the software adapter the blocking GPU reads went from 608 to 0. My words on the level after it: _"picture looks fine once all light and aliasing settles, but lagging, fps are low"_. So there is more to do.
+- **Test cost (0066), 10 to 11 November.** The tests that take more than 10 seconds moved to a separate long run; the main test gate runs in 505 seconds against a 12-minute budget.
+- **A hot-path pass (0044), 10 to 11 November**, on a side lane: the audio callback no longer frees or clears anything large, and smaller fixes in the world, simulation and network code.
+- **Entities (0062, 0063), drafted on 10 November.** Voxel models made of rigid parts, keyframe animation computed in fixed-point arithmetic, rigs as text files. The first phases merged on 11 November; I confirmed the rest pose and that the rig's z axis points up.
+
+## What is next
+
+The open light work: 0067, a bake budget per second instead of a slice per frame, and no black where light is missing; 0061, antialiasing under the baked light, for the edges that still change in the difference images above; 0065, waste in the bake; and 0058, moving lights as a list of analytic lights, approved but not built. After those come the entities, and then the outdoor milestone that was supposed to start two weeks ago.
+
+## How it was run
+
+The harness is the one from the last post: an orchestrating session, plan lanes each in its own worktree, a GPU lock, phases marked `human` that stop at a runner script for my window, a fresh architect agent reviewing every close. Two things changed. For plans driven by the look, exploration mode moved the tests after my pick. And what I say at the window now goes into the repository verbatim, for the light in a file of its own (`LIGHT-FEEDBACK.md`), so the next plan can read it.
