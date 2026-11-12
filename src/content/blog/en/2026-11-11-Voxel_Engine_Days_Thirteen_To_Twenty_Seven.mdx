@@ -2,7 +2,7 @@
 title: 'Voxel engine, days thirteen to twenty-seven: what the agents could not see'
 date: 2026-11-11
 tags: ['voxel-engine', 'agents', 'graphics']
-description: 'Version 0.32 to 0.46 of the voxel engine: two weeks spent on light that would not hold still, six plans that turned the same knob, and the place where the agents stopped and only a person looking at the window could move the work on. Ends with baked light that does not change by a single pixel when nothing moves.'
+description: 'Version 0.32 to 0.46 of the voxel engine: two weeks spent on light that would not hold still, six plans that turned the same knob, and the place where the agents stopped and only a person at the screen, judging what was wrong with the picture and stepping into the fixes, could move the work on. Ends with baked light that does not change by a single pixel when nothing moves.'
 ---
 
 import Mermaid from '../../../components/Mermaid.astro';
@@ -13,7 +13,7 @@ import Clip from '../../../components/charts/Clip.astro';
 
 [Days seven to twelve](/projects/2026/10/27/voxel_engine_days_seven_to_twelve/) stopped at 18:52 on 27 October at version 0.32.0. The cave was lit by the rock glowing in it, the light bounced through a probe volume, and the next milestone was supposed to be outdoors: sun, sky, a far field to one kilometre, water, clouds, weather. This post runs to 19:34 on 11 November and version 0.46.0. None of the outdoor plans has started. For two weeks almost everything was about one thing. The light in the cave would not stand still.
 
-In this project agents write every line, and I approve plans and look at results. I have been looking for the limit of modern agents, a place where they cannot go on without a person no matter how much time they get. On the lighting I hit one: a problem the agents could not move without me sitting at the window.
+In this project agents write every line, and I approve plans and look at results. I have been looking for the limit of modern agents, a place where they cannot go on without a person no matter how much time they get. On the lighting I hit one: a problem the agents could not move until I sat down at the monitor myself, worked out what was wrong with the picture and stepped into the fixes.
 
 As before, every frame and timing below is from my laptop, an RTX 3080 Laptop GPU with a Ryzen 9, unless it says Cezanne, which is the integrated Radeon of the same laptop. The engine is built alongside a first game, and this post does not describe it.
 
@@ -44,17 +44,15 @@ The first plan after the last post, 0047, _"Emissive light holds still"_, made t
 
 By its own measurements it worked. On a still wall, the rig counted 74 to 78 flickering spots per measurement step before and 1.50 after. Light behind a removed plug of rock settled in one frame instead of 430. The bar I had chosen myself, at most 3 spots a step, was met. The plan closed as version 0.36.0 on 29 October.
 
-Then the phase marked `human`: I opened the build in a window and looked. _"It is much better, but still bad."_ With bounce light on, the light took seconds to settle. On fast turns and on digs, small bright dots appeared. Both went to the next plan.
+Then the phase marked `human`: I ran the build and checked it myself. _"It is much better, but still bad."_ With bounce light on, the light took seconds to settle. On fast turns and on digs, small bright dots appeared. Both went to the next plan.
 
-The plan had a number, the number was good, and the picture was not.
-
-## 29 October: ten steps at the window
+## 29 October: ten steps at the screen
 
 Plan 0049, _"light settles fast, young pixels hold no dots"_, started with a rig. Before trying any fix, measure the problem headless, with numbers, so that every candidate can be compared. The rig held the camera still at two poses in the level, turned it, dug, switched the lamp, and recorded per-pixel statistics over 8,192 frames per series.
 
 It confirmed that the light never settles with the camera still. At the vein pose, the probe gather owned 65 to 88 percent of the variance of the image. After a change, the gather took 1,064 to 2,012 frames to settle. And about the camera turn it said: _"The fast yaw showed no excess at these poses."_ No dots on a turn.
 
-The same day I sat at the window for a scripted session of ten steps. The orchestrating agent prepared a script that opened the build with the right flags for each step, and I wrote down what I saw. The notes are kept verbatim:
+The same day I sat at the screen for a scripted session of ten steps. The orchestrating agent prepared a script that opened the build with the right flags for each step, and I wrote down what I saw. The notes are kept verbatim:
 
 - Step 1, the camera still: _"there is very subtle and small change, and i see that parameters are moving without me doing anything. I think this should not happen when user and all lights are stationed"_
 - Step 7, moving: _"flicker is quite heavy when I move camera around, with a lot of small bright dots at first, it is all gone in 5-7 sec"_
@@ -62,7 +60,7 @@ The same day I sat at the window for a scripted session of ten steps. The orches
 
 I saw dots every time I moved the camera. The rig turned the camera and saw none. The agents wrote it down plainly in the feedback file: _"The rig's turn misses the defect."_
 
-The session also turned up a second defect. In steps 3, 5 and 6 I saw dark wedges at ledge corners and small bright triangles where facets of the smoothed surface meet. Step 6 had bounce light off and they were still there, so they were not light but the surface itself. They got their own plan, 0050, a watertight contour surface, done on 31 October. The rig counted both as flicker. Telling them apart took one look.
+The session also turned up a second defect. In steps 3, 5 and 6 I saw dark wedges at ledge corners and small bright triangles where facets of the smoothed surface meet. Step 6 had bounce light off and they were still there, so they were not light but the surface itself. They got their own plan, 0050, a watertight contour surface, done on 31 October. The rig counted both as flicker.
 
 <Screenshots
   title="What the eye separated on 29 October"
@@ -365,7 +363,7 @@ The verdict was B, with bounce light off for the glowing rock, and the probes re
 
 ### 0056: the magenta blotches
 
-In parallel, plan 0056 asked which of the things that move on the final image are light. Most of the big frame-to-frame jumps turned out to be FSR 2's jitter on silhouettes and on bright emitters. The yellow dots were light on creases.
+In parallel, plan 0056 asked which of the things that move on the final image are light. Most of the big frame-to-frame jumps turned out to be FSR 2's jitter on silhouettes and on bright emitters. The bright dots I saw on turns were light on creases.
 
 One of its candidates was an emitter cap, a limit on how bright a glowing face can be in the estimate, a standard trick against bright outliers. The numbers said it reduced the jumps. In the window it painted magenta blotches over the cave:
 
@@ -425,7 +423,7 @@ On 6 November I looked at it. The plan asked: _"is this the look to cut down fro
 
 Then the cuts, each a scratch build shown to me: 512 independent samples instead of shared seeds; glass as a filter; rings of chunks against single bricks; the brick level with 8-voxel cells and 4,096 samples per brick direction (_"8/4096 is fine, others are too noisy"_); a live queue that bakes what the camera needs first, coarse and then refined; digs that re-bake the rings around them and fade the new light in. Several cuts were dropped on the way because they did not look right. Shared seeds failed their seam bar, and the filter, the per-face cells and the rings went too.
 
-On 8 November the agents wrote a process change into the plan's log: _"For the lighting work until Plan 0059's pick, the eye-gate is the owner's window."_ Bar readings and image tests were skipped in the exploring phases. On 10 November this became a general rule of the harness, called exploration mode: in a plan driven by the look, the phases before my window carry no image tests, and the tests are written after the pick, from the picked look.
+On 8 November the agents wrote a process change into the plan's log: _"For the lighting work until Plan 0059's pick, the eye-gate is the owner's window."_ That is, my check of the running build decides, not the bars. Bar readings and image tests were skipped in the exploring phases. On 10 November this became a general rule of the harness, called exploration mode: in a plan driven by the look, the phases before my check at the screen carry no image tests, and the tests are written after the pick, from the picked look.
 
 **Before: look and budget at once**
 
@@ -435,7 +433,7 @@ flowchart TB
   b1["agent drafts a plan with bars"] --> b2["a dev lane implements"]
   b2 --> b3["headless rig: bar met"]
   b3 --> b4["close review: clean"]
-  b4 --> b5["my window: still bad"]
+  b4 --> b5["my check: still bad"]
   b5 --> b1
 `}
 />
@@ -445,9 +443,9 @@ flowchart TB
 <Mermaid
   code={`
 flowchart TB
-  a1["reference: no budget, as many samples as it takes"] --> a2["my window: is this the look?"]
+  a1["reference: no budget, as many samples as it takes"] --> a2["my check: is this the look?"]
   a2 --> a3["cut one thing"]
-  a3 --> a4["my window: still the look?"]
+  a3 --> a4["my check: still the look?"]
   a4 -- "yes" --> a3
   a4 -- "picked" --> a5["tests and bars written from the picked look"]
 `}
@@ -488,11 +486,11 @@ On 29 October I could count to five while the light settled. Now a dig at the ve
   note="From plan 0059's log, Phase 7a."
 />
 
-Not everything was met, and the plan says so. The target for the first frame was 3 seconds; in my window it was 2.2 to 11.6 seconds. The denoiser's line of 3.0 ms was missed. Both are written in the plan as misses. And a brick the queue has not reached yet still renders black, which on the slow adapter means _"after several seconds distant caves still black"_, as I wrote on 11 November. That is the next plan, 0067: a summary of light per block, so that a brick with no value yet takes its light from the block around it instead of showing black.
+Not everything was met, and the plan says so. The target for the first frame was 3 seconds; when I ran the build it was 2.2 to 11.6 seconds. The denoiser's line of 3.0 ms was missed. Both are written in the plan as misses. And a brick the queue has not reached yet still renders black, which on the slow adapter means _"after several seconds distant caves still black"_, as I wrote on 11 November. That is the next plan, 0067: a summary of light per block, so that a brick with no value yet takes its light from the block around it instead of showing black.
 
 ### 0060: the queue by the view
 
-The last light plan of the period came from my window at the end of 0059: _"in long distance, light is not recalculated until I come closer"_, and _"We should be able to cancel it when camera passed"_. Plan 0060 did both. The queue orders work by where the camera looks, and it cancels work for chunks a flight has already passed.
+The last light plan of the period came from my check at the end of 0059: _"in long distance, light is not recalculated until I come closer"_, and _"We should be able to cancel it when camera passed"_. Plan 0060 did both. The queue orders work by where the camera looks, and it cancels work for chunks a flight has already passed.
 
 Ordering by view made no visible difference, in the readings or for me. Cancelling did: _"without it everything starts lagging, so keep it"_. Version 0.45.0 on 11 November.
 
@@ -510,13 +508,13 @@ The three feed each other. Without seeing the defect you can't judge a fix, and 
 
 Everything else in these two weeks went the usual way. Once the look was picked, the cuts were implemented fast and measured honestly, and the misses were written down. The surface fix, the queue, the frame pacing and the test cost all went through plan, lanes, review and close. The limit is narrow. It is exactly where the answer depends on a person looking at a moving picture and deciding whether it is right.
 
-The harness has changed around it. Exploration mode is now a rule: for a plan driven by the look, my window comes before the tests, and the tests are written from what I picked.
+The harness has changed around it. Exploration mode is now a rule: for a plan driven by the look, my check at the screen comes before the tests, and the tests are written from what I picked.
 
 ## The rest of the two weeks
 
 - **The surface (0050, 0053, 0054), 31 October and 3 November.** The dark wedges and bright triangles from the 29 October session were cracks in the contour surface. Plan 0050 found them with a spike and closed them; I saw them gone. Plan 0053 tried to melt features one voxel wide into the smooth surface, and in the window I saw _"same problem"_. Plan 0054 built a smoother surface from a voxel density field, which costs about three times the GPU frame and stays optional. Plain cubes became the default look.
 - **Clarity (0055), 3 November.** Procedural surface detail was removed from the default look, FSR 2 became the default upscaler (_"fsr2 stays"_), and the far shading normal was added.
-- **The window's frame (0064), 11 November.** The window now runs as fast as it can instead of following the compositor's pace, timers and counters are read through ring buffers so the CPU never waits for the GPU, and the world sync gets a time budget. Under Hyprland on the RTX the median frame went from 13.0–17.2 ms to 10.6–13.5 ms, and over 300 frames on the software adapter the blocking GPU reads went from 608 to 0. My words on the level after it: _"picture looks fine once all light and aliasing settles, but lagging, fps are low"_. So there is more to do.
+- **Frame pacing in the windowed build (0064), 11 November.** The windowed build now runs as fast as it can instead of following the compositor's pace, timers and counters are read through ring buffers so the CPU never waits for the GPU, and the world sync gets a time budget. Under Hyprland on the RTX the median frame went from 13.0–17.2 ms to 10.6–13.5 ms, and over 300 frames on the software adapter the blocking GPU reads went from 608 to 0. My words on the level after it: _"picture looks fine once all light and aliasing settles, but lagging, fps are low"_. So there is more to do.
 - **Test cost (0066), 10 to 11 November.** The tests that take more than 10 seconds moved to a separate long run; the main test gate runs in 505 seconds against a 12-minute budget.
 - **A hot-path pass (0044), 10 to 11 November**, on a side lane: the audio callback no longer frees or clears anything large, and smaller fixes in the world, simulation and network code.
 - **Entities (0062, 0063), drafted on 10 November.** Voxel models made of rigid parts, keyframe animation computed in fixed-point arithmetic, rigs as text files. The first phases merged on 11 November; I confirmed the rest pose and that the rig's z axis points up.
@@ -527,4 +525,4 @@ The open light work: 0067, a bake budget per second instead of a slice per frame
 
 ## How it was run
 
-The harness is the one from the last post: an orchestrating session, plan lanes each in its own worktree, a GPU lock, phases marked `human` that stop at a runner script for my window, a fresh architect agent reviewing every close. Two things changed. For plans driven by the look, exploration mode moved the tests after my pick. And what I say at the window now goes into the repository verbatim, for the light in a file of its own (`LIGHT-FEEDBACK.md`), so the next plan can read it.
+The harness is the one from the last post: an orchestrating session, plan lanes each in its own worktree, a GPU lock, phases marked `human` that stop at a runner script and wait for my check, a fresh architect agent reviewing every close. Two things changed. For plans driven by the look, exploration mode moved the tests after my pick. And what I say at the screen now goes into the repository verbatim, for the light in a file of its own (`LIGHT-FEEDBACK.md`), so the next plan can read it.
