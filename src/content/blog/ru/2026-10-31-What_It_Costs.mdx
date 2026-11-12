@@ -114,6 +114,7 @@ import BarChart from '../../../components/charts/BarChart.astro';
 - И сами вакансии. Indeed отслеживает объявления о работе для разработчиков в США ([ряд на FRED](https://fred.stlouisfed.org/series/IHLIDXUSTPSOFTDEVE)):
 
 <BarChart
+  table={false}
   title="Вакансии разработчиков в США"
   sub="Индекс Indeed Hiring Lab с поправкой на сезонность. Февраль 2020 = 100."
   series={[{ name: 'индекс' }]}
@@ -168,6 +169,7 @@ import BarChart from '../../../components/charts/BarChart.astro';
 А ещё я разговариваю с компьютером. Но агентов никогда не очеловечиваю — это жёсткое правило. Инструмент есть инструмент.
 
 <BarChart
+  table={false}
   title="Сотрудники, которые «значительную часть вчерашнего дня» чувствовали себя одинокими"
   sub="Gallup, State of the Global Workplace 2024, по месту работы."
   series={[{ name: 'одиноки' }]}

@@ -2,7 +2,8 @@
 // Horizontal bar chart in plain HTML/CSS: grouped (one thin bar per series)
 // or stacked (segments split by a 2px surface gap, total at the tip).
 // Colours follow the series index, never the rank. Every bar has a native
-// tooltip, and the numbers are repeated in a table under the chart.
+// tooltip, and the numbers are repeated in a table under the chart unless
+// `table={false}`.
 import '../../styles/viz.css';
 
 interface Series {
@@ -27,6 +28,8 @@ interface Props {
   max?: number;
   lang?: 'en' | 'ru';
   wide?: boolean;
+  /** The "show the numbers" table; off where every value is already printed at the bar tip. */
+  table?: boolean;
 }
 
 const {
@@ -40,6 +43,7 @@ const {
   max,
   lang = 'en',
   wide = false,
+  table: showTable = true,
 } = Astro.props;
 
 const show = lang === 'ru' ? 'Показать числа' : 'Show the numbers';
@@ -119,31 +123,35 @@ const single = series.length === 1;
 
   {note && <p class="viz-note">{note}</p>}
 
-  <details class="viz-data">
-    <summary>{show}</summary>
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          {series.map((s) => <th>{s.name}</th>)}
-          {stacked && <th>{totalWord}</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {
-          rows.map((r) => (
+  {
+    showTable && (
+      <details class="viz-data">
+        <summary>{show}</summary>
+        <table>
+          <thead>
             <tr>
-              <td>{r.label}</td>
-              {r.values.map((v) => (
-                <td>{fmt(v)}</td>
+              <th>{''}</th>
+              {series.map((s) => (
+                <th>{s.name}</th>
               ))}
-              {stacked && <td>{fmt(sum(r.values))}</td>}
+              {stacked && <th>{totalWord}</th>}
             </tr>
-          ))
-        }
-      </tbody>
-    </table>
-  </details>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr>
+                <td>{r.label}</td>
+                {r.values.map((v) => (
+                  <td>{fmt(v)}</td>
+                ))}
+                {stacked && <td>{fmt(sum(r.values))}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+    )
+  }
 </figure>
 
 <style>

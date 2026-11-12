@@ -32,6 +32,7 @@ I don't see how meetings and ceremonies can be made fast enough to keep pace wit
 My friend's story has simple arithmetic behind it, and it is not new. Every pair of people in a team is a channel through which information has to pass: something to agree, to explain, to wait for. With _n_ people there are _n_(_n_ − 1) / 2 such pairs. Fred Brooks wrote about this in 1975, in _The Mythical Man-Month_: adding people to a late project makes it later.
 
 <BarChart
+  table={false}
   title="Pairs of people who have to agree"
   sub="Every pair in a team is one line of communication: n × (n − 1) / 2."
   series={[{ name: 'pairs' }]}
@@ -90,6 +91,7 @@ When a change costs an hour, you don't need to approve it before you make it. Yo
 So far this is my experience and one story from someone else. The measurements in big companies say the same thing.
 
 <BarChart
+  table={false}
   title="How much faster with AI"
   sub="What the studies measured, and my estimate for our team."
   series={[{ name: 'faster' }]}
@@ -136,6 +138,7 @@ The second is the voxel engine, only the engine. With agents it took nine days, 
 It looks strange: the bot is much simpler, and it took more days. But the days are not the same: on the bot I spent much less than a full day each time, and the engine already ran with full orchestration, so a day of work on it was a different kind of day.
 
 <BarChart
+  table={false}
   title="Two pet projects: by hand and with agents"
   sub="Working days. By hand is my estimate; with agents is days on which git shows work."
   series={[{ name: 'by hand, my estimate' }, { name: 'with agents' }]}
