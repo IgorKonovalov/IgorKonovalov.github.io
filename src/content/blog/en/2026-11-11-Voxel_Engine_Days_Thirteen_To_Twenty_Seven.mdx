@@ -166,7 +166,7 @@ What is left in the default look is jitter on silhouettes, and that is the next 
 
 ### The turn the rig never rendered
 
-A still shot is still not what I was looking at on 29 October. I saw the dots when the camera moved. So for this post I wrote a throwaway variant of the still renderer that does what the rig's turn apparently did not: it lets the shot settle for 512 frames looking 90 degrees to the side, turns the camera to the hall view over 10 frames, about a sixth of a second at 60 frames per second, and saves the frames right after the turn.
+A still shot is still not what I was looking at on 29 October. I saw the dots when the camera moved. So for this post I wrote a throwaway variant of the still renderer that turns fast. The rig's turn was too slow: the light had time to settle and the dots never showed. The new variant lets the shot settle for 512 frames looking 90 degrees to the side, turns the camera to the hall view over 10 frames, about a sixth of a second at 60 frames per second, and saves the frames right after the turn.
 
 Here is the same kind of turn as a clip, at 60 frames per second: the camera turns 90 degrees in a quarter of a second, holds for a second and a quarter, turns back and holds again. The old build is on top, today's below.
 
@@ -383,7 +383,7 @@ One of its candidates was an emitter cap, a limit on how bright a glowing face c
 
 I rejected it: _"artifacts on high contrast voxels"_.
 
-The same plan compared two ranges for the far shading normal, the distance at which far surfaces switch to smoothed shading. Headless, the range [1, 2] had about seven times the still-camera jumps of [2, 6]. I picked [1, 2] in the window: _"i think that far normal 1..2 is the best"_. And about the slow scripted pan the agents used to compare them: _"if camera moves slowly like that, its enough time to settle the light, but real players won't be that slow"_.
+The same plan compared two ranges for the far shading normal, the distance at which far surfaces switch to smoothed shading. Headless, the range [1, 2] had about seven times the still-camera jumps of [2, 6]. I picked [1, 2] in the window: _"i think that far normal 1..2 is the best"_. I went by feel, not by any number, and I no longer remember what exactly decided it. And about the slow scripted pan the agents used to compare them: _"if camera moves slowly like that, its enough time to settle the light, but real players won't be that slow"_.
 
 ### 0057: the wrong way
 
