@@ -1,0 +1,207 @@
+---
+// A slider through dated stops of a project: each stop has a picture, a
+// caption and a few numbers, and the numbers count up or down as the reader
+// moves between stops. Plays on its own while on screen (one stop every few
+// seconds) unless the reader prefers reduced motion; any touch of the
+// controls stops the autoplay. Every stop is also in a plain table below.
+import '../../styles/viz.css';
+
+interface Stop {
+  when: string;
+  label: string;
+  src: string;
+  alt: string;
+  caption: string;
+  /** Values in the order of `stats`. */
+  values: number[];
+}
+
+interface Props {
+  title: string;
+  sub?: string;
+  note?: string;
+  stats: string[];
+  stops: Stop[];
+  lang?: 'en' | 'ru';
+}
+
+const { title, sub, note, stats, stops, lang = 'en' } = Astro.props;
+const words =
+  lang === 'ru'
+    ? {
+        prev: 'Назад',
+        next: 'Дальше',
+        pause: 'Пауза',
+        play: 'Пуск',
+        show: 'Показать числа',
+        when: 'Когда',
+      }
+    : {
+        prev: 'Previous',
+        next: 'Next',
+        pause: 'Pause',
+        play: 'Play',
+        show: 'Show the numbers',
+        when: 'When',
+      };
+const fmt = (n: number) => n.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US');
+---
+
+<figure
+  class="viz viz-wide month"
+  data-month
+  data-stops={JSON.stringify(stops.map((s) => s.values))}
+  data-captions={JSON.stringify(stops.map((s) => [s.when, s.label, s.caption]))}
+  data-lang={lang}
+  data-words={JSON.stringify(words)}
+>
+  <p class="viz-title">{title}</p>
+  {sub && <p class="viz-sub">{sub}</p>}
+  <div class="month-frame">
+    {
+      stops.map((s, i) => (
+        <img
+          src={s.src}
+          alt={s.alt}
+          width="1280"
+          height="720"
+          loading="lazy"
+          decoding="async"
+          class:list={{ on: i === 0 }}
+          data-i={i}
+        />
+      ))
+    }
+  </div>
+  <div class="month-head">
+    <p class="month-when" aria-live="polite">
+      <strong>{stops[0].when}</strong> · <span>{stops[0].label}</span>
+    </p>
+    <p class="month-caption">{stops[0].caption}</p>
+  </div>
+  <dl class="month-stats">
+    {
+      stats.map((name, k) => (
+        <div>
+          <dt>{name}</dt>
+          <dd data-k={k}>{fmt(stops[0].values[k])}</dd>
+        </div>
+      ))
+    }
+  </dl>
+  <div class="month-controls">
+    <button type="button" data-act="prev">{words.prev}</button>
+    <input
+      type="range"
+      min="0"
+      max={stops.length - 1}
+      step="1"
+      value="0"
+      aria-label={title}
+      data-act="scrub"
+    />
+    <button type="button" data-act="next">{words.next}</button>
+    <button type="button" data-act="play">{words.pause}</button>
+  </div>
+  <details class="viz-data">
+    <summary>{words.show}</summary>
+    <table>
+      <thead>
+        <tr><th>{words.when}</th>{stats.map((s) => <th>{s}</th>)}</tr>
+      </thead>
+      <tbody>
+        {
+          stops.map((s) => (
+            <tr>
+              <td>
+                {s.when} · {s.label}
+              </td>
+              {s.values.map((v) => (
+                <td>{fmt(v)}</td>
+              ))}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </details>
+  {note && <p class="viz-note">{note}</p>}
+</figure>
+
+<style>
+  .month-frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-secondary);
+  }
+  .month-frame img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 600ms ease;
+  }
+  .month-frame img.on {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .month-frame img {
+      transition: none;
+    }
+  }
+  .month-head {
+    margin-top: var(--space-3);
+  }
+  .month-when,
+  .month-caption {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+  .month-caption {
+    color: var(--color-text-secondary);
+  }
+  .month-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+    margin: var(--space-4) 0 0;
+  }
+  @media (min-width: 768px) {
+    .month-stats {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .month-stats dt {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+  }
+  .month-stats dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xl);
+    color: var(--viz-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .month-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+  .month-controls input {
+    flex: 1;
+    min-width: 0;
+  }
+</style>
+
+<script>
+  import { monthScrubber } from '../../scripts/charts/month-scrubber';
+
+  for (const el of document.querySelectorAll<HTMLElement>('[data-month]')) {
+    monthScrubber(el);
+  }
+</script>

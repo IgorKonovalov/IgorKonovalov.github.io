@@ -1,0 +1,126 @@
+---
+// A 2D slice of the voxel engine's ray walk: rays cross empty chunks, brick
+// groups, air bricks and the small blocks inside a brick in one step each.
+// The reader aims with the pointer (or arrow keys), digs by clicking or
+// dragging, and compares the step count with a voxel-by-voxel walk.
+// Logic: src/scripts/demos/brick-march.ts.
+import '../../styles/viz.css';
+
+interface Props {
+  lang?: 'en' | 'ru';
+}
+
+const { lang = 'en' } = Astro.props;
+const t =
+  lang === 'ru'
+    ? {
+        title: 'Как луч идёт сквозь пустоту: срез мира в 2D',
+        sub: 'Наведите — лучи пойдут за курсором; нажмите или проведите — выкопаете яму. Квадраты — шаги луча: чем крупнее и темнее, тем больше пустоты пройдено за один шаг; оранжевые — шаги по одному вокселю.',
+        skips: 'пропускать пустоту',
+        dig: 'Копнуть там, куда смотрит средний луч',
+        reset: 'Новая пещера',
+        steps: 'шагов',
+        perVoxel: 'по одному вокселю было бы',
+        alt: 'Срез пещеры из вокселей с веером лучей из точки камеры; квадраты разного размера показывают, сколько пустоты луч проходит за шаг. Стрелки поворачивают лучи.',
+        legend: [
+          'чанк 64',
+          '2×2 кирпича (16)',
+          'пустой кирпич (8)',
+          'блок 4 или 2',
+          'один воксель',
+        ],
+        note: 'Двумерная модель shaders/walk.wgsl из движка: кирпич 8 вокселей, чанк 64. В движке то же самое в 3D, а дальние чанки он обходит по огрублённым копиям (мипам) — о них ниже.',
+      }
+    : {
+        title: 'How a ray crosses empty space, in a 2D slice',
+        sub: 'Point at the cave and the rays follow; click or drag to dig. The squares are the ray’s steps: the bigger and darker, the more empty space one step crossed; orange ones are single voxels.',
+        skips: 'skip empty space',
+        dig: 'Dig where the middle ray hits',
+        reset: 'New cave',
+        steps: 'steps',
+        perVoxel: 'voxel by voxel it would be',
+        alt: 'A slice of a voxel cave with a fan of rays from the camera point; squares of different sizes show how much empty space each step of a ray crosses. Arrow keys turn the rays.',
+        legend: [
+          'chunk 64',
+          '2×2 bricks (16)',
+          'empty brick (8)',
+          'block of 4 or 2',
+          'one voxel',
+        ],
+        note: 'A 2D model of the engine’s shaders/walk.wgsl: an 8-voxel brick, a 64-voxel chunk. The engine does the same in 3D, and walks far chunks through coarser copies of them (mips), shown further down.',
+      };
+const swatches = [
+  '--viz-step-4',
+  '--viz-step-3',
+  '--viz-step-2',
+  '--viz-step-1',
+  '--viz-2',
+];
+---
+
+<figure
+  class="viz viz-wide brick-march"
+  data-brick-march
+  data-labels={JSON.stringify(t)}
+>
+  <p class="viz-title">{t.title}</p>
+  <p class="viz-sub">{t.sub}</p>
+  <ul class="viz-legend">
+    {
+      t.legend.map((label, i) => (
+        <li>
+          <span class="viz-swatch" style={`background: var(${swatches[i]})`} />
+          {label}
+        </li>
+      ))
+    }
+  </ul>
+  <canvas width="1024" height="640" tabindex="0" role="img" aria-label={t.alt}
+  ></canvas>
+  <div class="bm-controls">
+    <p class="bm-counter"></p>
+    <label><input type="checkbox" data-act="skips" checked /> {t.skips}</label>
+    <button type="button" data-act="dig">{t.dig}</button>
+    <button type="button" data-act="reset">{t.reset}</button>
+  </div>
+  <p class="viz-note">{t.note}</p>
+</figure>
+
+<style>
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+    cursor: crosshair;
+    touch-action: none;
+  }
+  canvas:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .bm-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+  }
+  .bm-counter {
+    margin: 0;
+    flex: 1 1 100%;
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+  }
+</style>
+
+<script>
+  import { brickMarch } from '../../scripts/demos/brick-march';
+
+  for (const el of document.querySelectorAll<HTMLElement>(
+    '[data-brick-march]',
+  )) {
+    brickMarch(el);
+  }
+</script>

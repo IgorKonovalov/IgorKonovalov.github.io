@@ -1,0 +1,133 @@
+---
+// The voxel engine's spider walk clip, played from the numbers in its .rig
+// file (src/data/voxelSpider.ts) and drawn from above. The reader can pause,
+// scrub the tick, slow it down and switch between "whole ticks" (what the
+// simulation samples, 30 a second) and "between ticks" (what the screen
+// draws, blended per frame). Starts only when on screen; waits for a click
+// under prefers-reduced-motion.
+import '../../styles/viz.css';
+
+interface Props {
+  lang?: 'en' | 'ru';
+}
+
+const { lang = 'en' } = Astro.props;
+const t =
+  lang === 'ru'
+    ? {
+        title: 'Походка паука прямо из его файла .rig',
+        sub: 'Вид сверху. Восемь ног, у каждой своя фаза; поднятая нога светлее и отбрасывает тень. Числа — ключи клипа walk как есть.',
+        play: 'Пауза',
+        resume: 'Пуск',
+        slow: 'Замедлить ×¼',
+        fast: 'Обычная скорость',
+        between: 'между тиками',
+        whole: 'целые тики',
+        tick: 'Тик',
+        alt: 'Анимация: паук сверху переставляет восемь ног волной, по одной.',
+        note: 'Источник: spider.rig из движка, клип walk, 48 тиков, 30 тиков в секунду.',
+      }
+    : {
+        title: "The spider's walk, played from its .rig file",
+        sub: 'Seen from above. Eight legs, each on its own phase; a lifted leg is lighter and casts a shadow. The numbers are the walk clip’s keys as written.',
+        play: 'Pause',
+        resume: 'Play',
+        slow: 'Slow ×¼',
+        fast: 'Normal speed',
+        between: 'between ticks',
+        whole: 'whole ticks',
+        tick: 'Tick',
+        alt: 'Animation: a spider seen from above moving its eight legs in a wave, one at a time.',
+        note: 'Source: the engine’s spider.rig, clip walk, 48 ticks at 30 ticks a second.',
+      };
+---
+
+<figure
+  class="viz spider-walk"
+  data-spider-walk
+  data-labels={JSON.stringify(t)}
+>
+  <p class="viz-title">{t.title}</p>
+  <p class="viz-sub">{t.sub}</p>
+  <div class="sw-stage">
+    <canvas width="240" height="180" role="img" aria-label={t.alt}></canvas>
+    <pre class="sw-readout" aria-live="off"></pre>
+  </div>
+  <div class="sw-controls">
+    <button type="button" data-act="play">{t.play}</button>
+    <button type="button" data-act="slow">{t.slow}</button>
+    <label>
+      <input type="checkbox" data-act="blend" checked />
+      {t.between}
+    </label>
+    <label class="sw-scrub">
+      {t.tick}
+      <input
+        type="range"
+        min="0"
+        max="48"
+        step="0.01"
+        value="0"
+        data-act="tick"
+      />
+    </label>
+  </div>
+  <p class="viz-note">{t.note}</p>
+</figure>
+
+<style>
+  .sw-stage {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  @media (min-width: 640px) {
+    .sw-stage {
+      grid-template-columns: 2fr 1fr;
+      align-items: center;
+    }
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+  }
+  .sw-readout {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+    color: var(--color-text-secondary);
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .sw-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+  }
+  .sw-scrub {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: 1 1 12rem;
+  }
+  .sw-scrub input {
+    flex: 1;
+  }
+</style>
+
+<script>
+  import { spiderWalk } from '../../scripts/demos/spider-walk';
+
+  for (const el of document.querySelectorAll<HTMLElement>(
+    '[data-spider-walk]',
+  )) {
+    spiderWalk(el);
+  }
+</script>
