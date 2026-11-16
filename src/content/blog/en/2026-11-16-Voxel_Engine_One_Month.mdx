@@ -1,0 +1,376 @@
+---
+title: 'Voxel engine, one month'
+date: 2026-11-16
+tags: ['voxel-engine', 'graphics', 'agents']
+description: 'The voxel engine is a month old: from an empty repository on 16 October to a cave you can dig and collapse, light that does not flicker, and voxel creatures that walk. The month condensed, with three slices of the world you can play with and a spider you can slow down.'
+---
+
+import BarChart from '../../../components/charts/BarChart.astro';
+import Clip from '../../../components/charts/Clip.astro';
+import Mermaid from '../../../components/Mermaid.astro';
+import MonthScrubber from '../../../components/charts/MonthScrubber.astro';
+import Screenshots from '../../../components/charts/Screenshots.astro';
+import Timeline from '../../../components/charts/Timeline.astro';
+import BrickMarch from '../../../components/demos/BrickMarch.astro';
+import CaveCollapse from '../../../components/demos/CaveCollapse.astro';
+import MipRing from '../../../components/demos/MipRing.astro';
+import SpiderWalk from '../../../components/demos/SpiderWalk.astro';
+
+The voxel engine started on 16 October at 08:51, as an empty repository with a licence, a roadmap and a list of budgets. Today is 16 November, so it is one month old, and it is at version 0.56.
+
+Until now this diary came every few days: [day one](/projects/2026/10/16/voxel_engine_day_one/), [days two to six](/projects/2026/10/21/voxel_engine_days_two_to_six/), [seven to twelve](/projects/2026/10/27/voxel_engine_days_seven_to_twelve/) and [thirteen to twenty-seven](/projects/2026/11/11/voxel_engine_days_thirteen_to_twenty_seven/). That pace made sense while every day changed the engine's shape. Now it changes less from day to day, so from here the posts come once a month, or earlier when something interesting arrives.
+
+As before, agents write every line of the code, and I decide what gets built and check the result on the screen. That takes every evening and every weekend: at least three or four hours a day, sometimes up to ten. Every frame and timing below is from my laptop, an RTX 3080 Laptop GPU with a Ryzen 9, unless it says otherwise. The engine is built alongside a first game, and this post does not describe the game.
+
+## The first evening and today
+
+On the evening of day one I recorded the screen for the first time. The cave was already streaming around the camera, drawn as grey cubes and lit by nothing but the headlamp.
+
+A month later the cave has glowing amethyst and ore in it. Its light does not flicker. And a spider of fourteen parts walks across the floor.
+
+<Clip
+  title="Day one and day thirty-two"
+  sub="Both are my screen recordings from the windowed build. Left: 16 October, 20:41. Right: 16 November, 16:41."
+  columns={2}
+  clips={[
+    {
+      webm: '/videos/voxel-engine/month-day-one.webm',
+      mp4: '/videos/voxel-engine/month-day-one.mp4',
+      poster: '/images/voxel-engine/month-day-one-poster.webp',
+      alt: 'A grey voxel cave inside a round frame on black: the camera flies forward and turns, stepped walls of small cubes slide past.',
+      caption: 'Day one: the streamed cave under the headlamp',
+      width: 760,
+      height: 720,
+    },
+    {
+      webm: '/videos/voxel-engine/month-spider.webm',
+      mp4: '/videos/voxel-engine/month-spider.mp4',
+      poster: '/images/voxel-engine/month-spider-poster.webp',
+      alt: 'A dark voxel spider with glowing white leg tips walks in place on a striped cave floor; purple crystals glow on the wall to the left and warm ore to the right.',
+      caption: 'Day thirty-two: the spider in the showcase hall',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+  note="Cropped from full-screen recordings; the spider's crop removes the debug line at the top of the window."
+/>
+
+## The month in pictures
+
+The slider walks through the month by the pictures from the earlier posts and today's recordings. Under each picture is the size of the engine on that date: its tests, and its lines of Rust and of shader code.
+
+<MonthScrubber
+  title="The engine's first month"
+  sub="Plays by itself while on screen; the slider and the buttons stop it."
+  stats={['tests', 'lines of Rust', 'lines of shaders']}
+  stops={[
+    {
+      when: '16 Oct',
+      label: 'day one',
+      src: '/images/voxel-engine/spawn-pocket.webp',
+      alt: 'A spherical pocket of air in grey voxel rock, lit by a cone of light from the viewer',
+      caption: 'A bounded world, then a streamed one, under a headlamp.',
+      values: [115, 13200, 824],
+    },
+    {
+      when: '20 Oct',
+      label: 'collapse',
+      src: '/images/voxel-engine/cutaway.webp',
+      alt: 'A cross-section of the voxel level seen from outside, with the lit walls of caverns visible through it',
+      caption: 'Packed bricks, collapse and crushing, the cutaway view.',
+      values: [501, 52318, 1490],
+    },
+    {
+      when: '22 Oct',
+      label: 'light',
+      src: '/images/voxel-engine/castle-nave-gi.webp',
+      alt: 'The inside of a gothic chapel with ribbed vaults, tall blue windows and torches',
+      caption: 'Light per pixel, bounce light and a generated castle.',
+      values: [646, 74144, 4050],
+    },
+    {
+      when: '28 Oct',
+      label: 'glowing rock',
+      src: '/images/voxel-engine/vein-lamp.webp',
+      alt: 'A cave wall under a headlamp with a vein of warm glowing ore running down it',
+      caption: 'Glowing ore and crystals, and the showcase hall.',
+      values: [724, 85484, 6237],
+    },
+    {
+      when: '11 Nov',
+      label: 'steady light',
+      src: '/images/voxel-engine/light-hall-after-2048.webp',
+      alt: 'A cavern where glowing crystals cast warm, steady light on the pillars around them',
+      caption: 'Light computed ahead, which no longer flickers.',
+      values: [876, 110617, 7438],
+    },
+    {
+      when: '16 Nov',
+      label: 'walkers',
+      src: '/images/voxel-engine/month-walkers-poster.webp',
+      alt: 'A ring of small white voxel figures in a warm-lit cave, seen from above',
+      caption: 'Dynamic lights, the first release and the first walkers.',
+      values: [1054, 146566, 8317],
+    },
+    {
+      when: '16 Nov',
+      label: 'the spider',
+      src: '/images/voxel-engine/month-spider-poster.webp',
+      alt: 'A voxel spider in a cave lit by purple crystals and warm ore',
+      caption: 'Animation written as text, and a spider drawn in text.',
+      values: [1054, 146566, 8317],
+    },
+  ]}
+  note="Tests are the #[test] functions on that date; lines are all lines of the .rs and .wgsl files, comments and tests included."
+/>
+
+<Timeline
+  title="The month by date"
+  sub="When each feature arrived."
+  groups={['the world', 'light', 'speed', 'creatures']}
+  events={[
+    {
+      when: '16 Oct',
+      what: 'Empty repository at 08:51; a bounded world of bricks and chunks with digging at 15:20; a streamed world with coarse copies far away at 17:29',
+      group: 0,
+    },
+    {
+      when: '17 Oct',
+      what: 'One night: collision and a character controller, .vox import, collapse of unsupported rock, a server with an edit log and replay, game logic in WebAssembly, 3D sound',
+      group: 0,
+    },
+    {
+      when: '19 Oct',
+      what: 'The ray walk learns to skip empty space by flags',
+      group: 2,
+    },
+    {
+      when: '20 Oct',
+      what: 'Bricks stored four times smaller, falling rock that crushes what it lands on, the cutaway view, a gamepad',
+      group: 0,
+    },
+    {
+      when: '22 Oct',
+      what: 'Light per pixel, bounce light, a generated gothic castle',
+      group: 1,
+    },
+    {
+      when: '27–28 Oct',
+      what: "AMD's FSR 2 upscaler, eye adaptation, the showcase hall of 72 × 58 × 24 metres",
+      group: 1,
+    },
+    {
+      when: '29 Oct–11 Nov',
+      what: 'Light computed ahead and stored per chunk, after two weeks of flicker',
+      detail: 'Plain cubes became the default look on 3 November.',
+      group: 1,
+    },
+    {
+      when: '11–13 Nov',
+      what: 'Far caves no longer black while their light is computed; big speed cuts',
+      group: 2,
+    },
+    {
+      when: '15 Nov',
+      what: 'Sixteen dynamic lights; the first release, with a tester build',
+      group: 1,
+    },
+    {
+      when: '16 Nov',
+      what: 'Voxel creatures: walkers, a spider, animation written as text, a recorder that films them, a loading screen',
+      group: 3,
+    },
+  ]}
+/>
+
+## How the engine sees
+
+Everything in the engine stands on one idea: the ray walk. The world is made of voxels, 10 cm cubes. Eight by eight by eight voxels make a **brick**, and eight by eight by eight bricks make a **chunk**, 6.4 metres on a side. The GPU draws a picture by shooting a ray from the camera through every pixel and walking it through this grid until it hits rock.
+
+Walking voxel by voxel would be slow, because most of a cave is air. So the walk crosses empty space in big steps, and each step starts on the edge of a block of its size. A whole empty chunk is one step. Then a group of two by two by two empty bricks, then one empty brick, then empty blocks of 4 and 2 voxels inside a brick that has some rock in it. Only right next to the rock does the ray go one voxel at a time.
+
+The slice below does the same in two dimensions. Point at the cave and the rays turn. Click or drag to dig, and the big steps come back where the rock is gone. Untick the skipping to see the walk the slow way.
+
+<BrickMarch />
+
+Every frame pays for the walk first, and it got cheaper twice. On day one the primary rays took 6.69 ms at 1080p in the streamed cave. On 19 October the engine got flags that say "nothing in here" for blocks of every size, which is what lets the ray skip, and the time fell to just under 2 ms. Today it is under 1.5 ms.
+
+<BarChart
+  title="Primary rays, 1080p, the streamed cave's spawn"
+  sub="GPU time of the ray walk on the RTX 3080 Laptop."
+  series={[{ name: 'ray walk' }]}
+  unit=" ms"
+  rows={[
+    { label: '16 Oct', values: [6.69] },
+    { label: '19 Oct', values: [1.98] },
+    { label: '16 Nov', values: [1.48] },
+  ]}
+  note="From the engine's notes and changelog; the two later readings were ranges (1.93–1.98 and 1.44–1.48 ms), shown at their upper end. The budget for primary rays is 3.0 ms of a 16.6 ms frame."
+/>
+
+## What the engine keeps around the camera
+
+The cave has no edge. As the camera flies, chunks ahead are generated and chunks behind are dropped, so only the space around the camera exists at all. And not all of it at the same detail. Close to the camera every voxel is kept. Further out the engine keeps **mips**: coarser copies of a chunk, where one cell stands for 2, 4 or 8 voxels a side. A mip cell is solid if any voxel under it is solid, and it takes the most common material. From far away the difference is hard to see, and the ray steps over the coarse cells there, so it is cheaper too.
+
+In the engine full detail reaches 102 metres from the camera and the mips 154. The slice below is scaled down to fit the page. Move the pointer and the rings travel with the camera. Notice that a whole chunk changes level at once, and that far rock keeps its shape even in cells of 8 × 8. The counter shows how many cells the mips save.
+
+<MipRing />
+
+## Digging
+
+The second foundation is the edit. An edit is a shape, like a sphere or a box, applied to the world, and it reports back exactly how many voxels of each material it removed. The math uses whole numbers only, so a server and a client that apply the same edits get the same world to the bit. That is also why the engine can keep a log of every edit and replay it: ten thousand digs of a one-metre radius replay in 279 ms.
+
+After an edit the engine checks whether any rock lost its connection to something that holds it, on a coarse grid, in 0.33 to 0.4 ms. Rock that lost it drops straight down as one piece, and in the engine it also crushes what it lands on. Below is the same in two dimensions, without the crushing. Dig, and the counter lists every material you removed and how many voxels fell. Then undercut the ceiling.
+
+<CaveCollapse />
+
+## Light, finished
+
+The [two weeks of light I described last time](/projects/2026/11/11/voxel_engine_days_thirteen_to_twenty_seven/) ended with light that is computed ahead and stored per chunk, so it does not change by a pixel while nothing moves.
+
+The worst leftover was black. Light for the far chunks was computed in a queue, and until the queue reached a chunk, the chunk stayed black. My own note from 11 November was _"after several seconds distant caves still black"_. Now such a chunk borrows the averaged light of the bigger block around it, and if there is none yet, of the block around that. The far caves are dim for a moment, never black.
+
+Then dynamic lights. The game can now hand the engine up to sixteen point or spot lights every frame. Each lit pixel computes each light in reach exactly, with one shadow ray: a ray toward the light that checks nothing blocks it. There is no randomness in it, so there is no noise and nothing to settle. The old light flickered exactly because it was estimated at random, so that was the whole reason for doing it this way. A moving light is computed exactly every frame, and the light that does not move stays stored. The headlamp is now simply light number zero, and each light in reach costs about 0.17 ms on the RTX.
+
+The last fix was to a bug that had been in every screenshot of this diary. A screen expects colour encoded with a standard curve called sRGB, and the final pass, which puts the picture in the window, used `pow(c, 2.2)` instead, a rough copy of that curve. It shifted 216 of the 256 possible values of a channel, the dark ones by up to nine steps: a value that should have reached the screen as 16 arrived as 7. The real curve is a straight line near black. The power curve has no straight part, so it presses the darkest values toward black. In a cave, where most of the picture is dark, that is a lot of lost shadow. Now every value reaches the screen as it should, and the colours I see got darker and more natural.
+
+## Speed, and the first release
+
+The same days cut a lot of time. None of it shows in a picture, and that was the rule: every reference image, a saved picture each test must match, stayed the same to the byte.
+
+<BarChart
+  title="Three cuts from the last five days"
+  sub="Milliseconds on the RTX 3080 Laptop, before and after."
+  series={[{ name: 'before' }, { name: 'after' }]}
+  unit=" ms"
+  rows={[
+    { label: 'creature animation, 64 creatures', values: [15.12, 0.5] },
+    { label: 'processor time per frame', values: [4.43, 1.68] },
+    { label: 'copying changed chunks to the GPU', values: [0.18, 0.019] },
+  ]}
+  note="From the engine's changelog. The last row is a median; its after value is the upper end of a 15–19 µs range. The animation row is explained below."
+/>
+
+Version 0.54 is the first release. It ships a tester build: a launcher window that runs three scenes in turn, the streamed cave, the showcase hall and the castle. In each it flies the camera along a fixed path, times it like a benchmark and writes a report. Until now the only machine that had ever run the engine was my laptop. Then a programmer from America, who is building an engine of his own, wrote to me and offered to develop together. I said no, but we stayed partners for testing.
+
+## Creatures
+
+Creatures started with one line from me on 10 November: _"we need a plan for voxel model entity ... with possibility of emissive light (gloving eyes for example) - we place model on a level"_. Six days later the first one walked.
+
+A creature is a voxel model made of up to sixteen rigid parts, each at most 64 voxels on a side. Every part hangs from another, turns around its own pivot and has its own detail: one, two or four model voxels per world voxel. A creature is not written into the world grid; creatures live in a pool of their own on the GPU. First the world's walk finds the hit for a pixel. Then a second walk traces the creatures, never further than that hit. The shadow rays see creatures, so a creature throws a shadow.
+
+The simulation moves in ticks, 30 a second, and a pose is computed for each tick in fixed point: whole numbers with an agreed scale, offsets in 1/256 of a voxel. Rotations are quaternions, the usual four numbers for a rotation, here also whole numbers, built from a fixed table of sines stored with the code. That is for the network. A server and every client compute the same pose to the bit, so a creature's every voxel is in the same place on every machine.
+
+<Mermaid
+  code={`
+flowchart TB
+  vt["spider.voxtext: the voxels drawn as text"] --> vox["spider.vox: the parts as voxel models"]
+  rig[".rig text file: parts, pivots, materials, clips"] --> pose
+  vox --> pose["pose at a tick, in whole numbers"]
+  pose --> pool["creature pool on the GPU, up to 64 creatures and 512 parts a frame"]
+  world["world walk: the hit for each pixel"] --> trace
+  pool --> trace["creature walk, never past the world hit"]
+  trace --> light["lights and shadows"]
+`}
+/>
+
+The first creature is the **walker**: a torso, a head with two glowing eyes and two legs, about 1.3 metres tall with 10 cm voxels. One key places a walker, another sets them all walking in small circles at a metre a second. A third puts a real light between each walker's eyes, one that casts shadows, as long as the list of sixteen lights has room; the rest keep their glow.
+
+<Clip
+  title="Walkers"
+  sub="My screen recording from 16 November: a crowd of walkers on their circles, seen from above."
+  clips={[
+    {
+      webm: '/videos/voxel-engine/month-walkers.webm',
+      mp4: '/videos/voxel-engine/month-walkers.mp4',
+      poster: '/images/voxel-engine/month-walkers-poster.webp',
+      alt: 'Seen from above in a warm-lit voxel cave, a ring of small white blocky figures walks in circles while the camera drifts and tilts over them.',
+      caption: 'Each walker is its own posed model, traced after the world',
+      width: 1120,
+      height: 612,
+    },
+  ]}
+/>
+
+Sixteen walkers with their eye lights cost 1.8 to 2.2 ms on the RTX. On the integrated Radeon of the same laptop the same scene costs 15 to 23 ms, so a crowd there is not affordable yet.
+
+Two problems showed only on the screen. The first was grain. With the eye lights off, a walking crowd looked _"quite bad"_ in my window. A moving walker keeps uncovering pixels that the previous frames never saw, so there is nothing to average their noisy light with. A first fix halved it: the noise on screen, relative to the mean brightness, went from 10.6 to 5.5 percent. Filtering the freshly uncovered pixels harder barely moved it further and blurred fresh shadow edges, so I took another way. A walker that no listed light reaches is now lit by the stored light of the nearest wall or floor, with nothing random in it.
+
+The second was a freeze. The first walker I placed stopped the app for about twelve seconds, long enough for the desktop to say "Application Not Responding". The graphics driver was compiling the creature shaders right then, on the first frame that drew one. I decided: _"its fine to wait for entities on startup when we have a loader in place"_. The loader is further below.
+
+## Animation as text
+
+A creature's animation is a `.rig` file next to its model. It names the parts, which part hangs from which, where each joint is, which palette colour is which material, and the clips. A clip is a list of keys like "at tick 12 turn this leg 68 degrees about z". Here is the start of the spider's walk, the first leg's keys:
+
+```
+clip walk ticks 48 loop
+key 0 leg_l1 rot z 50 rot y 14
+key 4 leg_l1 rot z 59 rot y 12
+key 8 leg_l1 rot z 66 rot y 7
+key 12 leg_l1 rot z 68 rot y 0
+```
+
+The leg swings around the vertical axis from 50 to 68 degrees and back. While it swings forward it is also turned about y, which lifts it off the floor. Eight legs with thirteen keys each, plus a few keys that bob the body and sway the abdomen, palps and fangs, and that is the whole walk.
+
+The spider itself is drawn in text too. A `.voxtext` file is a stack of layers of characters, one character per voxel, `s` for shell, `a` for amethyst, `e` for ember, and a tool turns it into a `.vox`. The spider has fourteen parts (a body, an abdomen, eight legs, two palps and two fangs) and 32,455 voxels, of which the abdomen alone is 20,788. When I first saw it walk, I nearly fell off my chair: how cool it is, how much detail there is, and everything moves.
+
+The slice below plays that walk straight from the numbers in `spider.rig`, seen from above. The simulation samples a clip at whole ticks, and the screen blends between two ticks for every frame it draws. Slow it down and untick "between ticks" to see what the simulation sees.
+
+<SpiderWalk />
+
+The engine's viewer reloads the files on save: edit the text, save it, and the creature in the running window changes. I wrote down _"arrived instantenious"_, and about the motion between ticks _"smooth"_. A broken line keeps the old model and shows the error with its line number. MagicaVoxel, the usual editor for `.vox` files, still opens the same models. An agent also writes text as easily as code.
+
+The blend between ticks had one surprise. The first version took 15.12 ms for 64 creatures of 16 parts each, because it composed every part's pose from scratch for every point of every part, so the work grew with the square of the parts. Composing it once brought it to 0.50 ms. What is still missing is a crossfade between clips. When I switched the spider from walking to a head turn, it jumped.
+
+## The engine films itself
+
+The recordings at the top of this post come from my screen. The engine can now record its creatures by itself. A small program renders the animation off-screen frame by frame, and frame _n_ always shows the same instant of the clip, blended between ticks the way the screen would blend it.
+
+The light needs a few frames to settle, so before the first kept frame the program renders 64 warm-up frames. Then it renders each instant 16 times and keeps the last one. Every run gives exactly the same footage, which ffmpeg turns into a GIF or an MP4.
+
+<Clip
+  title="The spider, filmed by the engine"
+  sub="The walk clip rendered off-screen frame by frame in the showcase hall, 25 frames a second, one 1.6-second loop played four times."
+  clips={[
+    {
+      webm: '/videos/voxel-engine/month-spider-recorder.webm',
+      mp4: '/videos/voxel-engine/month-spider-recorder.mp4',
+      poster: '/images/voxel-engine/month-spider-recorder-poster.webp',
+      alt: 'A dark voxel spider walks in place in a brown cave hall between pillars with small warm lights, a cyan and pink glow behind it.',
+      caption: 'Every run of the recorder gives these same frames',
+      width: 800,
+      height: 450,
+    },
+  ]}
+  note="The recorder wrote this as a GIF; re-encoded for the page, so the GIF's palette banding stays."
+/>
+
+## A loading screen
+
+The castle scene used to start with a blank window for about three seconds, and bigger scenes for up to ten. The start is now cut into slices of 25 ms. Between slices the window draws a frame: a turning cube of 3 × 3 × 3 voxels, ray-traced in a shader, a progress bar that only ever moves forward, and the name of the stage.
+
+<Screenshots
+  title="The loading screen"
+  sub="The test's reference image: the castle at 37 percent."
+  images={[
+    {
+      src: '/images/voxel-engine/month-loading-screen.webp',
+      alt: 'A black screen with a small cube of 27 tan voxels in the middle, a progress bar a third full below it, and in the top corner the lines "castle - benchmark", "lighting the near chunks: 31 / 49 chunks" and "37 % 0.4 s"',
+      caption: 'The cube turns, the bar only moves forward',
+      width: 1280,
+      height: 720,
+    },
+  ]}
+/>
+
+A plain splash appears as soon as the GPU is ready, so the castle shows something after about a third of a second instead of one to three seconds. The price is that the big streamed scenes load 8 to 10 percent longer. I accepted that, because loading is not so bad when the user sees that something is changing. I follow the RAIL model of interfaces here: the point is not the speed, it is that the user is not bored and does not think something broke. Slices of 25 ms plus the frame between them mean at most about 40 frames a second while loading, and that is what I saw: _"a bit of a stutter yes, like fps in 30-40. bar is fine"_.
+
+## The impression after a month
+
+I think the engine has come a long way. I had no special plan for what must be done by when; I go with the flow. While the light was broken it was hard. The worst moment of the month was when I saw the light flicker and lag, and that was awful. The best was when we solved it, and that filled me with hope and enthusiasm. Today is a very good day too: finally there is life in the caves.
+
+The biggest surprise of the month is still the limit of the agents: a task they cannot solve without me there. The work went fast wherever a test could check the result, and slowly wherever only a person looking at the screen could say whether the picture was right: the light for two weeks, and this week the grain on the walkers and the freeze.
+
+## What is next
+
+Next come creatures that follow the floor instead of walking at a fixed height, and squash and stretch in the clips, shown off by a bouncing slime. Then a layer of small detail above the surfaces, grass blades, caps and pebbles, swaying in the wind. Then anything from a `.vox` file: large scenes stamped into the world, and structures built in stages and demolished. But what I want to see most is the outdoors: the sun, weather, liquids and gases, fire. Next post in a month, or earlier if one of these turns out interesting.
